@@ -1,0 +1,115 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:views="clr-namespace:yopet.Views"
+        x:Class="yopet.MainWindow"
+        x:CompileBindings="False"
+        Title="我的工具"
+        Width="420"
+        MinWidth="360"
+        MaxWidth="600"
+        Height="768"
+        MinHeight="500"
+        WindowStartupLocation="CenterScreen"
+        WindowDecorations="None"
+        Background="Transparent"
+        TransparencyLevelHint="Transparent">
+
+  <Border CornerRadius="20" BorderThickness="1" BorderBrush="{DynamicResource BorderColor}"
+          Background="{DynamicResource BgPage}">
+    <Grid RowDefinitions="50,*,60">
+      <!-- 标题栏（圆角与外层 Border 一致 20px） -->
+      <Border Background="{DynamicResource BgOverlay}"
+              BoxShadow="0 2 8 #1A000000"
+              PointerPressed="TitleBar_OnPointerPressed"
+              CornerRadius="20,20,0,0">
+        <Grid ColumnDefinitions="*,Auto,Auto,Auto">
+          <TextBlock Text="My Personal Tool"
+                     FontSize="16"
+                     FontWeight="SemiBold"
+                     VerticalAlignment="Center"
+                     Margin="16,0"
+                     Foreground="{DynamicResource TextPrimary}" />
+
+          <Button x:Name="MinimizeBtn"
+                  Classes="flat"
+                  Grid.Column="1"
+                  Content="─"
+                  Width="46" Height="32"
+                  FontSize="14"
+                  Foreground="{DynamicResource TextPrimary}"
+                  Background="Transparent"
+                  BorderThickness="0"
+                  Cursor="Hand"
+                  CornerRadius="0" />
+          <Button x:Name="MaximizeBtn"
+                  Classes="flat"
+                  Grid.Column="2"
+                  Content="⛶"
+                  Width="46" Height="32"
+                  FontSize="14"
+                  Foreground="{DynamicResource TextPrimary}"
+                  Background="Transparent"
+                  BorderThickness="0"
+                  Cursor="Hand"
+                  CornerRadius="0" />
+          <Button x:Name="CloseBtn"
+                  Classes="flat"
+                  Grid.Column="3"
+                  Content="✕"
+                  Width="46" Height="32"
+                  FontSize="14"
+                  Foreground="{DynamicResource TextPrimary}"
+                  Background="Transparent"
+                  BorderThickness="0"
+                  Cursor="Hand"
+                  CornerRadius="0" />
+        </Grid>
+      </Border>
+
+      <!-- 内容区域 -->
+      <Grid Grid.Row="1">
+        <ScrollViewer IsVisible="{Binding IsHomeSelected}">
+          <views:HomePage Margin="16" />
+        </ScrollViewer>
+        <ScrollViewer IsVisible="{Binding IsSettingsSelected}">
+          <views:SettingsPage Margin="16" />
+        </ScrollViewer>
+      </Grid>
+
+      <!-- 底部导航（圆角与外层 Border 一致 20px） -->
+      <Border Grid.Row="2"
+              Background="{DynamicResource BgOverlay}"
+              BoxShadow="0 -2 8 #1A000000"
+              CornerRadius="0,0,20,20">
+        <Grid ColumnDefinitions="*,*">
+          <Button Classes="nav"
+                  Command="{Binding GoToHomeCommand}"
+                  Cursor="Hand"
+                  HorizontalAlignment="Center"
+                  HorizontalContentAlignment="Center"
+                  VerticalContentAlignment="Center"
+                  Padding="16,0">
+            <StackPanel Spacing="2">
+              <TextBlock Text="Home" FontSize="20" HorizontalAlignment="Center" />
+              <TextBlock Text="首页" FontSize="11" HorizontalAlignment="Center" Foreground="{DynamicResource TextSecondary}" />
+            </StackPanel>
+          </Button>
+
+          <Button Classes="nav"
+                  Grid.Column="1"
+                  Command="{Binding GoToSettingsCommand}"
+                  Cursor="Hand"
+                  HorizontalAlignment="Center"
+                  HorizontalContentAlignment="Center"
+                  VerticalContentAlignment="Center"
+                  Padding="16,0">
+            <StackPanel Spacing="2">
+              <TextBlock Text="Settings" FontSize="20" HorizontalAlignment="Center" />
+              <TextBlock Text="设置" FontSize="11" HorizontalAlignment="Center" Foreground="{DynamicResource TextSecondary}" />
+            </StackPanel>
+          </Button>
+        </Grid>
+      </Border>
+    </Grid>
+  </Border>
+</Window>

@@ -1,0 +1,125 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:controls="clr-namespace:yopet.Controls"
+        x:Class="yopet.PetWindow"
+        x:CompileBindings="False"
+        Title="电子宠物"
+        Width="160" MinWidth="120"
+        Height="160" MinHeight="120"
+        WindowStartupLocation="Manual"
+        WindowDecorations="None"
+        Topmost="True"
+        ShowInTaskbar="False"
+        Background="Transparent"
+        TransparencyLevelHint="Transparent"
+        PointerPressed="OnWindowPointerPressed"
+        PointerMoved="OnWindowPointerMoved"
+        PointerReleased="OnWindowPointerReleased"
+        DragDrop.AllowDrop="True">
+
+  <Grid DragDrop.AllowDrop="True"
+        DragDrop.DragEnter="OnDragEnter"
+        DragDrop.DragOver="OnDragOver"
+        DragDrop.DragLeave="OnDragLeave"
+        DragDrop.Drop="OnDrop">
+    <!-- 统一外部气泡（替代内部气泡 + 旧 Popup） -->
+    <Popup x:Name="BubblePopup"
+           Placement="Top"
+           PlacementTarget="{Binding ElementName=PetBody}"
+           IsOpen="{Binding IsAnyBubbleVisible}"
+           HorizontalOffset="0"
+           VerticalOffset="-8"
+           WindowManagerAddShadowHint="False">
+      <Border Background="{DynamicResource BgOverlay}"
+              BorderBrush="{DynamicResource BorderColor}"
+              BorderThickness="1"
+              CornerRadius="12"
+              Padding="14,8"
+              MaxWidth="220">
+        <StackPanel>
+          <!-- Reaction 模式：大号 emoji -->
+          <TextBlock Text="{Binding CurrentReaction}"
+                     FontSize="22"
+                     HorizontalAlignment="Center"
+                     IsVisible="{Binding IsReacting}" />
+          <!-- Thought 模式：助理名 + 文字 -->
+          <Grid IsVisible="{Binding IsShowingThought}">
+            <Grid RowDefinitions="Auto,Auto">
+              <Grid ColumnDefinitions="Auto,*">
+                <TextBlock Text="💬" FontSize="12" VerticalAlignment="Center" />
+                <TextBlock Text="{Binding ThoughtAssistant}"
+                           FontSize="10" FontWeight="Bold"
+                           Foreground="#AAAAAA" Margin="4,0,0,0"
+                           VerticalAlignment="Center" />
+              </Grid>
+              <TextBlock Grid.Row="1" Text="{Binding ThoughtText}"
+                         FontSize="11" Foreground="{DynamicResource TextPrimary}"
+                         TextWrapping="Wrap" MaxHeight="160" Margin="0,4,0,0" />
+            </Grid>
+          </Grid>
+        </StackPanel>
+      </Border>
+    </Popup>
+
+    <!-- Dialog 弹窗层（确认框/输入框等交互） -->
+    <Popup x:Name="DialogPopup"
+           Placement="Top"
+           PlacementTarget="{Binding ElementName=PetBody}"
+           HorizontalOffset="0"
+           VerticalOffset="-8"
+           WindowManagerAddShadowHint="False">
+      <ContentControl x:Name="DialogContent" />
+    </Popup>
+
+    <!-- 右上角状态区：💡 / 📋 或 进度环 -->
+    <!-- 💡：普通激活无任务 ｜ 📋：会话中无任务 -->
+    <Border Width="20" Height="20"
+            IsVisible="{Binding IsIndicatorVisible}"
+            HorizontalAlignment="Right" VerticalAlignment="Top"
+            Margin="0,16,16,0">
+      <TextBlock Text="{Binding IndicatorText}" FontSize="13" HorizontalAlignment="Center" VerticalAlignment="Center" />
+    </Border>
+
+    <!-- 进度环：有任务执行中，点击取消 -->
+    <Grid x:Name="RingGrid"
+          Width="28" Height="28"
+          IsVisible="{Binding IsTaskRunning}"
+          HorizontalAlignment="Right" VerticalAlignment="Top"
+          Margin="0,13,13,0"
+          Cursor="Hand"
+          ToolTip.Tip="点击取消任务"
+          Background="Transparent"
+          PointerPressed="OnCancelTaskPointerPressed">
+      <!-- 轨道背景圆圈（不拦截点击） -->
+      <Ellipse Stroke="#3319c8b9" StrokeThickness="1"
+               Width="20" Height="20"
+               HorizontalAlignment="Center" VerticalAlignment="Center"
+               IsHitTestVisible="False" />
+      <!-- 旋转圆点（不拦截点击） -->
+      <Ellipse x:Name="RingDot" Fill="#FF19c8b9"
+               Width="4" Height="4"
+               HorizontalAlignment="Center" VerticalAlignment="Center"
+               IsHitTestVisible="False" />
+    </Grid>
+
+    <!-- 宠物主体 -->
+    <Border x:Name="PetBody"
+            Width="100" Height="100"
+            CornerRadius="50"
+            Background="Transparent"
+            HorizontalAlignment="Center"
+            VerticalAlignment="Center"
+            PointerPressed="OnPetPointerPressed"
+            ContextRequested="OnPetContextRequested">
+      <controls:SpritesheetView x:Name="PetSprite"
+                                Spritesheet="{Binding SpritesheetPath}"
+                                CurrentRow="{Binding AnimCurrentRow}"
+                                FrameWidth="{Binding AnimFrameWidth}"
+                                FrameHeight="{Binding AnimFrameHeight}"
+                                Columns="{Binding AnimColumns}"
+                                Width="80" Height="80"
+                                HorizontalAlignment="Center"
+                                VerticalAlignment="Center" />
+    </Border>
+  </Grid>
+</Window>

@@ -1,0 +1,214 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             x:Class="yopet.Views.SettingsPage"
+             x:CompileBindings="False">
+  <StackPanel Spacing="16" HorizontalAlignment="Center">
+    <TextBlock Text="⚙️ 设置"
+               FontSize="20"
+               FontWeight="Bold"
+               Foreground="{DynamicResource TextPrimary}"
+               HorizontalAlignment="Center" />
+
+    <!-- Module 1: 主题设置（默认展开） -->
+    <Expander IsExpanded="True" Width="340">
+      <Expander.Header>
+        <TextBlock Text="🎨 主题设置"
+                   FontSize="14"
+                   FontWeight="SemiBold"
+                   Foreground="{DynamicResource TextPrimary}" />
+      </Expander.Header>
+      <StackPanel Spacing="10" HorizontalAlignment="Center" Margin="0,10,0,0">
+        <Grid ColumnDefinitions="*,Auto" Width="280">
+          <TextBlock Text="深色模式"
+                     Foreground="{DynamicResource TextTertiary}"
+                     VerticalAlignment="Center"
+                     FontSize="13" />
+          <ToggleSwitch Grid.Column="1"
+                        IsChecked="{Binding IsDarkTheme}"
+                        OffContent="☀️"
+                        OnContent="🌙" />
+        </Grid>
+      </StackPanel>
+    </Expander>
+
+    <!-- Module 2: 启动设置（默认展开） -->
+    <Expander IsExpanded="True" Width="340">
+      <Expander.Header>
+        <TextBlock Text="🚀 启动设置"
+                   FontSize="14"
+                   FontWeight="SemiBold"
+                   Foreground="{DynamicResource TextPrimary}" />
+      </Expander.Header>
+      <StackPanel Spacing="10" HorizontalAlignment="Center" Margin="0,10,0,0">
+        <Grid ColumnDefinitions="*,Auto" Width="280">
+          <TextBlock Text="开机自启动"
+                     Foreground="{DynamicResource TextTertiary}"
+                     VerticalAlignment="Center"
+                     FontSize="13" />
+          <ToggleSwitch Grid.Column="1"
+                        x:Name="AutoStartToggle"
+                        IsChecked="{Binding Config.EnableAutoStart}"
+                        OffContent="❌"
+                        OnContent="✅" />
+        </Grid>
+      </StackPanel>
+    </Expander>
+
+    <!-- Module 3: 窗口设置（默认展开） -->
+    <Expander IsExpanded="True" Width="340">
+      <Expander.Header>
+        <TextBlock Text="📐 窗口设置"
+                   FontSize="14"
+                   FontWeight="SemiBold"
+                   Foreground="{DynamicResource TextPrimary}" />
+      </Expander.Header>
+      <Grid ColumnDefinitions="70,*" RowDefinitions="Auto,Auto" RowSpacing="10" Width="280" Margin="0,10,0,0">
+        <TextBlock Text="宽度:"
+                   Foreground="{DynamicResource TextTertiary}"
+                   VerticalAlignment="Center" />
+        <TextBox Grid.Column="1"
+                 Text="{Binding Config.WindowWidth}"
+                 PlaceholderText="420"
+                 Foreground="{DynamicResource TextPrimary}"
+                 Background="{DynamicResource BgPage}"
+                 BorderBrush="{DynamicResource BorderColor}"
+                 CornerRadius="8" />
+
+        <TextBlock Grid.Row="1" Text="高度:"
+                   Foreground="{DynamicResource TextTertiary}"
+                   VerticalAlignment="Center" />
+        <TextBox Grid.Row="1" Grid.Column="1"
+                 Text="{Binding Config.WindowHeight}"
+                 PlaceholderText="768"
+                 Foreground="{DynamicResource TextPrimary}"
+                 Background="{DynamicResource BgPage}"
+                 BorderBrush="{DynamicResource BorderColor}"
+                 CornerRadius="8" />
+      </Grid>
+    </Expander>
+
+    <!-- 插件管理 -->
+    <Expander IsExpanded="True" Width="340">
+      <Expander.Header>
+        <TextBlock Text="🧩 插件管理"
+                   FontSize="14"
+                   FontWeight="SemiBold"
+                   Foreground="{DynamicResource TextPrimary}" />
+      </Expander.Header>
+      <StackPanel Spacing="6" Margin="0,10,0,0" Width="280">
+        <TextBlock Text="{Binding LoadedPlugins.Count, StringFormat={}{0} 个插件已加载}"
+                   FontSize="12"
+                   Foreground="{DynamicResource TextTertiary}" />
+        <ItemsControl ItemsSource="{Binding LoadedPlugins}"
+                      x:CompileBindings="False">
+          <ItemsControl.ItemTemplate>
+            <DataTemplate>
+              <Border CornerRadius="8" Background="{DynamicResource BgPage}" Padding="10,6" Margin="0,0,0,4">
+                <Grid ColumnDefinitions="Auto,*">
+                  <TextBlock Text="🧩" FontSize="16" VerticalAlignment="Center" />
+                  <StackPanel Grid.Column="1" Margin="8,0,0,0">
+                    <TextBlock Text="{Binding Name}"
+                               FontSize="12" FontWeight="SemiBold" Foreground="{DynamicResource TextPrimary}" />
+                    <TextBlock Text="{Binding Description}"
+                               FontSize="10" Foreground="{DynamicResource TextMuted}" />
+                  </StackPanel>
+                </Grid>
+              </Border>
+            </DataTemplate>
+          </ItemsControl.ItemTemplate>
+        </ItemsControl>
+      </StackPanel>
+    </Expander>
+
+    <!-- 宠物设置（默认折叠） -->
+    <Expander IsExpanded="False" Width="340">
+      <Expander.Header>
+        <TextBlock Text="🐱 宠物设置"
+                   FontSize="14"
+                   FontWeight="SemiBold"
+                   Foreground="{DynamicResource TextPrimary}" />
+      </Expander.Header>
+      <StackPanel Spacing="10" Margin="0,10,0,0">
+        <Grid ColumnDefinitions="70,*" Width="280">
+          <TextBlock Text="名字:"
+                     Foreground="{DynamicResource TextTertiary}"
+                     VerticalAlignment="Center" />
+          <TextBox Grid.Column="1"
+                   Text="{Binding Config.PetName}"
+                   PlaceholderText="小宠"
+                   Foreground="{DynamicResource TextPrimary}"
+                   Background="{DynamicResource BgPage}"
+                   BorderBrush="{DynamicResource BorderColor}"
+                   CornerRadius="8" />
+        </Grid>
+
+        <Grid ColumnDefinitions="70,*,Auto" Width="280">
+          <TextBlock Text="动画速度"
+                     Foreground="{DynamicResource TextTertiary}"
+                     VerticalAlignment="Center" />
+          <Slider Grid.Column="1"
+                  Minimum="30" Maximum="300"
+                  Value="{Binding AnimSpeed, Mode=TwoWay}"
+                  IsSnapToTickEnabled="True"
+                  TickFrequency="10"
+                  Margin="8,0" />
+          <TextBlock Grid.Column="2"
+                     Text="{Binding AnimSpeed, StringFormat={}{0:0}ms}"
+                     FontSize="12"
+                     Foreground="{DynamicResource TextMuted}"
+                     VerticalAlignment="Center" />
+        </Grid>
+      </StackPanel>
+    </Expander>
+
+    <!-- Module 4: 宠物动作管理（默认折叠） -->
+    <Expander IsExpanded="False" Width="340">
+      <Expander.Header>
+        <TextBlock Text="🎮 宠物动作（可配置）"
+                   FontSize="14"
+                   FontWeight="SemiBold"
+                   Foreground="{DynamicResource TextPrimary}" />
+      </Expander.Header>
+      <ItemsControl ItemsSource="{Binding Config.PetActions}"
+                    x:CompileBindings="False"
+                    Margin="0,10,0,0">
+        <ItemsControl.ItemTemplate>
+          <DataTemplate>
+            <Border CornerRadius="10" Background="{DynamicResource BgPage}" Padding="12" Margin="0,0,0,6">
+              <Grid ColumnDefinitions="Auto,*,Auto">
+                <TextBlock Text="{Binding Emoji}" FontSize="22" VerticalAlignment="Center" />
+                <StackPanel Grid.Column="1" Margin="10,0,0,0">
+                  <TextBlock Text="{Binding Name}" FontSize="13" FontWeight="SemiBold" Foreground="{DynamicResource TextPrimary}" />
+                  <TextBlock Text="{Binding Description}" FontSize="11" Foreground="{DynamicResource TextMuted}" />
+                </StackPanel>
+                <TextBlock Grid.Column="2"
+                           Text="{Binding Reaction}"
+                           FontSize="18"
+                           VerticalAlignment="Center" />
+              </Grid>
+            </Border>
+          </DataTemplate>
+        </ItemsControl.ItemTemplate>
+      </ItemsControl>
+    </Expander>
+
+    <!-- 保存按钮 -->
+    <Button Content="💾 保存设置"
+            Command="{Binding SaveConfigCommand}"
+            Width="340" Height="42"
+            CornerRadius="12"
+            Background="{DynamicResource AccentPrimary}"
+            BorderThickness="0"
+            FontSize="14"
+            FontWeight="SemiBold"
+            Foreground="{DynamicResource TextPrimary}"
+            Cursor="Hand"
+            HorizontalContentAlignment="Center" />
+
+    <TextBlock Text="v1.0.0 · 用 ❤️ 和 Avalonia 构建"
+               FontSize="11"
+               Foreground="{DynamicResource TextFaint}"
+               HorizontalAlignment="Center"
+               Margin="0,4,0,0" />
+  </StackPanel>
+</UserControl>
