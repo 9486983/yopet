@@ -1,0 +1,141 @@
+<Application xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             x:Class="yopet.App"
+             RequestedThemeVariant="Dark">
+
+  <Application.Styles>
+    <FluentTheme />
+
+    <!-- ================================================================
+         animal-island-ui 全局组件样式
+         暖羊皮纸底色 · pill 胶囊圆角 · 3D 游戏按钮阴影
+         Nintendo 按键反馈 · #ffcc00 金黄焦点
+         ================================================================ -->
+
+    <!-- ── Button: 3D 游戏按钮（Nintendo 风格） ── -->
+    <Style Selector="Button">
+      <Setter Property="CornerRadius" Value="50" />
+      <Setter Property="FontWeight" Value="700" />
+      <Setter Property="FontSize" Value="14" />
+      <Setter Property="Padding" Value="24,0" />
+      <Setter Property="Height" Value="42" />
+      <Setter Property="Background" Value="{DynamicResource AccentPrimary}" />
+      <Setter Property="Foreground" Value="White" />
+      <Setter Property="BorderThickness" Value="0,0,0,5" />
+      <Setter Property="BorderBrush" Value="{DynamicResource Shadow3D}" />
+      <Setter Property="Cursor" Value="Hand" />
+      <Setter Property="HorizontalContentAlignment" Value="Center" />
+      <Setter Property="VerticalContentAlignment" Value="Center" />
+    </Style>
+    <Style Selector="Button:pointerover">
+      <Setter Property="Background" Value="{DynamicResource AccentHover}" />
+      <Setter Property="BorderThickness" Value="0,0,0,6" />
+    </Style>
+    <Style Selector="Button:pressed">
+      <Setter Property="Background" Value="{DynamicResource AccentPress}" />
+      <Setter Property="BorderThickness" Value="0,0,0,1" />
+    </Style>
+    <Style Selector="Button:disabled">
+      <Setter Property="Opacity" Value="0.5" />
+      <Setter Property="BorderThickness" Value="0,0,0,2" />
+    </Style>
+
+    <!-- ── Button.flat: 扁平按钮（标题栏 / 对话框关闭等） ── -->
+    <Style Selector="Button.flat">
+      <Setter Property="Background" Value="Transparent" />
+      <Setter Property="BorderThickness" Value="0" />
+      <Setter Property="Height" Value="32" />
+      <Setter Property="Padding" Value="8,0" />
+      <Setter Property="CornerRadius" Value="0" />
+      <Setter Property="Foreground" Value="{DynamicResource TextPrimary}" />
+      <Setter Property="FontSize" Value="14" />
+      <Setter Property="HorizontalContentAlignment" Value="Center" />
+      <Setter Property="VerticalContentAlignment" Value="Center" />
+    </Style>
+    <Style Selector="Button.flat:pointerover">
+      <Setter Property="Background" Value="{DynamicResource BgHover}" />
+    </Style>
+    <Style Selector="Button.flat:pressed">
+      <Setter Property="Background" Value="{DynamicResource BgHover}" />
+      <Setter Property="Opacity" Value="0.8" />
+    </Style>
+
+    <!-- ── Button.nav: 底部导航按钮 ── -->
+    <Style Selector="Button.nav">
+      <Setter Property="Background" Value="Transparent" />
+      <Setter Property="BorderThickness" Value="0" />
+      <Setter Property="Height" Value="60" />
+      <Setter Property="Padding" Value="0" />
+      <Setter Property="CornerRadius" Value="0" />
+      <Setter Property="Foreground" Value="{DynamicResource TextPrimary}" />
+      <Setter Property="FontSize" Value="13" />
+    </Style>
+    <Style Selector="Button.nav:pointerover">
+      <Setter Property="Background" Value="{DynamicResource BgHover}" />
+    </Style>
+    <Style Selector="Button.nav:pressed">
+      <Setter Property="Background" Value="{DynamicResource BgHover}" />
+      <Setter Property="Opacity" Value="0.8" />
+    </Style>
+
+    <!-- ── TextBox: pill 胶囊输入框 + #ffcc00 焦点 ── -->
+    <Style Selector="TextBox">
+      <Setter Property="CornerRadius" Value="50" />
+      <Setter Property="Padding" Value="18,10" />
+      <Setter Property="FontSize" Value="13" />
+      <Setter Property="Height" Value="40" />
+      <Setter Property="BorderThickness" Value="2" />
+      <Setter Property="BorderBrush" Value="{DynamicResource BorderColor}" />
+      <Setter Property="Background" Value="{DynamicResource BgInput}" />
+      <Setter Property="Foreground" Value="{DynamicResource TextPrimary}" />
+    </Style>
+    <Style Selector="TextBox:focus">
+      <Setter Property="BorderBrush" Value="{DynamicResource FocusYellow}" />
+      <Setter Property="BorderThickness" Value="2.5" />
+    </Style>
+    <Style Selector="TextBox:pointerover">
+      <Setter Property="BorderBrush" Value="{DynamicResource AccentPrimary}" />
+    </Style>
+
+    <!-- ── ToggleSwitch: 游戏风格开关 ── -->
+    <Style Selector="ToggleSwitch">
+      <Setter Property="Background" Value="{DynamicResource BgCard}" />
+      <Setter Property="Foreground" Value="{DynamicResource TextPrimary}" />
+      <Setter Property="BorderBrush" Value="{DynamicResource BorderColor}" />
+      <Setter Property="BorderThickness" Value="1" />
+    </Style>
+    <Style Selector="ToggleSwitch:pointerover">
+      <Setter Property="BorderBrush" Value="{DynamicResource AccentPrimary}" />
+    </Style>
+
+    <!-- ── Slider: 暖色滑动条 ── -->
+    <Style Selector="Slider">
+      <Setter Property="Background" Value="{DynamicResource BorderColor}" />
+      <Setter Property="Foreground" Value="{DynamicResource AccentPrimary}" />
+      <Setter Property="BorderBrush" Value="Transparent" />
+    </Style>
+
+    <!-- ── Expander 面板 ── -->
+    <Style Selector="Expander">
+      <Setter Property="CornerRadius" Value="18" />
+      <Setter Property="BorderThickness" Value="0" />
+      <Setter Property="Padding" Value="0" />
+      <Setter Property="Background" Value="{DynamicResource BgCard}" />
+    </Style>
+    <Style Selector="Expander /template/ ToggleButton#ExpanderToggleButton">
+      <Setter Property="Background" Value="Transparent" />
+      <Setter Property="BorderThickness" Value="0" />
+      <Setter Property="Cursor" Value="Hand" />
+    </Style>
+
+    <!-- ── ScrollViewer ── -->
+    <Style Selector="ScrollViewer">
+      <Setter Property="Background" Value="Transparent" />
+    </Style>
+
+    <!-- ── Border.card ── -->
+    <Style Selector="Border.card">
+      <Setter Property="CornerRadius" Value="20" />
+    </Style>
+  </Application.Styles>
+</Application>

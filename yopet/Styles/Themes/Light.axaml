@@ -1,0 +1,52 @@
+<ResourceDictionary xmlns="https://github.com/avaloniaui"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+  <!-- ===== animal-island-ui 浅色主题 =====
+       暖羊皮纸底色 + 薄荷青绿强调色
+  -->
+
+  <!-- 页面/窗口背景 -->
+  <Color x:Key="BgPage">#F0ECE3</Color>
+  <Color x:Key="BgCard">#F7F3DF</Color>
+  <Color x:Key="BgNav">#E8E0D0</Color>
+  <Color x:Key="BgHover">#DED6C4</Color>
+  <Color x:Key="BgInput">#FFFFFF</Color>
+  <Color x:Key="BgOverlay">#CCF0ECE3</Color>
+
+  <!-- 文字（暖棕色） -->
+  <Color x:Key="TextPrimary">#794f27</Color>
+  <Color x:Key="TextSecondary">#725d42</Color>
+  <Color x:Key="TextTertiary">#9f927d</Color>
+  <Color x:Key="TextMuted">#8a7b66</Color>
+  <Color x:Key="TextFaint">#c4b89e</Color>
+
+  <!-- 边框 -->
+  <Color x:Key="BorderColor">#c4b89e</Color>
+
+  <!-- 强调色（薄荷青绿） -->
+  <Color x:Key="AccentPrimary">#19c8b9</Color>
+  <Color x:Key="AccentHover">#3dd4c6</Color>
+  <Color x:Key="AccentPress">#11a89b</Color>
+  <Color x:Key="AccentGrad1">#19c8b9</Color>
+  <Color x:Key="AccentGrad2">#41b8a8</Color>
+
+  <!-- NookPhone 卡片色板 -->
+  <Color x:Key="NookPink">#f8a6b2</Color>
+  <Color x:Key="NookPurple">#b77dee</Color>
+  <Color x:Key="NookBlue">#889df0</Color>
+  <Color x:Key="NookYellow">#f7cd67</Color>
+  <Color x:Key="NookOrange">#e59266</Color>
+  <Color x:Key="NookTeal">#82d5bb</Color>
+  <Color x:Key="NookGreen">#8ac68a</Color>
+  <Color x:Key="NookRed">#fc736d</Color>
+
+  <!-- 功能色 -->
+  <Color x:Key="Danger">#e05a5a</Color>
+  <Color x:Key="DangerHover">#c94444</Color>
+  <Color x:Key="Success">#6fba2c</Color>
+  <Color x:Key="Warning">#f5c31c</Color>
+  <Color x:Key="FocusYellow">#ffcc00</Color>
+
+  <!-- 3D 阴影色 -->
+  <Color x:Key="Shadow3D">#bdaea0</Color>
+  <Color x:Key="ShadowInput">#d4c9b4</Color>
+</ResourceDictionary>

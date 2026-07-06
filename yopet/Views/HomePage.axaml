@@ -1,0 +1,148 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             x:Class="yopet.Views.HomePage"
+             x:CompileBindings="False">
+  <StackPanel Spacing="16" HorizontalAlignment="Center">
+    <!-- Module 1: 欢迎卡片（默认展开） -->
+    <Expander IsExpanded="True" Width="340" CornerRadius="16" Padding="0">
+      <Expander.Background>
+        <LinearGradientBrush StartPoint="0%,0%" EndPoint="100%,100%">
+          <GradientStop Color="{DynamicResource AccentGrad1}" Offset="0" />
+          <GradientStop Color="{DynamicResource AccentGrad2}" Offset="1" />
+        </LinearGradientBrush>
+      </Expander.Background>
+      <Expander.Header>
+        <TextBlock Text="🌸 欢迎回来"
+                   FontSize="20"
+                   FontWeight="Bold"
+                   Foreground="{DynamicResource TextPrimary}" />
+      </Expander.Header>
+      <TextBlock Text="今天也是美好的一天 ~"
+                 FontSize="13"
+                 Foreground="#DDFFFFFF"
+                 HorizontalAlignment="Center"
+                 Margin="0,8,0,8" />
+    </Expander>
+
+    <!-- Module 2: 快捷工具（默认展开） -->
+    <Expander IsExpanded="True" Width="340">
+      <Expander.Header>
+        <TextBlock Text="📦 快捷工具"
+                   FontSize="15"
+                   FontWeight="SemiBold"
+                   Foreground="{DynamicResource TextPrimary}" />
+      </Expander.Header>
+      <WrapPanel HorizontalAlignment="Center" Margin="0,8,0,0">
+        <Border Width="156" Height="90"
+                CornerRadius="14"
+                Background="{DynamicResource BgPage}"
+                Padding="14"
+                Margin="0,0,8,8"
+                Cursor="Hand">
+          <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center" Spacing="6">
+            <TextBlock Text="📝" FontSize="24" HorizontalAlignment="Center" />
+            <TextBlock Text="随手记"
+                       FontSize="13"
+                       FontWeight="SemiBold"
+                       Foreground="{DynamicResource TextPrimary}"
+                       HorizontalAlignment="Center" />
+            <TextBlock Text="快速记录灵感"
+                       FontSize="10"
+                       Foreground="{DynamicResource TextMuted}"
+                       HorizontalAlignment="Center" />
+          </StackPanel>
+        </Border>
+
+        <Border Width="156" Height="90"
+                CornerRadius="14"
+                Background="{DynamicResource BgPage}"
+                Padding="14"
+                Margin="0,0,0,8"
+                Cursor="Hand">
+          <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center" Spacing="6">
+            <TextBlock Text="🔍" FontSize="24" HorizontalAlignment="Center" />
+            <TextBlock Text="搜索"
+                       FontSize="13"
+                       FontWeight="SemiBold"
+                       Foreground="{DynamicResource TextPrimary}"
+                       HorizontalAlignment="Center" />
+            <TextBlock Text="查找内容"
+                       FontSize="10"
+                       Foreground="{DynamicResource TextMuted}"
+                       HorizontalAlignment="Center" />
+          </StackPanel>
+        </Border>
+
+        <Border Width="156" Height="90"
+                CornerRadius="14"
+                Background="{DynamicResource BgPage}"
+                Padding="14"
+                Margin="0,0,8,0"
+                Cursor="Hand">
+          <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center" Spacing="6">
+            <TextBlock Text="📊" FontSize="24" HorizontalAlignment="Center" />
+            <TextBlock Text="统计"
+                       FontSize="13"
+                       FontWeight="SemiBold"
+                       Foreground="{DynamicResource TextPrimary}"
+                       HorizontalAlignment="Center" />
+            <TextBlock Text="查看数据"
+                       FontSize="10"
+                       Foreground="{DynamicResource TextMuted}"
+                       HorizontalAlignment="Center" />
+          </StackPanel>
+        </Border>
+
+        <Border Width="156" Height="90"
+                CornerRadius="14"
+                Background="{DynamicResource BgPage}"
+                Padding="14"
+                Margin="0,0,0,0"
+                Cursor="Hand">
+          <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center" Spacing="6">
+            <TextBlock Text="🎨" FontSize="24" HorizontalAlignment="Center" />
+            <TextBlock Text="主题"
+                       FontSize="13"
+                       FontWeight="SemiBold"
+                       Foreground="{DynamicResource TextPrimary}"
+                       HorizontalAlignment="Center" />
+            <TextBlock Text="切换样式"
+                       FontSize="10"
+                       Foreground="{DynamicResource TextMuted}"
+                       HorizontalAlignment="Center" />
+          </StackPanel>
+        </Border>
+      </WrapPanel>
+    </Expander>
+
+    <!-- Module 3: 宠物状态（默认折叠） -->
+    <Expander IsExpanded="False" Width="340">
+      <Expander.Header>
+        <TextBlock Text="🐱 宠物状态"
+                   FontSize="15"
+                   FontWeight="SemiBold"
+                   Foreground="{DynamicResource TextPrimary}" />
+      </Expander.Header>
+      <Border CornerRadius="14" Background="{DynamicResource BgPage}" Padding="16" Margin="0,8,0,0">
+        <Grid ColumnDefinitions="Auto,*">
+          <Border CornerRadius="12" Background="{DynamicResource BgPage}" Width="56" Height="56" BorderThickness="0">
+            <TextBlock Text="🎮"
+                       FontSize="28"
+                       HorizontalAlignment="Center"
+                       VerticalAlignment="Center" />
+          </Border>
+          <StackPanel Grid.Column="1" Margin="12,0,0,0"
+                      VerticalAlignment="Center" Spacing="2">
+            <TextBlock Text="{Binding Config.PetName}"
+                       FontSize="14"
+                       FontWeight="SemiBold"
+                       Foreground="{DynamicResource TextPrimary}" />
+            <TextBlock Text="双击宠物打开图鉴切换"
+                       FontSize="11"
+                       Foreground="{DynamicResource TextMuted}" />
+          </StackPanel>
+        </Grid>
+      </Border>
+    </Expander>
+  </StackPanel>
+</UserControl>

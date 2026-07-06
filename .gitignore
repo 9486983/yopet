@@ -1,0 +1,39 @@
+## .NET
+bin/
+obj/
+*.user
+*.suo
+*.sln.docstates
+.vs/
+
+## Avalonia
+*.userprefs
+
+## SkiaSharp
+*.png
+*.webp
+
+## IDE
+.idea/
+*.swp
+*.swo
+*~
+*.bak
+
+## OS
+Thumbs.db
+.DS_Store
+
+## Build
+packages/
+*.nupkg
+
+## Config (user-specific)
+appsettings.Development.json
+
+## Claude
+.claude/
+
+## Plugin build output (DLLs copied to app output)
+MyPersonalTool/bin/Debug/**/plugins/*.dll
+MyPersonalTool/bin/Release/**/plugins/*.dll
