@@ -27,9 +27,8 @@
 | 用眼 | 25 分钟 | "看看窗外吧～一直盯着屏幕，眼睛会变成熊猫眼的🐼" |
 | 喝水 | 40 分钟 | "喝水时间到！你的身体正在喊「我好渴啊～」💧" |
 
-- 锁屏自动重置计时器（`SystemEvents.SessionSwitch`）
 - 跨天自动重置
-- 间隔通过设置页滑块自定义（15~120 分钟）
+- 间隔通过插件设置自定义（15~120 分钟）
 
 ### 🪟 窗口特性
 | 特性 | 实现方式 |
@@ -52,18 +51,18 @@
 | 📁 **FileUtilityPlugin** | 文件详情、MD5 哈希、ZIP 压缩、资源管理器定位、记事本打开、复制路径 |
 | 🧘 **HealthReminder** | 久坐/用眼/喝水定时提醒（现已实现为插件） |
 | 🐍 **PythonScriptPlugin** | 拖入 .py 文件挂载脚本，支持运行/编辑/删除/Cron 定时执行 |
-| 🌐 **WebAnalyzerPlugin** | 抓取网页内容，通过 AI 生成结构化 Markdown 分析报告 |
 | 🖼️ **SessionDemoPlugin** | 会话工作流示例：拖入文件夹启动会话，再拖图片自动整理 |
+| ⚙️ **SettingPlugin** | 设置中心 —— 开机自启（跨平台）、动画速度、深色模式、插件列表 |
 
-### ⚙️ 设置页功能
-| 模块 | 内容 |
-|------|------|
-| 🎨 主题设置 | 深色模式开关 |
-| 🚀 启动设置 | 开机自启动 |
-| 📐 窗口设置 | 宽度/高度 |
-| 🧘 健康提醒 | 启用/关闭 + 三个间隔滑块 |
-| 🐱 宠物设置 | 名字 + 动画速度滑块 |
-| 🎮 宠物动作 | 动作列表展示 |
+### ⚙️ 设置功能（SettingPlugin）
+原设置窗口已移除，设置功能现由 **SettingPlugin** 提供（右键宠物 → ⚙️ 设置）：
+
+| 设置项 | 实现 |
+|--------|------|
+| 🚀 开机自启 | 跨平台（Windows 注册表 / macOS LaunchAgents / Linux autostart） |
+| 🐱 动画速度 | 30–300 ms/帧 滑块 |
+| 🎨 深色模式 | 主题切换 |
+| 🧩 插件列表 | 浏览已加载插件 |
 
 ---
 
@@ -80,18 +79,15 @@ yopet.sln
 │   ├── PetdexService.cs          Petdex 宠物扫描/加载
 │   ├── ActivityMonitor.cs        AI 事件监控
 │   ├── PluginLoader.cs           插件发现与加载
-│   ├── PluginHostImpl.cs         插件宿主实现
-│   ├── CronSchedulerService.cs   Cron 定时任务引擎
-│   └── HealthReminderService.cs  内建健康提醒
+│   ├── PluginHostImpl.cs         插件宿主实现（含宿主设置 API）
+│   └── CronSchedulerService.cs   Cron 定时任务引擎
 ├── yopet.ViewModels/     MVVM ViewModel 层
-│   ├── MainViewModel.cs          主窗口逻辑
 │   └── PetViewModel.cs           宠物逻辑 + 交互
 └── yopet/                Avalonia 应用层
     ├── App.axaml/.cs             应用入口 + DI 容器
-    ├── MainWindow.axaml/.cs      设置窗口（竖屏）
     ├── PetWindow.axaml/.cs       宠物悬浮窗（透明置顶）
     ├── Controls/                 自定义控件（SpritesheetView）
-    ├── Views/                    视图页面（Home、Settings、Petdex）
+    ├── Views/                    对话框页面（Petdex、插件配置等）
     └── Styles/Themes/            深色 & 浅色主题
 ```
 
@@ -107,8 +103,7 @@ yopet.sln
 | Avalonia | 12.0.3 (FluentTheme) |
 | CommunityToolkit.Mvvm | 8.4.0（源生成器） |
 | SkiaSharp | 3.119.4-preview.1.1 |
-| Microsoft.Win32.SystemEvents | 9.0.0（锁屏检测） |
-| 目标平台 | Windows (x64) |
+| 目标平台 | Windows (x64) · macOS (osx-x64/osx-arm64) · Linux |
 
 ---
 
@@ -187,14 +182,7 @@ npx petdex install boba
   "PetWindowY": 100,
   "IsDarkTheme": true,
   "EnableAutoStart": false,
-  "AnimFrameDurationMs": 100.0,
-  "HealthReminder": {
-    "Enabled": true,
-    "SitIntervalMinutes": 55,
-    "EyeIntervalMinutes": 25,
-    "DrinkIntervalMinutes": 40
-  },
-  "PetActions": [...]
+  "AnimFrameDurationMs": 100.0
 }
 ```
 
@@ -216,7 +204,7 @@ npx petdex install boba
 |------|------|
 | 单击宠物 | 宠物挥手回应，切换到 waving 动画行 |
 | 双击宠物 | 打开宠物图鉴 |
-| 右键宠物 | 打开动作菜单（切换宠物 / 喂食/玩耍/摸摸 / 打开设置 / 退出） |
+| 右键宠物 | 打开动作菜单（切换宠物 / 插件动作 / 设置 / 退出） |
 | 拖动宠物 | 任意位置拖动宠物窗口 |
 | Enter (图鉴输入框) | 执行 `npx petdex install` |
 | 🔄 (图鉴) | 刷新宠物列表 |

@@ -13,7 +13,6 @@ namespace yopet;
 
 public partial class App : Application
 {
-    public static Window? SettingsWindow { get; private set; }
     public static PetViewModel? PetViewModel { get; private set; }
 
     private ServiceProvider? _serviceProvider;
@@ -41,8 +40,6 @@ public partial class App : Application
             services.AddSingleton<PluginLoader>();
 
             // ViewModels（Singleton）
-            services.AddSingleton<MainViewModel>();
-
             _serviceProvider = services.BuildServiceProvider();
 
             // ── 从容器解析服务 ──
@@ -66,11 +63,6 @@ public partial class App : Application
 
             // ── 启动定时任务调度器 ──
             pluginHost.SchedulerService.Start();
-
-            // ── 主设置窗口（MainViewModel 由 DI 构建，自动注入 PluginLoader） ──
-            var mainVm = _serviceProvider.GetRequiredService<MainViewModel>();
-            var mainWindow = new MainWindow { DataContext = mainVm };
-            SettingsWindow = mainWindow;
 
             // ── 宠物窗口 ──
             var petVm = new PetViewModel(configService, dispatcher, petdexService,

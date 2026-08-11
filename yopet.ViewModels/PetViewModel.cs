@@ -71,13 +71,8 @@ public partial class PetViewModel : ObservableObject
     /// <summary>已安装的 Petdex 宠物列表</summary>
     public List<PetDefinition> PetdexPets { get; private set; } = [];
 
-    /// <summary>默认交互动作（右键菜单用）</summary>
-    public List<PetActionConfig> Actions { get; } =
-    [
-        new() { Name = "喂食", Emoji = "🍔", Reaction = "😋", Description = "喂好吃的" },
-        new() { Name = "玩耍", Emoji = "🎮", Reaction = "🎉", Description = "一起玩" },
-        new() { Name = "摸摸", Emoji = "❤️", Reaction = "🥰", Description = "轻轻抚摸" },
-    ];
+    /// <summary>交互动作（右键菜单用，由插件注册）</summary>
+    public List<PetActionConfig> Actions { get; } = [];
 
     /// <summary>文件拖放动作（径向菜单用）</summary>
     public List<FileActionConfig> FileActions => _fileActions;

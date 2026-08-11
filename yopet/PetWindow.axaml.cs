@@ -257,18 +257,6 @@ public partial class PetWindow : Window
         }
         menu.Items.Add(new Separator());
 
-        var settingsItem = new MenuItem
-        {
-            Header = "⚙️ 打开设置", FontSize = 13, Foreground = ThemeBrush("TextPrimary"),
-        };
-        settingsItem.Click += (_, _) =>
-        {
-            var w = App.SettingsWindow;
-            if (w != null) { w.Show(); w.WindowState = WindowState.Normal; w.Activate(); }
-        };
-        menu.Items.Add(settingsItem);
-        menu.Items.Add(new Separator());
-
         var closeItem = new MenuItem
         {
             Header = "✕ 关闭宠物", FontSize = 13,
@@ -456,7 +444,9 @@ public partial class PetWindow : Window
             Header = $"{a.Emoji} {a.Name}",
             FontSize = 13, Foreground = ThemeBrush("TextPrimary"),
         };
-        ToolTip.SetTip(item, a.Description);
+        // 仅在有描述内容时设置 tooltip，避免悬浮显示空白提示框
+        if (!string.IsNullOrWhiteSpace(a.Description))
+            ToolTip.SetTip(item, a.Description);
         var cap = a;
         item.Click += (_, _) => _vm?.PerformActionCommand.Execute(cap);
         return item;

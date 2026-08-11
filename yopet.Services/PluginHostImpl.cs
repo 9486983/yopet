@@ -81,9 +81,10 @@ public class PluginHostImpl : IPluginHost
     /// <summary>日志输出</summary>
     public event Action<string>? LogEmitted;
 
-    public PluginHostImpl(IConfigService config, LoggerService? logger = null, CronSchedulerService? scheduler = null)
+    public PluginHostImpl(IConfigService config, LoggerService? logger = null, CronSchedulerService? scheduler = null, PluginLoader? pluginLoader = null)
     {
         _config = config;
+        _pluginLoader = pluginLoader;
         _loggerService = logger ?? new LoggerService(
             Path.Combine(AppDomain.CurrentDomain.BaseDirectory, ".yopet", "logs"));
         _schedulerService = scheduler ?? new CronSchedulerService();
@@ -317,4 +318,34 @@ public class PluginHostImpl : IPluginHost
         System.Diagnostics.Debug.WriteLine($"[Plugin] {message}");
         LogEmitted?.Invoke(message);
     }
+
+    // ── 宿主设置（供设置类插件使用） ──
+
+    private readonly PluginLoader? _pluginLoader;
+
+    public double GetAnimationSpeedMs() => _config.Config.AnimFrameDurationMs;
+
+    public void SetAnimationSpeedMs(double ms)
+    {
+        _config.Config.AnimFrameDurationMs = Math.Clamp(ms, 30, 300);
+        _config.Save();
+        PetEvents.NotifyConfigSaved();
+    }
+
+    public bool GetDarkTheme() => _config.Config.IsDarkTheme;
+
+    public void SetDarkTheme(bool isDark)
+    {
+        _config.Config.IsDarkTheme = isDark;
+        _config.Save();
+        PetEvents.NotifyThemeChanged(isDark);
+    }
+
+    public IReadOnlyList<PluginInfo> LoadedPlugins =>
+        _pluginLoader?.Plugins.Select(p => new PluginInfo
+        {
+            Name = p.Name,
+            Version = p.Version,
+            Description = p.Description,
+        }).ToList() ?? new List<PluginInfo>();
 }

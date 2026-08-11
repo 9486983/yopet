@@ -580,7 +580,6 @@ The project includes several plugins for reference:
 | `plugins/DeepSeekPlugin/` | Scheduled tasks, HTTP calls, config persistence, message queue |
 | `plugins/FileUtilityPlugin/` | Radial menu, file operations, RunWithAnimation |
 | `plugins/PythonScriptPlugin/` | List dialog (with dropdown actions), config groups, scheduled tasks, input dialog |
-| `plugins/WebAnalyzerPlugin/` | Input dialog, confirm dialog, file save, API calls |
 | `plugins/SessionDemoPlugin/` | Complete session workflow example |
 | `plugins/AgentHooksPlugin/` | Dynamic config toggles, list dialog data refresh, multi-Provider management |
 | `plugins/HealthReminder/` | Scheduled tasks, config listening, randomized messages |

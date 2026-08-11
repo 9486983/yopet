@@ -1,9 +1,10 @@
+using yopet.Core.Models;
+
 namespace yopet.Sdk;
 
 /// <summary>插件宿主接口 —— 插件通过此接口与主程序交互</summary>
 public interface IPluginHost
-{
-    // ── 日志（独立对象，所有日志方法放这里） ──
+{    // ── 日志（独立对象，所有日志方法放这里） ──
     IPluginLogger Logger { get; }
 
     // ── 定时任务（独立对象，所有调度方法放这里） ──
@@ -81,4 +82,21 @@ public interface IPluginHost
 
     /// <summary>输出日志（兼容旧版）</summary>
     void Log(string message);
+
+    // ── 宿主设置（供设置类插件使用） ──
+
+    /// <summary>获取当前宠物动画速度（ms/帧）</summary>
+    double GetAnimationSpeedMs();
+
+    /// <summary>设置宠物动画速度（ms/帧），立即生效并持久化</summary>
+    void SetAnimationSpeedMs(double ms);
+
+    /// <summary>获取当前是否深色主题</summary>
+    bool GetDarkTheme();
+
+    /// <summary>设置深色/浅色主题，立即生效并持久化</summary>
+    void SetDarkTheme(bool isDark);
+
+    /// <summary>已加载的插件信息列表（只读展示用）</summary>
+    IReadOnlyList<PluginInfo> LoadedPlugins { get; }
 }

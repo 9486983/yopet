@@ -27,9 +27,8 @@ A Windows desktop pet companion app built with **Avalonia UI** (.NET 9). Your pe
 | Eye Strain | 25 min | "Look out the window～staring at the screen too long turns you into a panda 🐼" |
 | Hydration | 40 min | "Time to hydrate! Your body is shouting 'I'm thirsty～' 💧" |
 
-- Lock screen auto-resets all timers (`SystemEvents.SessionSwitch`)
 - Cross-day auto-reset
-- Custom intervals via settings (15–120 min)
+- Custom intervals via plugin settings (15–120 min)
 
 ### 🪟 Window Features
 | Feature | Implementation |
@@ -52,18 +51,18 @@ Hot-loadable plugin system with a rich SDK. Plugins are loaded from `plugins/` d
 | 📁 **FileUtilityPlugin** | File details, MD5 hash, ZIP compression, open in explorer/notepad, copy path |
 | 🧘 **HealthReminder** | Sitting/eye/drink reminders with configurable intervals (now implemented as a plugin) |
 | 🐍 **PythonScriptPlugin** | Mount `.py` scripts by drag-and-drop, run/edit/delete/cron-schedule them |
-| 🌐 **WebAnalyzerPlugin** | Fetch web page content and generate structured Markdown reports via AI |
 | 🖼️ **SessionDemoPlugin** | Demo of session workflow — drag a folder, then drag images for auto-collection |
+| ⚙️ **SettingPlugin** | Settings hub — auto-start (cross-platform), pet animation speed, dark mode, plugin list |
 
-### ⚙️ Settings Page
-| Section | Features |
-|---------|----------|
-| 🎨 Theme | Dark mode toggle |
-| 🚀 Startup | Auto-start on boot |
-| 📐 Window | Width/height configuration |
-| 🧘 Health | Enable/disable + 3 interval sliders |
-| 🐱 Pet | Pet name + animation speed |
-| 🎮 Actions | Action list display |
+### ⚙️ Settings (SettingPlugin)
+The legacy settings window was removed — settings now live in the **SettingPlugin** (right-click pet → ⚙️ Settings):
+
+| Setting | Implementation |
+|---------|----------------|
+| 🚀 Auto-start | Cross-platform (Windows registry / macOS LaunchAgents / Linux autostart) |
+| 🐱 Animation speed | 30–300 ms/frame slider |
+| 🎨 Dark mode | Theme toggle |
+| 🧩 Plugin list | Browse loaded plugins |
 
 ---
 
@@ -80,18 +79,15 @@ yopet.sln
 │   ├── PetdexService.cs          Petdex scanning/loading
 │   ├── ActivityMonitor.cs        AI event monitoring
 │   ├── PluginLoader.cs           Plugin discovery & loading
-│   ├── PluginHostImpl.cs         Plugin host implementation
-│   ├── CronSchedulerService.cs   Cron/scheduled task engine
-│   └── HealthReminderService.cs  Built-in health reminders
+│   ├── PluginHostImpl.cs         Plugin host implementation (incl. host settings API)
+│   └── CronSchedulerService.cs   Cron/scheduled task engine
 ├── yopet.ViewModels/     MVVM ViewModels
-│   ├── MainViewModel.cs          Main window logic
 │   └── PetViewModel.cs           Pet logic + interaction
 └── yopet/                Avalonia UI layer
     ├── App.axaml/.cs             App entry + DI container
-    ├── MainWindow.axaml/.cs      Settings window (portrait)
     ├── PetWindow.axaml/.cs       Pet overlay window (transparent, always-on-top)
     ├── Controls/                 Custom controls (SpritesheetView)
-    ├── Views/                    Dialog pages (Home, Settings, Petdex)
+    ├── Views/                    Dialog pages (Petdex, plugin config, etc.)
     └── Styles/Themes/            Dark & Light themes
 ```
 
@@ -107,8 +103,7 @@ yopet.sln
 | Avalonia | 12.0.3 (FluentTheme) |
 | CommunityToolkit.Mvvm | 8.4.0 (source generators) |
 | SkiaSharp | 3.119.4-preview.1.1 |
-| Microsoft.Win32.SystemEvents | 9.0.0 (lock screen detection) |
-| Target Platform | Windows (x64) |
+| Target Platform | Windows (x64) · macOS (osx-x64/osx-arm64) · Linux |
 
 ---
 
@@ -187,14 +182,7 @@ npx petdex install boba
   "PetWindowY": 100,
   "IsDarkTheme": true,
   "EnableAutoStart": false,
-  "AnimFrameDurationMs": 100.0,
-  "HealthReminder": {
-    "Enabled": true,
-    "SitIntervalMinutes": 55,
-    "EyeIntervalMinutes": 25,
-    "DrinkIntervalMinutes": 40
-  },
-  "PetActions": [...]
+  "AnimFrameDurationMs": 100.0
 }
 ```
 
@@ -216,7 +204,7 @@ npx petdex install boba
 |--------|--------|
 | Click pet | Pet waves back (switches to waving animation row) |
 | Double-click pet | Opens petdex dialog |
-| Right-click pet | Opens action menu (switch pet / feed/play/pet / settings / exit) |
+| Right-click pet | Opens action menu (switch pet / plugin actions / settings / exit) |
 | Drag pet | Drag the pet window anywhere |
 | Enter (petdex input) | Executes `npx petdex install` |
 | 🔄 (petdex) | Refresh pet list |

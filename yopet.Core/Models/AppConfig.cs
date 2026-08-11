@@ -12,8 +12,6 @@ public class AppConfig
     public bool IsDarkTheme { get; set; } = true;
     public bool EnableAutoStart { get; set; }
     public double AnimFrameDurationMs { get; set; } = 100.0;
-    public HealthReminderConfig HealthReminder { get; set; } = new();
-    public List<PetActionConfig> PetActions { get; set; } = new();
 
     /// <summary>插件自定义配置存储</summary>
     public Dictionary<string, string> PluginValues { get; set; } = new();
