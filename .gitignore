@@ -40,3 +40,6 @@ todo/
 ## Plugin build output (DLLs copied to app output)
 MyPersonalTool/bin/Debug/**/plugins/*.dll
 MyPersonalTool/bin/Release/**/plugins/*.dll
+
+## Reasonix runtime
+.reasonix/
