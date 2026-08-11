@@ -1,4 +1,5 @@
 using System.Diagnostics;
+using Lang.Avalonia;
 using yopet.Sdk;
 
 namespace SettingPlugin;
@@ -14,7 +15,13 @@ public class SettingPlugin : PluginBase
 
     private IPluginHost? _host;
 
-    public override string Name => "设置";
+    /// <summary>取当前语言的插件词条</summary>
+    private static string T(string key) =>
+        I18nManager.Instance.GetResource($"Localization.SettingPlugin.{key}");
+
+    public override string Name => T("Name");
+
+    public override string Description => T("Description");
 
     public override async Task InitializeAsync(IPluginHost host)
     {
@@ -24,39 +31,39 @@ public class SettingPlugin : PluginBase
         // ── 配置表单 ──
         host.RegisterConfig(new PluginConfigSection
         {
-            Title = "设置",
+            Title = T("Name"),
             Emoji = "⚙️",
             Fields = new()
             {
                 new()
                 {
                     Key = KeyAutoStart,
-                    Label = "开机自启",
+                    Label = T("AutoStartLabel"),
                     Type = PluginConfigFieldType.Boolean,
                     DefaultValue = AutoStartHelper.IsEnabled() ? "true" : "false",
-                    Description = "登录系统时自动启动 yopet",
+                    Description = T("AutoStartDesc"),
                 },
                 new()
                 {
                     Key = KeyAnimSpeed,
-                    Label = "动画速度（ms/帧）",
+                    Label = T("AnimSpeedLabel"),
                     Type = PluginConfigFieldType.Number,
                     DefaultValue = host.GetAnimationSpeedMs().ToString("0"),
                     MinValue = 30, MaxValue = 300,
-                    Description = "数值越小动画越快（30-300）",
+                    Description = T("AnimSpeedDesc"),
                 },
                 new()
                 {
                     Key = KeyDarkTheme,
-                    Label = "深色模式",
+                    Label = T("DarkThemeLabel"),
                     Type = PluginConfigFieldType.Boolean,
                     DefaultValue = host.GetDarkTheme() ? "true" : "false",
-                    Description = "切换深色 / 浅色主题",
+                    Description = T("DarkThemeDesc"),
                 },
                 new()
                 {
                     Key = KeyLanguage,
-                    Label = "语言 / Language",
+                    Label = T("LanguageLabel"),
                     Type = PluginConfigFieldType.Dropdown,
                     DefaultValue = host.GetLanguage(),
                     Options = new()
@@ -64,7 +71,7 @@ public class SettingPlugin : PluginBase
                         new() { Label = "简体中文", Value = "zh-CN" },
                         new() { Label = "English", Value = "en-US" },
                     },
-                    Description = "切换界面语言，立即生效",
+                    Description = T("LanguageDesc"),
                 },
             },
         }, Name);
@@ -82,18 +89,18 @@ public class SettingPlugin : PluginBase
         // ── 右键菜单入口 ──
         host.RegisterAction(new PluginAction
         {
-            Name = "设置",
+            Name = T("Name"),
             Emoji = "⚙️",
-            Group = "⚙️ 设置",
+            Group = T("Group"),
             Target = ActionTarget.ContextMenu,
-            Callback = () => { host.ShowConfigDialog("设置"); return Task.CompletedTask; },
+            Callback = () => { host.ShowConfigDialog(T("Name")); return Task.CompletedTask; },
         });
 
         host.RegisterAction(new PluginAction
         {
-            Name = "插件列表",
+            Name = T("PluginList"),
             Emoji = "🧩",
-            Group = "⚙️ 设置",
+            Group = T("Group"),
             Target = ActionTarget.ContextMenu,
             Callback = () => ShowPluginListAsync(host),
         });
@@ -108,12 +115,12 @@ public class SettingPlugin : PluginBase
     {
         var config = new ListDialogConfig
         {
-            Title = "插件列表",
+            Title = T("PluginList"),
             Emoji = "🧩",
             Columns = new()
             {
-                new() { Key = "name", Header = "插件" },
-                new() { Key = "desc", Header = "描述" },
+                new() { Key = "name", Header = T("ColPlugin") },
+                new() { Key = "desc", Header = T("ColDesc") },
             },
             DataSource = () => Task.FromResult(
                 host.LoadedPlugins.Select(p => new Dictionary<string, string>

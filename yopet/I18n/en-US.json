@@ -45,6 +45,22 @@
       "CronWeekly0": "Every Sunday at 0:00",
       "CronMonthly1": "On the 1st at 0:00",
       "CronTemplate": "Template"
+    },
+    "SettingPlugin": {
+      "Name": "Settings",
+      "Description": "Auto-start, animation speed, dark mode and plugin list management",
+      "Group": "⚙️ Settings",
+      "PluginList": "Plugin List",
+      "ColPlugin": "Plugin",
+      "ColDesc": "Description",
+      "AutoStartLabel": "Auto-start",
+      "AutoStartDesc": "Start yopet automatically at login",
+      "AnimSpeedLabel": "Animation speed (ms/frame)",
+      "AnimSpeedDesc": "Smaller value = faster animation (30-300)",
+      "DarkThemeLabel": "Dark mode",
+      "DarkThemeDesc": "Toggle dark / light theme",
+      "LanguageLabel": "Language",
+      "LanguageDesc": "Switch UI language, applies immediately"
     }
   }
 }

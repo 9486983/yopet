@@ -45,6 +45,22 @@
       "CronWeekly0": "每周日0点",
       "CronMonthly1": "每月1号0点",
       "CronTemplate": "模板"
+    },
+    "SettingPlugin": {
+      "Name": "设置",
+      "Description": "开机自启、动画速度、深色模式与插件列表管理",
+      "Group": "⚙️ 设置",
+      "PluginList": "插件列表",
+      "ColPlugin": "插件",
+      "ColDesc": "描述",
+      "AutoStartLabel": "开机自启",
+      "AutoStartDesc": "登录系统时自动启动 yopet",
+      "AnimSpeedLabel": "动画速度（ms/帧）",
+      "AnimSpeedDesc": "数值越小动画越快（30-300）",
+      "DarkThemeLabel": "深色模式",
+      "DarkThemeDesc": "切换深色 / 浅色主题",
+      "LanguageLabel": "语言 / Language",
+      "LanguageDesc": "切换界面语言，立即生效"
     }
   }
 }
