@@ -1,5 +1,6 @@
 using System.Text;
 using System.Text.Json;
+using Lang.Avalonia;
 using yopet.Sdk;
 
 namespace AgentHooksPlugin;
@@ -11,10 +12,14 @@ namespace AgentHooksPlugin;
 /// </summary>
 public class ClaudeCodeHookProvider : HookProviderBase
 {
+    /// <summary>取当前语言的 Agent Hooks 词条</summary>
+    private static string T(string key) =>
+        I18nManager.Instance.GetResource($"Localization.AgentHooksPlugin.{key}");
+
     public override string Id => "claude";
     public override string Name => "Claude Code";
     public override string Emoji => "🦾";
-    public override string Description => "监听 Claude Code 的系统 Hooks：会话、响应、命令执行、文件更改等";
+    public override string Description => T("ClaudeDesc");
     public override string ConfigPrefix => "claude_";
 
     private static readonly string LogFile = Path.Combine(
@@ -40,28 +45,28 @@ public class ClaudeCodeHookProvider : HookProviderBase
             new()
             {
                 Key = $"{ConfigPrefix}{KeyEnabled}",
-                Label = "启用监测",
+                Label = T("EnabledLabel"),
                 Type = PluginConfigFieldType.Boolean,
                 DefaultValue = "true",
-                Description = $"监听 {Name} 事件并显示在宠物气泡上",
+                Description = string.Format(T("EnabledDesc"), Name),
             },
             new()
             {
                 Key = $"{ConfigPrefix}{KeyShowBash}",
-                Label = "显示命令执行",
+                Label = T("ShowBashLabel"),
                 Type = PluginConfigFieldType.Boolean,
                 DefaultValue = "false",
-                Description = "每次 Claude 执行 Shell 命令时显示气泡",
+                Description = T("ShowBashDesc"),
             },
             new()
             {
                 Key = $"{ConfigPrefix}{KeyMaxLength}",
-                Label = "内容截断长度",
+                Label = T("MaxLengthLabel"),
                 Type = PluginConfigFieldType.Number,
                 DefaultValue = "150",
                 MinValue = 30,
                 MaxValue = 500,
-                Description = "气泡显示文本的最大字符数",
+                Description = T("MaxLengthDesc"),
             },
         },
     };
@@ -161,7 +166,7 @@ public class ClaudeCodeHookProvider : HookProviderBase
         {
             case "session_start":
                 DispatchEvent(host, eventId, Name,
-                    string.IsNullOrEmpty(project) ? "开始工作 🚀" : $"在 {project} 开工 🚀", 3000);
+                    string.IsNullOrEmpty(project) ? T("StartWork") : string.Format(T("StartWorkIn"), project), 3000);
                 break;
 
             case "session_end":
@@ -175,7 +180,7 @@ public class ClaudeCodeHookProvider : HookProviderBase
                 break;
 
             case "notification":
-                DispatchEvent(host, eventId, Name, "在等你回复 ⏳", 3000);
+                DispatchEvent(host, eventId, Name, T("WaitingReply"), 3000);
                 break;
 
             case "bash":

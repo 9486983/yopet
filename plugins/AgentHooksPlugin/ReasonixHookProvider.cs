@@ -2,6 +2,7 @@ using System.Text;
 using System.Text.Encodings.Web;
 using System.Text.Json;
 using System.Text.Json.Nodes;
+using Lang.Avalonia;
 using yopet.Sdk;
 
 namespace AgentHooksPlugin;
@@ -14,10 +15,14 @@ namespace AgentHooksPlugin;
 /// </summary>
 public class ReasonixHookProvider : HookProviderBase
 {
+    /// <summary>取当前语言的 Agent Hooks 词条</summary>
+    private static string T(string key) =>
+        I18nManager.Instance.GetResource($"Localization.AgentHooksPlugin.{key}");
+
     public override string Id => "reasonix";
     public override string Name => "Reasonix Code";
     public override string Emoji => "🧠";
-    public override string Description => "监听 Reasonix Code 的系统 Hooks：响应内容、命令执行、文件更改等";
+    public override string Description => T("ReasonixDesc");
     public override string ConfigPrefix => "reasonix_";
 
     private static readonly string EventsDir = Path.Combine(
@@ -54,28 +59,28 @@ public class ReasonixHookProvider : HookProviderBase
             new()
             {
                 Key = $"{ConfigPrefix}{KeyEnabled}",
-                Label = "启用监测",
+                Label = T("EnabledLabel"),
                 Type = PluginConfigFieldType.Boolean,
                 DefaultValue = "true",
-                Description = $"监听 {Name} 事件并显示在宠物气泡上",
+                Description = string.Format(T("EnabledDesc"), Name),
             },
             new()
             {
                 Key = $"{ConfigPrefix}{KeyShowCommands}",
-                Label = "显示 Shell 命令",
+                Label = T("ShowCmdLabel"),
                 Type = PluginConfigFieldType.Boolean,
                 DefaultValue = "false",
-                Description = "执行 Shell 命令时显示气泡（如 git、npm、dotnet 等）",
+                Description = T("ShowCmdDesc"),
             },
             new()
             {
                 Key = $"{ConfigPrefix}{KeyMaxLength}",
-                Label = "内容截断长度",
+                Label = T("MaxLengthLabel"),
                 Type = PluginConfigFieldType.Number,
                 DefaultValue = "150",
                 MinValue = 30,
                 MaxValue = 500,
-                Description = "气泡显示文本的最大字符数",
+                Description = T("MaxLengthDesc"),
             },
         },
     };
@@ -194,7 +199,7 @@ public class ReasonixHookProvider : HookProviderBase
                         break;
 
                     case "session_start":
-                        DispatchEvent(host, type, Name, "开始工作 🚀", 3000);
+                        DispatchEvent(host, type, Name, T("StartWork"), 3000);
                         break;
 
                     case "session_end":
@@ -263,7 +268,7 @@ public class ReasonixHookProvider : HookProviderBase
     /// 接收 Reasonix Desktop 通过 stdin 传入的 JSON payload，
     /// 映射事件类型、提取内容，以小写键 JSON 写入 ~/.petdex/events/。
     /// </summary>
-    private const string HookScriptContent = @"# Reasonix Event Hook Wrapper
+    private const string HookScriptTemplate = @"# Reasonix Event Hook Wrapper
 # Called by Reasonix Desktop hooks mechanism, receives JSON on stdin.
 # Writes lowercase-key events to ~/.petdex/events/ for ReasonixHookProvider.
 
@@ -293,11 +298,11 @@ $skip = $false
 switch ($reasonixEvent) {
     ""SessionStart"" {
         $type = ""session_start""
-        $content = ""开始工作 🚀""
+        $content = ""{{StartWork}}""
     }
     ""SessionEnd"" {
         $type = ""session_end""
-        $content = ""收工 ✨""
+        $content = ""{{WorkDone}}""
     }
     ""Stop"" {
         $type = ""response""
@@ -356,6 +361,10 @@ $filepath = [System.IO.Path]::Combine($eventsDir, $filename)
 $json = $event | ConvertTo-Json -Compress
 [System.IO.File]::WriteAllText($filepath, $json)
 ";
+
+    private static readonly string HookScriptContent = HookScriptTemplate
+        .Replace("{{StartWork}}", T("StartWork"))
+        .Replace("{{WorkDone}}", T("WorkDone"));
 
     /// <summary>
     /// 确保 Reasonix hooks 基础设施已就绪：

@@ -1,3 +1,4 @@
+using Lang.Avalonia;
 using yopet.Sdk;
 
 namespace AgentHooksPlugin;
@@ -8,6 +9,10 @@ namespace AgentHooksPlugin;
 /// </summary>
 public abstract class HookProviderBase : IDisposable
 {
+    /// <summary>取当前语言的 Agent Hooks 词条</summary>
+    private static string T(string key) =>
+        I18nManager.Instance.GetResource($"Localization.AgentHooksPlugin.{key}");
+
     /// <summary>唯一标识（如 "reasonix"、"claude"）</summary>
     public abstract string Id { get; }
 
@@ -21,7 +26,7 @@ public abstract class HookProviderBase : IDisposable
     public abstract string Description { get; }
 
     /// <summary>当前状态（"运行中" / "已暂停" / "未启动"）</summary>
-    public virtual string Status => _isRunning ? "运行中" : "已暂停";
+    public virtual string Status => _isRunning ? T("StatusRunning") : T("StatusPaused");
 
     /// <summary>该 Provider 的配置定义（注册到主程序配置页）</summary>
     public abstract PluginConfigSection ConfigSection { get; }
@@ -70,7 +75,7 @@ public abstract class HookProviderBase : IDisposable
         host.EnqueueThought(new ThoughtMessage
         {
             Title = Name,
-            Text = "收工 ✨",
+            Text = T("WorkDone"),
             DurationMs = 3000,
         });
     }

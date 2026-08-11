@@ -1,4 +1,5 @@
 using System.Diagnostics;
+using Lang.Avalonia;
 using yopet.Core.Models;
 using yopet.Sdk;
 
@@ -16,15 +17,19 @@ namespace SessionDemoPlugin;
 [Plugin("图片整理器", Version = "1.0.0", Description = "会话工作流示例：拖入文件夹启动，再拖入图片自动整理")]
 public class SessionDemoPlugin : PluginBase
 {
-    public override string Name => "图片整理器";
+    /// <summary>取当前语言的插件词条</summary>
+    private static string T(string key) =>
+        I18nManager.Instance.GetResource($"Localization.SessionDemoPlugin.{key}");
+
+    public override string Name => T("Name");
 
     public override async Task InitializeAsync(IPluginHost host)
     {
         host.RegisterAction(new PluginAction
         {
-            Name = "图片整理",
+            Name = T("OrganizeAction"),
             Emoji = "🖼️",
-            Description = "拖入文件夹启动会话，再拖入 JPG/PNG 自动收集整理",
+            Description = T("OrganizeActionDesc"),
             Target = ActionTarget.RadialMenu,
             AcceptType = ItemType.Both,
             FileCallback = async (paths) =>
@@ -35,7 +40,7 @@ public class SessionDemoPlugin : PluginBase
                 }
                 catch (Exception ex)
                 {
-                    host.ShowThought("❌ 错误", ex.Message);
+                    host.ShowThought(T("ErrorTitle"), ex.Message);
                 }
             },
         });
@@ -59,22 +64,22 @@ public class SessionDemoPlugin : PluginBase
         var folder = paths[0];
         if (!Directory.Exists(folder))
         {
-            host.ShowThought("❌ 需要文件夹", "请拖入一个文件夹来启动图片整理会话");
+            host.ShowThought(T("NeedFolderTitle"), T("NeedFolderMsg"));
             return;
         }
 
         // 准备输出目录
-        var outputDir = Path.Combine(folder, Path.GetFileName(folder) + "_整理输出");
+        var outputDir = Path.Combine(folder, Path.GetFileName(folder) + T("OutputSuffix"));
         Directory.CreateDirectory(outputDir);
 
         // 启动会话（自动激活同名动作，后续拖入不再弹菜单）
-        session = host.StartSession("图片整理");
+        session = host.StartSession(T("OrganizeAction"));
         session.Context["outputDir"] = outputDir;
         session.Context["count"] = 0;
 
-        session.Status = "已就绪，拖入图片开始整理";
-        host.ShowThought("📋 会话已启动",
-            $"输出目录：{outputDir}\n\n拖入 JPG/PNG 文件自动整理到此目录。");
+        session.Status = T("ReadyStatus");
+        host.ShowThought(T("SessionStartedTitle"),
+            string.Format(T("SessionStartedMsg"), outputDir));
 
         // 如果拖入的正好也是图片文件，一并处理
         if (paths.Any(p => IsImage(p)))
@@ -89,7 +94,7 @@ public class SessionDemoPlugin : PluginBase
 
         if (imagePaths.Length == 0)
         {
-            host.ShowThought("ℹ️ 跳过", "没有检测到 JPG/PNG 图片文件");
+            host.ShowThought(T("SkipTitle"), T("NoImageMsg"));
             return;
         }
 
@@ -111,14 +116,14 @@ public class SessionDemoPlugin : PluginBase
 
                 // 更新会话状态
                 session.Context["count"] = count;
-                session.Status = $"已整理 {count} 张";
+                session.Status = string.Format(T("OrganizedCount"), count);
                 session.Progress = count switch
                 {
                     <= 5 => -1,           // 前 5 张不确定进度
                     _ => count / 50.0,     // 之后按 50 张总量估算
                 };
 
-                host.ShowThought($"🖼️ 已整理 {count} 张",
+                host.ShowThought(string.Format(T("OrganizedTitle"), count),
                     $"{Path.GetFileName(img)}\n→ {newName}");
             }
         });
@@ -128,12 +133,12 @@ public class SessionDemoPlugin : PluginBase
         if (total >= 10)
         {
             session.Complete();
-            host.ShowThought("✅ 整理完成",
-                $"共整理 {total} 张图片到：\n{outputDir}");
+            host.ShowThought(T("DoneTitle"),
+                string.Format(T("DoneMsg"), total, outputDir));
         }
         else
         {
-            host.ShowThought("📋 继续", $"已整理 {total}/10 张，再拖入一些吧");
+            host.ShowThought(T("ContinueTitle"), string.Format(T("ContinueMsg"), total));
         }
     }
 

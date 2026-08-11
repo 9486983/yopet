@@ -1,5 +1,6 @@
 using System.Runtime.InteropServices;
 using System.Text;
+using Lang.Avalonia;
 using yopet.Sdk;
 using static PinTopPlugin.Win32Native;
 using static PinTopPlugin.Win32Const;
@@ -20,7 +21,11 @@ public class PinTopPlugin : PluginBase
     private WndProcDelegate? _wndProc;
     private WndProcDelegate? _overlayWndProc;
 
-    public override string Name => "窗口置顶器";
+    /// <summary>取当前语言的插件词条</summary>
+    private static string T(string key) =>
+        I18nManager.Instance.GetResource($"Localization.PinTopPlugin.{key}");
+
+    public override string Name => T("Name");
 
     public PinTopPlugin()
     {
@@ -30,31 +35,31 @@ public class PinTopPlugin : PluginBase
     public override Task InitializeAsync(IPluginHost host)
     {
         _host = host;
-        host.RegisterConfig(new PluginConfigSection { Title = "窗口置顶器", Emoji = "📌",
+        host.RegisterConfig(new PluginConfigSection { Title = T("Name"), Emoji = "📌",
             Fields = new() {
-                new() { Key = "pt_enabled", Label = "启用", Type = PluginConfigFieldType.Boolean, DefaultValue = "true" },
-                new() { Key = "pt_modifiers", Label = "快捷键修饰键", Type = PluginConfigFieldType.String, DefaultValue = "Ctrl+Alt" },
-                new() { Key = "pt_key", Label = "快捷键主键", Type = PluginConfigFieldType.String, DefaultValue = "T" },
-                new() { Key = "pt_border_enabled", Label = "显示边框", Type = PluginConfigFieldType.Boolean, DefaultValue = "true" },
-                new() { Key = "pt_border_style", Label = "边框样式", Type = PluginConfigFieldType.Dropdown, DefaultValue = "border",
+                new() { Key = "pt_enabled", Label = T("EnabledLabel"), Type = PluginConfigFieldType.Boolean, DefaultValue = "true" },
+                new() { Key = "pt_modifiers", Label = T("ModifiersLabel"), Type = PluginConfigFieldType.String, DefaultValue = "Ctrl+Alt" },
+                new() { Key = "pt_key", Label = T("MainKeyLabel"), Type = PluginConfigFieldType.String, DefaultValue = "T" },
+                new() { Key = "pt_border_enabled", Label = T("BorderEnabledLabel"), Type = PluginConfigFieldType.Boolean, DefaultValue = "true" },
+                new() { Key = "pt_border_style", Label = T("BorderStyleLabel"), Type = PluginConfigFieldType.Dropdown, DefaultValue = "border",
                     Options = new() {
-                        new() { Label = "🔲 半透明描边", Value = "border" },
-                        new() { Label = "📌 四角图钉", Value = "corner" },
-                        new() { Label = "💡 系统级闪烁（仅置顶时）", Value = "flash" },
+                        new() { Label = T("StyleBorder"), Value = "border" },
+                        new() { Label = T("StyleCorner"), Value = "corner" },
+                        new() { Label = T("StyleFlash"), Value = "flash" },
                     } },
-                new() { Key = "pt_border_color", Label = "边框颜色 (#RRGGBB)", Type = PluginConfigFieldType.String, DefaultValue = "#FFD700" },
-                new() { Key = "pt_border_alpha", Label = "边框透明度 (0-255)", Type = PluginConfigFieldType.Number, DefaultValue = "140", MinValue = 0, MaxValue = 255 },
-                new() { Key = "pt_border_thickness", Label = "边框粗细 (像素)", Type = PluginConfigFieldType.Number, DefaultValue = "3", MinValue = 1, MaxValue = 20 },
-                new() { Key = "pt_border_radius", Label = "边框圆角 (像素)", Type = PluginConfigFieldType.Number, DefaultValue = "8", MinValue = 0, MaxValue = 30 },
+                new() { Key = "pt_border_color", Label = T("BorderColorLabel"), Type = PluginConfigFieldType.String, DefaultValue = "#FFD700" },
+                new() { Key = "pt_border_alpha", Label = T("BorderAlphaLabel"), Type = PluginConfigFieldType.Number, DefaultValue = "140", MinValue = 0, MaxValue = 255 },
+                new() { Key = "pt_border_thickness", Label = T("BorderThicknessLabel"), Type = PluginConfigFieldType.Number, DefaultValue = "3", MinValue = 1, MaxValue = 20 },
+                new() { Key = "pt_border_radius", Label = T("BorderRadiusLabel"), Type = PluginConfigFieldType.Number, DefaultValue = "8", MinValue = 0, MaxValue = 30 },
             }}, Name);
-        host.RegisterAction(new PluginAction { Name = "设置", Emoji = "📌", Group = "📌 窗口置顶器", Target = ActionTarget.ContextMenu,
-            Callback = () => { host.ShowConfigDialog("窗口置顶器"); return Task.CompletedTask; } });
+        host.RegisterAction(new PluginAction { Name = T("SettingsAction"), Emoji = "📌", Group = T("Group"), Target = ActionTarget.ContextMenu,
+            Callback = () => { host.ShowConfigDialog(T("Name")); return Task.CompletedTask; } });
 
         host.RegisterAction(new PluginAction
         {
-            Name = "已置顶窗口",
+            Name = T("PinnedWindows"),
             Emoji = "📌",
-            Group = "📌 窗口置顶器",
+            Group = T("Group"),
             Target = ActionTarget.ContextMenu,
             Callback = () => ShowPinnedList(host),
         });
@@ -198,7 +203,7 @@ public class PinTopPlugin : PluginBase
                 SetWindowPos(w, HWND_NOTOPMOST, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE);
                 _pinned.Remove(w);
                 _overlayMgr.Remove(w);
-                _host?.ShowThought("📌 已取消", GetTitle(w));
+                _host?.ShowThought(T("UnpinnedTitle"), GetTitle(w));
                 _activeListConfig?.NotifyDataChanged();
             }
             catch { }
@@ -267,13 +272,13 @@ public class PinTopPlugin : PluginBase
 
             _pinned.Remove(hwnd);
             _overlayMgr.Remove(hwnd);
-            host.ShowThought("📌 已取消", GetTitle(hwnd));
+            host.ShowThought(T("UnpinnedTitle"), GetTitle(hwnd));
         }
         else
         {
             if (!SetWindowPos(hwnd, HWND_TOPMOST, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE))
             {
-                host.ShowThought("❌ 置顶失败", $"无法置顶“{GetTitle(hwnd)}”，权限不足或窗口不支持");
+                host.ShowThought(T("PinFailTitle"), string.Format(T("PinFailMsg"), GetTitle(hwnd)));
                 return;
             }
             _pinned.Add(hwnd);
@@ -282,7 +287,7 @@ public class PinTopPlugin : PluginBase
                 _overlayCfg.ClassName = _overlayMgr.OverlayClassName;
                 _overlayMgr.Create(hwnd);
             }
-            host.ShowThought("📌 已置顶", GetTitle(hwnd));
+            host.ShowThought(T("PinnedTitle"), GetTitle(hwnd));
         }
         _activeListConfig?.NotifyDataChanged();
     }
@@ -317,7 +322,7 @@ public class PinTopPlugin : PluginBase
     {
         if (_pinned.Count == 0)
         {
-            host.ShowThought("📌 置顶列表", "暂无已置顶的窗口");
+            host.ShowThought(T("PinnedListTitle"), T("EmptyListMsg"));
             return;
         }
 
@@ -325,7 +330,7 @@ public class PinTopPlugin : PluginBase
 
         var config = new ListDialogConfig
         {
-            Title = "已置顶窗口",
+            Title = T("PinnedWindows"),
             Emoji = "📌",
             DataSource = () =>
             {
@@ -344,7 +349,7 @@ public class PinTopPlugin : PluginBase
             },
             Columns = new()
             {
-                new() { Key = "title", Header = "窗口标题" },
+                new() { Key = "title", Header = T("ColTitle") },
                 new()
                 {
                     Key = "actions", Header = "",
@@ -353,7 +358,7 @@ public class PinTopPlugin : PluginBase
                     {
                         new()
                         {
-                            Label = "取消", Emoji = "🔓",
+                            Label = T("UnpinAction"), Emoji = "🔓",
                             Callback = row =>
                             {
                                 if (IntPtr.TryParse(row["hwnd"], out var h) && _msgWnd != IntPtr.Zero)

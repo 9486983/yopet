@@ -1,5 +1,6 @@
 using System.Diagnostics;
 using System.Text;
+using Lang.Avalonia;
 using yopet.Core.Models;
 using yopet.Sdk;
 
@@ -20,7 +21,10 @@ namespace PythonScriptPlugin;
     Description = "挂载、管理和运行 Python 脚本，支持拖入自动挂载与执行")]
 public class PythonScriptPlugin : PluginBase
 {
-    public override string Name => "Python 脚本管理器";
+    /// <summary>取当前语言的插件词条</summary>
+    private static string T(string key) => I18nManager.Instance.GetResource($"Localization.PythonScriptPlugin.{key}");
+
+    public override string Name => T("Name");
 
     private string _scriptsDir = "";
     private string _logDir = "";
@@ -48,9 +52,9 @@ public class PythonScriptPlugin : PluginBase
         // ── 径向菜单：拖入 .py 文件自动挂载 ──
         host.RegisterAction(new PluginAction
         {
-            Name = "挂载 Python 脚本",
+            Name = T("MountPythonScript"),
             Emoji = "🐍",
-            Description = "将 .py 文件复制到脚本库并自动挂载",
+            Description = T("MountPythonScriptDesc"),
             Target = ActionTarget.RadialMenu,
             AcceptType = ItemType.File,
             FileExtensions = new[] { ".py" },
@@ -61,34 +65,34 @@ public class PythonScriptPlugin : PluginBase
         // ── 右键菜单：折叠在「🐍 Python 脚本」分组下 ──
         host.RegisterAction(new PluginAction
         {
-            Name = "脚本列表",
+            Name = T("ScriptListName"),
             Emoji = "📜",
-            Group = "🐍 Python 脚本",
-            Description = "查看和管理所有已挂载的 Python 脚本",
+            Group = T("GroupPythonScripts"),
+            Description = T("ScriptListDesc"),
             Target = ActionTarget.ContextMenu,
             Callback = async () => await ShowScriptList(host),
         });
 
         host.RegisterAction(new PluginAction
         {
-            Name = "快速运行",
+            Name = T("QuickRunName"),
             Emoji = "⚡",
-            Group = "🐍 Python 脚本",
-            Description = "输入脚本名直接运行，无需打开列表",
+            Group = T("GroupPythonScripts"),
+            Description = T("QuickRunDesc"),
             Target = ActionTarget.ContextMenu,
             Callback = async () => await QuickRun(host),
         });
 
         host.RegisterAction(new PluginAction
         {
-            Name = "插件配置",
+            Name = T("PluginConfigName"),
             Emoji = "⚙️",
-            Group = "🐍 Python 脚本",
-            Description = "配置 Python 路径、自动运行等选项",
+            Group = T("GroupPythonScripts"),
+            Description = T("PluginConfigDesc"),
             Target = ActionTarget.ContextMenu,
             Callback = () =>
             {
-                host.ShowConfigDialog("Python 运行配置");
+                host.ShowConfigDialog(T("PythonRunConfig"));
                 return Task.CompletedTask;
             },
         });
@@ -96,26 +100,26 @@ public class PythonScriptPlugin : PluginBase
         // ── 插件配置（演示新 SDK 字段类型） ──
         host.RegisterConfig(new PluginConfigSection
         {
-            Title = "Python 运行配置",
+            Title = T("PythonRunConfig"),
             Emoji = "⚙️",
             Groups = new()
             {
                 new PluginConfigGroup
                 {
-                    Title = "运行环境",
+                    Title = T("ConfigGroupRuntimeTitle"),
                     Emoji = "🖥️",
-                    Description = "Python 解释器和脚本执行相关配置",
+                    Description = T("ConfigGroupRuntimeDesc"),
                     FieldKeys = { "python_path", "work_dir" },
                 },
                 new PluginConfigGroup
                 {
-                    Title = "自动执行",
+                    Title = T("ConfigGroupAutoTitle"),
                     Emoji = "▶️",
                     FieldKeys = { "auto_run", "run_interval" },
                 },
                 new PluginConfigGroup
                 {
-                    Title = "备注",
+                    Title = T("ConfigGroupNotesTitle"),
                     Emoji = "📝",
                     FieldKeys = { "notes" },
                 },
@@ -125,43 +129,43 @@ public class PythonScriptPlugin : PluginBase
                 new()
                 {
                     Key = "python_path",
-                    Label = "Python 路径",
+                    Label = T("PythonPathLabel"),
                     Type = PluginConfigFieldType.FilePath,
-                    Placeholder = "留空则自动探测",
-                    Description = "选择 python.exe 文件路径",
+                    Placeholder = T("PythonPathPlaceholder"),
+                    Description = T("PythonPathDesc"),
                 },
                 new()
                 {
                     Key = "work_dir",
-                    Label = "工作目录",
+                    Label = T("WorkDirLabel"),
                     Type = PluginConfigFieldType.FolderPath,
-                    Placeholder = "留空使用脚本所在目录",
-                    Description = "脚本执行时的当前工作目录",
+                    Placeholder = T("WorkDirPlaceholder"),
+                    Description = T("WorkDirDesc"),
                 },
                 new()
                 {
                     Key = "auto_run",
-                    Label = "挂载后自动执行",
+                    Label = T("AutoRunLabel"),
                     Type = PluginConfigFieldType.Boolean,
                     DefaultValue = "true",
-                    Description = "拖入 .py 文件后自动运行该脚本",
+                    Description = T("AutoRunDesc"),
                 },
                 new()
                 {
                     Key = "run_interval",
-                    Label = "默认定时间隔",
+                    Label = T("RunIntervalLabel"),
                     Type = PluginConfigFieldType.CronExpression,
                     Placeholder = "*/10 * * * *",
-                    Description = "新脚本默认的定时执行 cron 表达式",
+                    Description = T("RunIntervalDesc"),
                 },
                 new()
                 {
                     Key = "notes",
-                    Label = "备注说明",
+                    Label = T("NotesLabel"),
                     Type = PluginConfigFieldType.TextArea,
                     TextAreaRows = 4,
-                    Placeholder = "可在此记录脚本用途等备注信息",
-                    Description = "自由文本，不会影响功能",
+                    Placeholder = T("NotesPlaceholder"),
+                    Description = T("NotesDesc"),
                 },
             },
         });
@@ -184,7 +188,7 @@ public class PythonScriptPlugin : PluginBase
             mounted.Add(dest);
         }
 
-        host.ShowThought("✅ 挂载完成", $"已挂载 {mounted.Count} 个脚本到脚本库");
+        host.ShowThought(T("MountCompleteTitle"), string.Format(T("MountCompleteContent"), mounted.Count));
 
         // 弹出脚本列表
         await ShowScriptList(host);
@@ -207,7 +211,7 @@ public class PythonScriptPlugin : PluginBase
     {
         _listConfig = new ListDialogConfig
         {
-            Title = "Python 脚本管理器",
+            Title = T("Name"),
             Emoji = "🐍",
             LayoutMode = ListDialogLayoutMode.Table,
             DataSource = () =>
@@ -226,30 +230,30 @@ public class PythonScriptPlugin : PluginBase
             },
             Columns = new()
             {
-                new() { Key = "name", Header = "脚本", Width = 110 },
-                new() { Key = "desc", Header = "描述", Width = double.NaN },
-                new() { Key = "mtime", Header = "时间", Width = 85 },
+                new() { Key = "name", Header = T("ColumnScriptHeader"), Width = 110 },
+                new() { Key = "desc", Header = T("ColumnDescHeader"), Width = double.NaN },
+                new() { Key = "mtime", Header = T("ColumnTimeHeader"), Width = 85 },
                 new()
                 {
                     Key = "actions",
-                    Header = "操作",
+                    Header = T("ColumnActionHeader"),
                     Type = ListColumnType.Action,
                     Width = 100,
                     RowActions = new()
                     {
                         new()
                         {
-                            Label = "操作",
+                            Label = T("ColumnActionHeader"),
                             Emoji = "⚙️",
                             Type = ListRowActionType.Dropdown,
-                            Tooltip = "运行、编辑、定时或删除脚本",
+                            Tooltip = T("RowActionTooltip"),
                             Children = new()
                             {
                                 new()
                                 {
-                                    Label = "运行",
+                                    Label = T("RowRunLabel"),
                                     Emoji = "▶",
-                                    Tooltip = "运行此脚本",
+                                    Tooltip = T("RowRunTooltip"),
                                     Callback = async (row) =>
                                     {
                                         await RunScript(row["file"], host);
@@ -258,9 +262,9 @@ public class PythonScriptPlugin : PluginBase
                                 },
                                 new()
                                 {
-                                    Label = "编辑",
+                                    Label = T("RowEditLabel"),
                                     Emoji = "📝",
-                                    Tooltip = "用记事本打开编辑",
+                                    Tooltip = T("RowEditTooltip"),
                                     Callback = (row) =>
                                     {
                                         var path = Path.Combine(_scriptsDir, row["file"]);
@@ -271,9 +275,9 @@ public class PythonScriptPlugin : PluginBase
                                 },
                                 new()
                                 {
-                                    Label = "定时",
+                                    Label = T("RowCronLabel"),
                                     Emoji = "⏰",
-                                    Tooltip = "设置 cron 定时执行此脚本",
+                                    Tooltip = T("RowCronTooltip"),
                                     Callback = (row) =>
                                     {
                                         _ = ConfigureCronAsync(row["file"], host);
@@ -282,9 +286,9 @@ public class PythonScriptPlugin : PluginBase
                                 },
                                 new()
                                 {
-                                    Label = "删除",
+                                    Label = T("RowDeleteLabel"),
                                     Emoji = "🗑",
-                                    Tooltip = "从脚本库中删除",
+                                    Tooltip = T("RowDeleteTooltip"),
                                     Callback = (row) =>
                                     {
                                         var src = Path.Combine(_scriptsDir, row["file"]);
@@ -317,7 +321,7 @@ public class PythonScriptPlugin : PluginBase
             {
                 new()
                 {
-                    Label = "脚本文件夹",
+                    Label = T("ToolbarScriptsFolder"),
                     Emoji = "📂",
                     Callback = () =>
                     {
@@ -327,7 +331,7 @@ public class PythonScriptPlugin : PluginBase
                 },
                 new()
                 {
-                    Label = "刷新",
+                    Label = T("ToolbarRefresh"),
                     Emoji = "🔄",
                     Callback = () =>
                     {
@@ -351,13 +355,13 @@ public class PythonScriptPlugin : PluginBase
         var scripts = Directory.GetFiles(_scriptsDir, "*.py");
         if (scripts.Length == 0)
         {
-            host.ShowThought("📂 暂无脚本", "请先拖入 .py 文件到宠物身上挂载");
+            host.ShowThought(T("NoScriptsTitle"), T("NoScriptsContent"));
             return;
         }
 
         var input = await host.ShowInputDialog(
-            "⚡ 快速运行",
-            "输入脚本名称（支持模糊搜索，如 hello）");
+            T("QuickRunDialogTitle"),
+            T("QuickRunDialogMessage"));
 
         if (string.IsNullOrEmpty(input)) return;
 
@@ -368,7 +372,7 @@ public class PythonScriptPlugin : PluginBase
 
         if (matched.Count == 0)
         {
-            host.ShowThought("❌ 未找到", $"没有找到包含「{input}」的脚本");
+            host.ShowThought(T("ScriptNotFoundTitle"), string.Format(T("ScriptNotFoundContent"), input));
             return;
         }
 
@@ -379,8 +383,8 @@ public class PythonScriptPlugin : PluginBase
         }
 
         // 多个匹配：自动运行第一个
-        host.ShowThought("📋 找到多个",
-            $"找到 {matched.Count} 个匹配，运行第一个：{matched[0]}");
+        host.ShowThought(T("MultipleMatchesTitle"),
+            string.Format(T("MultipleMatchesContent"), matched.Count, matched[0]));
         await Task.Delay(400);
         await RunScript(matched[0] + ".py", host);
     }
@@ -394,7 +398,7 @@ public class PythonScriptPlugin : PluginBase
         var scriptPath = Path.Combine(_scriptsDir, scriptName);
         if (!File.Exists(scriptPath))
         {
-            host.ShowThought("❌ 脚本不存在", $"找不到脚本：{scriptName}");
+            host.ShowThought(T("ScriptMissingTitle"), string.Format(T("ScriptMissingContent"), scriptName));
             return;
         }
 
@@ -421,15 +425,15 @@ public class PythonScriptPlugin : PluginBase
             // RunWithAnimation 自动：显示工作动画 + 进度环 + 可取消 + 结束后自动恢复待机
             await host.RunWithAnimation(PetAnimation.Running, async (token) =>
             {
-                host.ShowThought("🐍 运行中", $"执行：{scriptName} {args}");
+                host.ShowThought(T("RunningTitle"), string.Format(T("RunningContent"), scriptName, args));
 
                 var pythonPath = await ResolvePythonPathAsync(host);
                 LogToFile($"解析 Python 路径: {pythonPath ?? "null (未找到)"}");
                 if (pythonPath == null)
                 {
                     LogToFile("错误: 未找到 Python 可执行文件");
-                    host.ShowThought("❌ 未找到 Python",
-                        "系统中未找到 python/py 可执行文件。\n\n请右键宠物 → 插件配置 → «Python 运行配置» → 设置 Python 路径。");
+                    host.ShowThought(T("PythonNotFoundTitle"),
+                        T("PythonNotFoundContent"));
                     return;
                 }
 
@@ -486,8 +490,8 @@ public class PythonScriptPlugin : PluginBase
             {
                 var display = Truncate(output, 1500);
                 LogToFile($"执行成功, 输出 {output.Length} 字符");
-                host.ShowThought($"✅ 执行成功（退出码 {exitCode}）",
-                    $"脚本：{scriptName}\n\n─── 输出 ───\n{display}");
+                host.ShowThought(string.Format(T("RunSuccessTitle"), exitCode),
+                    string.Format(T("RunSuccessContent"), scriptName, display));
                 host.ShowReaction("✅", PetAnimation.Jump);
             }
             else
@@ -495,15 +499,15 @@ public class PythonScriptPlugin : PluginBase
                 var errMsg = Truncate(error.Length > 0 ? error : output, 1000);
                 var stderrPreview = error.Length > 0 ? Truncate(error, 500) : output.Length > 0 ? Truncate(output, 500) : "(无输出)";
                 LogToFile($"执行失败 退出码={exitCode}\n  stderr: {stderrPreview}");
-                host.ShowThought($"❌ 执行失败（退出码 {exitCode}）",
-                    $"脚本：{scriptName}\n\n─── 错误 ───\n{errMsg}");
+                host.ShowThought(string.Format(T("RunFailedTitle"), exitCode),
+                    string.Format(T("RunFailedContent"), scriptName, errMsg));
                 host.ShowReaction("❌", PetAnimation.Failed);
             }
         }
         catch (OperationCanceledException)
         {
             LogToFile("执行被用户取消");
-            host.ShowThought("⏹️ 已取消", $"脚本「{scriptName}」执行已取消");
+            host.ShowThought(T("CanceledTitle"), string.Format(T("CanceledContent"), scriptName));
             host.ShowReaction("⏹️", PetAnimation.Wave);
             // 如果是定时任务触发的，自动暂停
             var cronKey = "cron_" + scriptName;
@@ -516,8 +520,8 @@ public class PythonScriptPlugin : PluginBase
         catch (Exception ex)
         {
             LogToFile($"异常: {ex.GetType().Name}: {ex.Message}");
-            host.ShowThought("❌ 运行错误",
-                $"无法执行脚本「{scriptName}」：\n{ex.Message}");
+            host.ShowThought(T("RunErrorTitle"),
+                string.Format(T("RunErrorContent"), scriptName, ex.Message));
             host.ShowReaction("❌", PetAnimation.Failed);
         }
     }
@@ -560,8 +564,8 @@ public class PythonScriptPlugin : PluginBase
             if (declaredArgs != null)
             {
                 var edited = await host.ShowInputDialog(
-                    "⌨️ 输入参数",
-                    "编辑参数后确认",
+                    T("InputArgsTitle"),
+                    T("InputArgsEditMessage"),
                     declaredArgs);
                 return edited; // null=取消, 空或实际输入=使用
             }
@@ -577,8 +581,8 @@ public class PythonScriptPlugin : PluginBase
             if (needsArgs)
             {
                 var argStr = await host.ShowInputDialog(
-                    "⌨️ 输入参数",
-                    "检测到此脚本可能需要参数，请输入（空格分隔）",
+                    T("InputArgsTitle"),
+                    T("InputArgsDetectedMessage"),
                     "");
                 return argStr; // null=取消, ""=空参数
             }
@@ -803,8 +807,8 @@ public class PythonScriptPlugin : PluginBase
 
         // 第一步：cron/间隔表达式
         var input = await host.ShowInputDialog(
-            "⏰ 设置定时执行",
-            "cron(5字段) */10 * * * *\n间隔: 10s / 30s / 5m\n留空取消定时",
+            T("SetCronTitle"),
+            T("SetCronMessage"),
             currentCron);
         if (input == null) return;
 
@@ -813,7 +817,7 @@ public class PythonScriptPlugin : PluginBase
 
         if (string.IsNullOrWhiteSpace(input))
         {
-            host.ShowThought("⏰ 已取消定时", $"「{scriptName}」的定时任务已移除");
+            host.ShowThought(T("CronCanceledTitle"), string.Format(T("CronCanceledContent"), scriptName));
             LogToFile($"取消定时: {scriptName}");
             return;
         }
@@ -832,8 +836,8 @@ public class PythonScriptPlugin : PluginBase
         if (needsArgs)
         {
             var argsInput = await host.ShowInputDialog(
-                "⌨️ 定时参数",
-                "每次触发时传入的参数",
+                T("CronArgsTitle"),
+                T("CronArgsMessage"),
                 currentArgs);
             if (argsInput == null) return; // 用户取消
             cronArgs = argsInput;
@@ -850,16 +854,17 @@ public class PythonScriptPlugin : PluginBase
                 var num = int.Parse(m.Groups[1].Value);
                 var seconds = m.Groups[2].Value == "m" ? num * 60 : num;
                 host.Scheduler.RegisterInterval(cronKey, seconds, callback, $"⏰ {scriptName}");
-                host.ShowThought("⏰ 定时已设置",
-                    $"「{scriptName}」\n每 {(m.Groups[2].Value == "m" ? $"{num} 分钟" : $"{num} 秒")}" +
-                    (cronArgs.Length > 0 ? $"\n参数: {cronArgs}" : ""));
+                host.ShowThought(T("CronSetTitle"),
+                    string.Format(T("CronIntervalSetContent"), scriptName,
+                        string.Format(m.Groups[2].Value == "m" ? T("MinutesFormat") : T("SecondsFormat"), num)) +
+                    (cronArgs.Length > 0 ? string.Format(T("ArgsSuffix"), cronArgs) : ""));
             }
             else
             {
                 host.Scheduler.Register(cronKey, trimmed, callback, $"⏰ {scriptName}");
-                host.ShowThought("⏰ 定时已设置",
-                    $"「{scriptName}」\ncron: {trimmed}" +
-                    (cronArgs.Length > 0 ? $"\n参数: {cronArgs}" : ""));
+                host.ShowThought(T("CronSetTitle"),
+                    string.Format(T("CronSetContent"), scriptName, trimmed) +
+                    (cronArgs.Length > 0 ? string.Format(T("ArgsSuffix"), cronArgs) : ""));
             }
 
             host.SetConfig(cronKey, input);
@@ -868,8 +873,8 @@ public class PythonScriptPlugin : PluginBase
         }
         catch (Exception ex)
         {
-            host.ShowThought("❌ 定时格式错误",
-                $"「{input}」无法识别\n错误: {ex.Message}");
+            host.ShowThought(T("CronFormatErrorTitle"),
+                string.Format(T("CronFormatErrorContent"), input, ex.Message));
             LogToFile($"定时设置失败: {input} - {ex.Message}");
         }
     }
@@ -944,6 +949,6 @@ public class PythonScriptPlugin : PluginBase
     {
         if (text.Length <= maxLen) return text;
         return text[..maxLen] +
-            $"\n\n……（共 {text.Length} 字符，仅显示前 {maxLen} 字符）";
+            string.Format(T("TruncateSuffix"), text.Length, maxLen);
     }
 }
