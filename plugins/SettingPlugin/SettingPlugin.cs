@@ -10,6 +10,7 @@ public class SettingPlugin : PluginBase
     private const string KeyAutoStart = "st_auto_start";
     private const string KeyAnimSpeed = "st_anim_speed";
     private const string KeyDarkTheme = "st_dark_theme";
+    private const string KeyLanguage = "st_language";
 
     private IPluginHost? _host;
 
@@ -52,6 +53,19 @@ public class SettingPlugin : PluginBase
                     DefaultValue = host.GetDarkTheme() ? "true" : "false",
                     Description = "切换深色 / 浅色主题",
                 },
+                new()
+                {
+                    Key = KeyLanguage,
+                    Label = "语言 / Language",
+                    Type = PluginConfigFieldType.Dropdown,
+                    DefaultValue = host.GetLanguage(),
+                    Options = new()
+                    {
+                        new() { Label = "简体中文", Value = "zh-CN" },
+                        new() { Label = "English", Value = "en-US" },
+                    },
+                    Description = "切换界面语言，立即生效",
+                },
             },
         }, Name);
 
@@ -62,6 +76,8 @@ public class SettingPlugin : PluginBase
             host.SetConfig(KeyAnimSpeed, host.GetAnimationSpeedMs().ToString("0"));
         if (host.GetConfig(KeyDarkTheme) == null)
             host.SetConfig(KeyDarkTheme, host.GetDarkTheme() ? "true" : "false");
+        if (host.GetConfig(KeyLanguage) == null)
+            host.SetConfig(KeyLanguage, host.GetLanguage());
 
         // ── 右键菜单入口 ──
         host.RegisterAction(new PluginAction
@@ -130,6 +146,12 @@ public class SettingPlugin : PluginBase
 
             case KeyDarkTheme:
                 host.SetDarkTheme(host.GetConfig(KeyDarkTheme) == "true");
+                break;
+
+            case KeyLanguage:
+                var lang = host.GetConfig(KeyLanguage);
+                if (!string.IsNullOrWhiteSpace(lang))
+                    host.SetLanguage(lang);
                 break;
         }
     }

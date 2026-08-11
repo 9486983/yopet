@@ -5,6 +5,7 @@ using Avalonia.Input;
 using Avalonia.Media;
 using Avalonia.Platform.Storage;
 using Avalonia.Threading;
+using Lang.Avalonia;
 using yopet.Core.Models;
 using yopet.Sdk;
 using yopet.ViewModels;
@@ -289,7 +290,7 @@ public partial class PetWindow : Window
         var config = new ListDialogConfig
         {
             LayoutMode = ListDialogLayoutMode.CardGrid,
-            Title = "Petdex 宠物",
+            Title = I18nManager.Instance.GetResource("Localization.Petdex.Title"),
             Emoji = "🎮",
             CardTextKey = "name",
             CardFallbackEmoji = "🎮",
@@ -300,10 +301,12 @@ public partial class PetWindow : Window
         config.ToolbarActions.Add(new ListToolbarAction
         {
             Emoji = "⏬",
-            Label = "Install",
+            Label = I18nManager.Instance.GetResource("Localization.Petdex.Install"),
             Callback = async () =>
             {
-                var petName = await InputDialog.ShowAsync(this, "安装宠物", "宠物名...");
+                var petName = await InputDialog.ShowAsync(this,
+                    I18nManager.Instance.GetResource("Localization.Petdex.InstallPetTitle"),
+                    I18nManager.Instance.GetResource("Localization.Petdex.InstallPetPlaceholder"));
                 if (string.IsNullOrEmpty(petName)) return;
                 await InstallPet(petName, config);
             },

@@ -1,4 +1,6 @@
 using System.Collections.Concurrent;
+using Lang.Avalonia;
+using System.Globalization;
 using yopet.Core.Interfaces;
 using yopet.Core.Models;
 using yopet.Sdk;
@@ -339,6 +341,23 @@ public class PluginHostImpl : IPluginHost
         _config.Config.IsDarkTheme = isDark;
         _config.Save();
         PetEvents.NotifyThemeChanged(isDark);
+    }
+
+    public string GetLanguage() => _config.Config.Language;
+
+    public void SetLanguage(string cultureName)
+    {
+        if (string.IsNullOrWhiteSpace(cultureName)) return;
+        _config.Config.Language = cultureName;
+        _config.Save();
+        try
+        {
+            I18nManager.Instance.Culture = new CultureInfo(cultureName);
+        }
+        catch (CultureNotFoundException)
+        {
+            // 无效文化名:保留配置,但不切换
+        }
     }
 
     public IReadOnlyList<PluginInfo> LoadedPlugins =>

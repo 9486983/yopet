@@ -1,0 +1,33 @@
+{
+  "language": "English",
+  "description": "English resources",
+  "cultureName": "en-US",
+  "Localization": {
+    "App": {
+      "Title": "My Personal Tool"
+    },
+    "PetWindow": {
+      "MenuPetdex": "Petdex",
+      "MenuClose": "Close Pet",
+      "MenuUnlock": "Unlock",
+      "MenuEndSession": "End Session"
+    },
+    "Petdex": {
+      "Title": "🎮 Petdex Pets",
+      "Install": "Install",
+      "InstallPetTitle": "Install Pet",
+      "InstallPetPlaceholder": "Pet name...",
+      "InstallPlaceholder": "npx petdex install <pet-name>",
+      "NoPets": "No pets installed yet",
+      "Hint": "💡 Click to select · install a new pet via the input above"
+    },
+    "Dialogs": {
+      "Ok": "OK",
+      "Cancel": "Cancel",
+      "Close": "Close",
+      "Confirm": "Confirm",
+      "Input": "Input",
+      "Error": "Error"
+    }
+  }
+}

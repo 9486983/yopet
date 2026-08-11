@@ -604,3 +604,38 @@ The project includes several plugins for reference:
 - Plugin DLLs are loaded via `AssemblyLoadContext(isCollectible: true)`, theoretically supporting hot-reload
 - Plugin projects need to reference `yopet.Sdk`, which already references `yopet.Core` (for `ItemType` etc.)
 - Each plugin's `.csproj` must target `net9.0`
+
+---
+
+## 8. Localization (i18n)
+
+The main app integrates **Lang.Avalonia** (12.0.3.3, MIT). Plugins can use its API and XAML markup extension directly.
+
+### Key Store Convention (Unified Key Store)
+
+- All language entries (main app + all plugins) live in the main app's `yopet/I18n/` JSON files: `zh-CN.json` (Simplified Chinese) and `en-US.json` (English)
+- When adding a key you MUST add it to **both** language files
+- Key naming convention: `Localization.<PluginName>.<Category>.<Name>`, e.g. `Localization.SettingPlugin.AutoStart.Label`
+- Do NOT create separate language files in a plugin and register them: Lang.Avalonia merges entries per `cultureName` by overwriting, so a later registration would wipe out earlier entries
+
+### Usage in XAML
+
+```xml
+<Window xmlns:c="https://codewf.com" ...>
+  <TextBlock Text="{c:I18n Localization.Dialogs.Ok}" />
+</Window>
+```
+
+- Under the current .NET 9 SDK (Roslyn 4.14) the `Lang.Avalonia.Analysis` generator is unavailable (it requires Roslyn 5.3), so **string keys** are used; after upgrading to the .NET 10 SDK you can add Analysis for compile-time key checking
+- A missing key falls back to the raw key string, which makes typos easy to spot
+
+### Usage in C#
+
+```csharp
+using Lang.Avalonia;
+var text = I18nManager.Instance.GetResource("Localization.Dialogs.Ok");
+```
+
+### Switching Language
+
+The main app switches via `IPluginHost.SetLanguage("en-US")` (or the SettingPlugin language dropdown); all bound UI refreshes automatically.

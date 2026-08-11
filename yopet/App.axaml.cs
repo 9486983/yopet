@@ -4,7 +4,10 @@ using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Input.Platform;
 using Avalonia.Markup.Xaml;
 using Avalonia.Styling;
+using Lang.Avalonia;
+using Lang.Avalonia.Json;
 using Microsoft.Extensions.DependencyInjection;
+using System.Globalization;
 using yopet.Core.Interfaces;
 using yopet.Services;
 using yopet.ViewModels;
@@ -49,6 +52,21 @@ public partial class App : Application
             var pluginHost = _serviceProvider.GetRequiredService<PluginHostImpl>();
             var pluginLoader = _serviceProvider.GetRequiredService<PluginLoader>();
             var config = configService.Config;
+
+            // ── 注册多语言资源（JSON 文件位于输出目录 I18n/） ──
+            try
+            {
+                var culture = string.IsNullOrWhiteSpace(config.Language)
+                    ? new CultureInfo("zh-CN")
+                    : new CultureInfo(config.Language);
+                I18nManager.Instance.Register(new JsonLangPlugin(), culture, out var i18nError);
+                if (!string.IsNullOrWhiteSpace(i18nError))
+                    System.Diagnostics.Debug.WriteLine($"[I18n] 注册失败: {i18nError}");
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"[I18n] 注册异常: {ex.Message}");
+            }
 
             // ── 加载主题资源 ──
             LoadThemeResources(config.IsDarkTheme);

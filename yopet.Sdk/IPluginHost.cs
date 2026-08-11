@@ -97,6 +97,12 @@ public interface IPluginHost
     /// <summary>设置深色/浅色主题，立即生效并持久化</summary>
     void SetDarkTheme(bool isDark);
 
+    /// <summary>获取当前界面语言（culture name，如 zh-CN）</summary>
+    string GetLanguage();
+
+    /// <summary>切换界面语言（culture name，如 zh-CN / en-US），立即生效并持久化</summary>
+    void SetLanguage(string cultureName);
+
     /// <summary>已加载的插件信息列表（只读展示用）</summary>
     IReadOnlyList<PluginInfo> LoadedPlugins { get; }
 }

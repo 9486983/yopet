@@ -18,6 +18,12 @@
     </PackageReference>
     <PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="9.0.0" />
     <PackageReference Include="SkiaSharp" Version="3.119.4-preview.1.1" />
+    <PackageReference Include="Lang.Avalonia" Version="12.0.3.3" />
+    <PackageReference Include="Lang.Avalonia.Json" Version="12.0.3.3" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Update="I18n\*.json" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
 
   <ItemGroup>

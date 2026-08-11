@@ -604,3 +604,38 @@ public class MyPlugin : PluginBase { }
 - 插件 DLL 使用 `AssemblyLoadContext(isCollectible: true)` 加载，理论上支持热重载
 - 插件项目需要引用 `yopet.Sdk`，后者已引用 `yopet.Core`（`ItemType` 等模型）
 - 每个插件的 `.csproj` 需以 `net9.0` 为目标框架
+
+---
+
+## 8. 多语言（i18n）
+
+主程序已集成 **Lang.Avalonia**（12.0.3.3，MIT），插件可直接使用其 API 与 XAML 标记扩展。
+
+### 词条库约定（统一词条库）
+
+- 所有语言词条（主程序 + 各插件）统一放在主程序 `yopet/I18n/` 目录的 JSON 文件中：`zh-CN.json`（简体中文）、`en-US.json`（English）
+- 新增词条时必须**同时**在两种语言文件里补充
+- key 命名约定：`Localization.<插件名>.<类别>.<名称>`，如 `Localization.SettingPlugin.AutoStart.Label`
+- 禁止在插件内另建语言文件再注册：Lang.Avalonia 对同一 `cultureName` 是覆盖式合并，后加载者会覆盖先加载者的词条
+
+### XAML 中使用
+
+```xml
+<Window xmlns:c="https://codewf.com" ...>
+  <TextBlock Text="{c:I18n Localization.Dialogs.Ok}" />
+</Window>
+```
+
+- 当前 .NET 9 SDK（Roslyn 4.14）下 `Lang.Avalonia.Analysis` 生成器不可用（需 Roslyn 5.3），故使用**字符串 key**；升级到 .NET 10 SDK 后可引入 Analysis 获得编译期 key 检查
+- key 缺失时回退显示原始 key 字符串，便于发现拼写错误
+
+### C# 中使用
+
+```csharp
+using Lang.Avalonia;
+var text = I18nManager.Instance.GetResource("Localization.Dialogs.Ok");
+```
+
+### 切换语言
+
+主程序通过 `IPluginHost.SetLanguage("en-US")`（或 SettingPlugin 的语言下拉）切换，所有已绑定的 UI 自动刷新。

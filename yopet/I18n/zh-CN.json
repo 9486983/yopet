@@ -1,0 +1,33 @@
+{
+  "language": "简体中文",
+  "description": "简体中文资源",
+  "cultureName": "zh-CN",
+  "Localization": {
+    "App": {
+      "Title": "My Personal Tool"
+    },
+    "PetWindow": {
+      "MenuPetdex": "宠物图鉴",
+      "MenuClose": "关闭宠物",
+      "MenuUnlock": "解锁",
+      "MenuEndSession": "结束会话"
+    },
+    "Petdex": {
+      "Title": "🎮 Petdex 宠物",
+      "Install": "安装",
+      "InstallPetTitle": "安装宠物",
+      "InstallPetPlaceholder": "宠物名...",
+      "InstallPlaceholder": "npx petdex install <宠物名>",
+      "NoPets": "暂无已安装的宠物",
+      "Hint": "💡 点击选择 · 在上方输入框直接安装新宠物"
+    },
+    "Dialogs": {
+      "Ok": "确定",
+      "Cancel": "取消",
+      "Close": "关闭",
+      "Confirm": "确认",
+      "Input": "输入",
+      "Error": "错误"
+    }
+  }
+}

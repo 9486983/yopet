@@ -2,6 +2,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\yopet.Core\yopet.Core.csproj" />
+    <PackageReference Include="Lang.Avalonia" Version="12.0.3.3" />
   </ItemGroup>
 
   <PropertyGroup>
