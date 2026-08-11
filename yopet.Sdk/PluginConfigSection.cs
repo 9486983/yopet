@@ -3,6 +3,12 @@ namespace yopet.Sdk;
 /// <summary>插件配置分区 —— 插件在初始化时通过 <see cref="IPluginHost.RegisterConfig"/> 注册</summary>
 public class PluginConfigSection
 {
+    /// <summary>
+    /// 稳定标识（建议用英文 id，如 "setting"、"deepseek"）。
+    /// 用于 <see cref="IPluginHost.ShowConfigDialog"/> 定位，不受语言切换影响。
+    /// </summary>
+    public string Key { get; set; } = "";
+
     /// <summary>分区标题（如 "DeepSeek API 配置"）</summary>
     public string Title { get; set; } = "";
 

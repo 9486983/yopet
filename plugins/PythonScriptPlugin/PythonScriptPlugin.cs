@@ -69,6 +69,10 @@ public class PythonScriptPlugin : PluginBase
             Emoji = "📜",
             Group = T("GroupPythonScripts"),
             Description = T("ScriptListDesc"),
+            Display = LocalizedDisplay.Of(
+                name: () => T("ScriptListName"),
+                group: () => T("GroupPythonScripts"),
+                description: () => T("ScriptListDesc")),
             Target = ActionTarget.ContextMenu,
             Callback = async () => await ShowScriptList(host),
         });
@@ -79,6 +83,10 @@ public class PythonScriptPlugin : PluginBase
             Emoji = "⚡",
             Group = T("GroupPythonScripts"),
             Description = T("QuickRunDesc"),
+            Display = LocalizedDisplay.Of(
+                name: () => T("QuickRunName"),
+                group: () => T("GroupPythonScripts"),
+                description: () => T("QuickRunDesc")),
             Target = ActionTarget.ContextMenu,
             Callback = async () => await QuickRun(host),
         });
@@ -89,10 +97,14 @@ public class PythonScriptPlugin : PluginBase
             Emoji = "⚙️",
             Group = T("GroupPythonScripts"),
             Description = T("PluginConfigDesc"),
+            Display = LocalizedDisplay.Of(
+                name: () => T("PluginConfigName"),
+                group: () => T("GroupPythonScripts"),
+                description: () => T("PluginConfigDesc")),
             Target = ActionTarget.ContextMenu,
             Callback = () =>
             {
-                host.ShowConfigDialog(T("PythonRunConfig"));
+                host.ShowConfigDialog("python");
                 return Task.CompletedTask;
             },
         });
@@ -100,6 +112,7 @@ public class PythonScriptPlugin : PluginBase
         // ── 插件配置（演示新 SDK 字段类型） ──
         host.RegisterConfig(new PluginConfigSection
         {
+            Key = "python",
             Title = T("PythonRunConfig"),
             Emoji = "⚙️",
             Groups = new()

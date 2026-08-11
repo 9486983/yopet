@@ -1,6 +1,7 @@
 using System.Runtime.InteropServices;
 using System.Text;
 using Lang.Avalonia;
+using yopet.Core.Models;
 using yopet.Sdk;
 using static PinTopPlugin.Win32Native;
 using static PinTopPlugin.Win32Const;
@@ -35,7 +36,7 @@ public class PinTopPlugin : PluginBase
     public override Task InitializeAsync(IPluginHost host)
     {
         _host = host;
-        host.RegisterConfig(new PluginConfigSection { Title = T("Name"), Emoji = "📌",
+        host.RegisterConfig(new PluginConfigSection { Key = "pintop", Title = T("Name"), Emoji = "📌",
             Fields = new() {
                 new() { Key = "pt_enabled", Label = T("EnabledLabel"), Type = PluginConfigFieldType.Boolean, DefaultValue = "true" },
                 new() { Key = "pt_modifiers", Label = T("ModifiersLabel"), Type = PluginConfigFieldType.String, DefaultValue = "Ctrl+Alt" },
@@ -53,13 +54,15 @@ public class PinTopPlugin : PluginBase
                 new() { Key = "pt_border_radius", Label = T("BorderRadiusLabel"), Type = PluginConfigFieldType.Number, DefaultValue = "8", MinValue = 0, MaxValue = 30 },
             }}, Name);
         host.RegisterAction(new PluginAction { Name = T("SettingsAction"), Emoji = "📌", Group = T("Group"), Target = ActionTarget.ContextMenu,
-            Callback = () => { host.ShowConfigDialog(T("Name")); return Task.CompletedTask; } });
+            Display = LocalizedDisplay.Of(name: () => T("SettingsAction"), group: () => T("Group")),
+            Callback = () => { host.ShowConfigDialog("pintop"); return Task.CompletedTask; } });
 
         host.RegisterAction(new PluginAction
         {
             Name = T("PinnedWindows"),
             Emoji = "📌",
             Group = T("Group"),
+            Display = LocalizedDisplay.Of(name: () => T("PinnedWindows"), group: () => T("Group")),
             Target = ActionTarget.ContextMenu,
             Callback = () => ShowPinnedList(host),
         });

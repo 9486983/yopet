@@ -1,6 +1,7 @@
 using yopet.Sdk;
 using System.Text.Json;
 using Lang.Avalonia;
+using yopet.Core.Models;
 
 namespace DeepSeekPlugin;
 
@@ -37,6 +38,7 @@ public class DeepSeekQueryPlugin : PluginBase
         // ── 注册配置定义 ──
         host.RegisterConfig(new PluginConfigSection
         {
+            Key = "deepseek",
             Title = "DeepSeek API",
             Emoji = "🔑",
             Fields = new()
@@ -90,10 +92,14 @@ public class DeepSeekQueryPlugin : PluginBase
             Emoji = "⚙️",
             Description = T("SettingsActionDesc"),
             Group = T("Group"),
+            Display = LocalizedDisplay.Of(
+                name: () => T("SettingsAction"),
+                group: () => T("Group"),
+                description: () => T("SettingsActionDesc")),
             Target = ActionTarget.ContextMenu,
             Callback = () =>
             {
-                host.ShowConfigDialog("DeepSeek API");
+                host.ShowConfigDialog("deepseek");
                 return Task.CompletedTask;
             },
         });
@@ -104,6 +110,10 @@ public class DeepSeekQueryPlugin : PluginBase
             Emoji = "💰",
             Description = T("QueryBalanceDesc"),
             Group = T("Group"),
+            Display = LocalizedDisplay.Of(
+                name: () => T("QueryBalance"),
+                group: () => T("Group"),
+                description: () => T("QueryBalanceDesc")),
             Target = ActionTarget.ContextMenu,
             Callback = async () => await QueryBalance(),
         });

@@ -1,4 +1,5 @@
 using Lang.Avalonia;
+using yopet.Core.Models;
 using yopet.Sdk;
 
 namespace AgentHooksPlugin;
@@ -36,6 +37,10 @@ public class AgentHooksPlugin : PluginBase
             Emoji = "👾",
             Description = T("SettingsActionDesc"),
             Group = T("Group"),
+            Display = LocalizedDisplay.Of(
+                name: () => T("SettingsAction"),
+                group: () => T("Group"),
+                description: () => T("SettingsActionDesc")),
             Target = ActionTarget.ContextMenu,
             Callback = ShowAgentList,
         });
@@ -136,7 +141,7 @@ public class AgentHooksPlugin : PluginBase
                                 {
                                     var provider = _providers.FirstOrDefault(p => p.Id == id);
                                     if (provider != null)
-                                        _host?.ShowConfigDialog($"Agent: {provider.Name}");
+                                        _host?.ShowConfigDialog(provider.ConfigSection.Key);
                                 }
                                 return Task.CompletedTask;
                             },

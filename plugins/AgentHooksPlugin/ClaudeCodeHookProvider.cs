@@ -38,6 +38,7 @@ public class ClaudeCodeHookProvider : HookProviderBase
 
     public override PluginConfigSection ConfigSection => new()
     {
+        Key = "agent_claude",
         Title = $"Agent: {Name}",
         Emoji = Emoji,
         Fields = new()

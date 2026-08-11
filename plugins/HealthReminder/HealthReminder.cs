@@ -1,4 +1,5 @@
 using Lang.Avalonia;
+using yopet.Core.Models;
 using yopet.Sdk;
 
 namespace HealthReminder;
@@ -37,6 +38,7 @@ public class HealthReminderPlugin : PluginBase
         // 注册配置
         host.RegisterConfig(new PluginConfigSection
         {
+            Key = "health_reminder",
             Title = T("Name"),
             Emoji = "🧘",
             Fields = new()
@@ -75,10 +77,11 @@ public class HealthReminderPlugin : PluginBase
             Name = T("Settings"),
             Emoji = "⚙️",
             Group = T("Group"),
+            Display = LocalizedDisplay.Of(name: () => T("Settings"), group: () => T("Group")),
             Target = ActionTarget.ContextMenu,
             Callback = () =>
             {
-                host.ShowConfigDialog(T("Name"));
+                host.ShowConfigDialog("health_reminder");
                 return Task.CompletedTask;
             },
         });

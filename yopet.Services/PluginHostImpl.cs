@@ -142,6 +142,7 @@ public class PluginHostImpl : IPluginHost
                 Reaction = action.Emoji,
                 Description = action.Description,
                 Group = action.Group,
+                Display = action.Display,
                 ActionCallback = action.Callback,
             });
         }
@@ -207,9 +208,11 @@ public class PluginHostImpl : IPluginHost
         PluginConfigs.Add(config);
     }
 
-    void IPluginHost.ShowConfigDialog(string sectionTitle)
+    void IPluginHost.ShowConfigDialog(string configKey)
     {
-        var section = PluginConfigs.FirstOrDefault(s => s.Title == sectionTitle);
+        // 优先按稳定 Key 匹配，其次按 Title 匹配（兼容旧写法）
+        var section = PluginConfigs.FirstOrDefault(s => s.Key == configKey)
+                      ?? PluginConfigs.FirstOrDefault(s => s.Title == configKey);
         if (section != null && OnShowPluginConfig != null)
             _ = OnShowPluginConfig(section);
     }

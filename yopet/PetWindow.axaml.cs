@@ -242,7 +242,8 @@ public partial class PetWindow : Window
         menu.Items.Add(dexItem);
         menu.Items.Add(new Separator());
 
-        var groups = _vm.Actions.GroupBy(a => string.IsNullOrEmpty(a.Group) ? "" : a.Group).ToList();
+        var groups = _vm.Actions.GroupBy(a =>
+            string.IsNullOrEmpty(a.Display?.Group?.Invoke() ?? a.Group) ? "" : (a.Display?.Group?.Invoke() ?? a.Group)).ToList();
         foreach (var group in groups)
         {
             if (string.IsNullOrEmpty(group.Key))
@@ -447,12 +448,13 @@ public partial class PetWindow : Window
     {
         var item = new MenuItem
         {
-            Header = $"{a.Emoji} {a.Name}",
+            Header = $"{a.Emoji} {a.Display?.Name?.Invoke() ?? a.Name}",
             FontSize = 13, Foreground = ThemeBrush("TextPrimary"),
         };
         // 仅在有描述内容时设置 tooltip，避免悬浮显示空白提示框
-        if (!string.IsNullOrWhiteSpace(a.Description))
-            ToolTip.SetTip(item, a.Description);
+        var desc = a.Display?.Description?.Invoke() ?? a.Description;
+        if (!string.IsNullOrWhiteSpace(desc))
+            ToolTip.SetTip(item, desc);
         var cap = a;
         item.Click += (_, _) => _vm?.PerformActionCommand.Execute(cap);
         return item;

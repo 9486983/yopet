@@ -1,5 +1,6 @@
 using System.Diagnostics;
 using Lang.Avalonia;
+using yopet.Core.Models;
 using yopet.Sdk;
 
 namespace SettingPlugin;
@@ -31,6 +32,7 @@ public class SettingPlugin : PluginBase
         // ── 配置表单 ──
         host.RegisterConfig(new PluginConfigSection
         {
+            Key = "setting",
             Title = T("Name"),
             Emoji = "⚙️",
             Fields = new()
@@ -92,8 +94,9 @@ public class SettingPlugin : PluginBase
             Name = T("Name"),
             Emoji = "⚙️",
             Group = T("Group"),
+            Display = LocalizedDisplay.Of(name: () => T("Name"), group: () => T("Group")),
             Target = ActionTarget.ContextMenu,
-            Callback = () => { host.ShowConfigDialog(T("Name")); return Task.CompletedTask; },
+            Callback = () => { host.ShowConfigDialog("setting"); return Task.CompletedTask; },
         });
 
         host.RegisterAction(new PluginAction
@@ -101,6 +104,7 @@ public class SettingPlugin : PluginBase
             Name = T("PluginList"),
             Emoji = "🧩",
             Group = T("Group"),
+            Display = LocalizedDisplay.Of(name: () => T("PluginList"), group: () => T("Group")),
             Target = ActionTarget.ContextMenu,
             Callback = () => ShowPluginListAsync(host),
         });

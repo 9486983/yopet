@@ -28,6 +28,11 @@ public class PluginAction
     /// <summary>右键菜单分组名（只有 Target=ContextMenu 时生效）</summary>
     public string Group { get; set; } = "";
 
+    /// <summary>
+    /// 动态显示信息（语言切换即时刷新；为 null 时使用上面的静态字符串）。
+    /// </summary>
+    public LocalizedDisplay? Display { get; set; }
+
     /// <summary>出现位置</summary>
     public ActionTarget Target { get; set; } = ActionTarget.ContextMenu;
 

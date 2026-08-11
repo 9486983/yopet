@@ -52,6 +52,7 @@ public class ReasonixHookProvider : HookProviderBase
 
     public override PluginConfigSection ConfigSection => new()
     {
+        Key = "agent_reasonix",
         Title = $"Agent: {Name}",
         Emoji = Emoji,
         Fields = new()
