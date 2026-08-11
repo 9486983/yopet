@@ -1,5 +1,17 @@
 # yopet Plugin SDK 开发指南
 
+> ## ⚠️ 跨平台约束（强制要求）
+>
+> yopet 是跨平台桌面应用（Windows / macOS / Linux 均需可编译、可运行）。开发或修改插件时必须遵守以下规则：
+>
+> 1. **禁止裸调用平台专属 API**：不得直接使用注册表、`user32.dll` / `gdi32.dll` 等 P/Invoke、`powershell`、`cmd.exe`、`explorer.exe`、`notepad.exe`、`shutdown` / `powercfg` 等 Windows 专属命令、可执行文件或路径。
+> 2. **优先使用跨平台方案**：剪贴板优先用 Avalonia 内置 `Clipboard` API；打开文件/目录/URL 用 `Process.Start` + 按平台分支的命令（macOS 用 `open`，Windows 用 `explorer.exe` 等）。
+> 3. **平台 API 必须守卫**：确需平台专属 API 时，必须用 `OperatingSystem.IsWindows()` / `OperatingSystem.IsMacOS()` 守卫包裹，并提供非目标平台的降级实现（返回 false、提示不可用或跳过功能），禁止让整个插件初始化失败。
+> 4. **路径与进程跨平台**：路径一律用 `Path.Combine`，禁止硬编码 `\`、`C:\`、`python.exe` 等；可执行文件探测需覆盖各平台命名（如 `python` / `python3` / `py`）。
+> 5. **优雅降级而非依赖异常**：插件 `InitializeAsync` 抛出的异常虽会被宿主捕获并跳过，但平台不可用时应在代码内显式降级，而不是靠异常兜底。
+
+---
+
 当你需要开发、修改或理解 yopet 桌面宠物应用的插件时使用。本文档涵盖 `yopet.Sdk` 命名空间下所有核心接口和类的使用方法。
 
 ---

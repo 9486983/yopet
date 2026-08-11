@@ -1,5 +1,17 @@
 # yopet Plugin SDK Guide
 
+> ## ⚠️ Cross-Platform Requirement (Mandatory)
+>
+> yopet is a cross-platform desktop application (must compile and run on Windows / macOS / Linux). When developing or modifying plugins, you MUST follow these rules:
+>
+> 1. **No bare platform-specific API calls**: never directly use the Windows Registry, P/Invoke into `user32.dll` / `gdi32.dll`, or Windows-only executables/commands such as `powershell`, `cmd.exe`, `explorer.exe`, `notepad.exe`, `shutdown`, `powercfg`, or hard-coded Windows paths.
+> 2. **Prefer cross-platform solutions**: use the Avalonia built-in `Clipboard` API for clipboard; use `Process.Start` with per-platform branching for opening files/directories/URLs (`open` on macOS, `explorer.exe` on Windows, etc.).
+> 3. **Guard any platform-specific API**: when a platform-specific API is truly required, wrap it with `OperatingSystem.IsWindows()` / `OperatingSystem.IsMacOS()` and provide a graceful fallback on other platforms (return false, show "not available", or skip the feature) — never let plugin initialization fail.
+> 4. **Cross-platform paths & processes**: always use `Path.Combine`; never hard-code `\`, `C:\`, `python.exe`, etc.; executable detection must cover per-platform names (e.g. `python` / `python3` / `py`).
+> 5. **Degrade gracefully instead of relying on exceptions**: exceptions thrown by plugin `InitializeAsync` are caught and skipped by the host, but you should degrade explicitly in code rather than relying on exceptions as a fallback.
+
+---
+
 Use this guide when developing, modifying, or understanding plugins for the yopet desktop pet application. It covers all core interfaces and classes in the `yopet.Sdk` namespace.
 
 ---

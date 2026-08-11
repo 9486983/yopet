@@ -31,6 +31,9 @@ packages/
 ## Config (user-specific)
 appsettings.Development.json
 
+## TODO (planning notes, not committed)
+todo/
+
 ## Claude
 .claude/
 
