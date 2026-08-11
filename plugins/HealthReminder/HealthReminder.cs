@@ -1,3 +1,4 @@
+using Lang.Avalonia;
 using yopet.Sdk;
 
 namespace HealthReminder;
@@ -13,36 +14,20 @@ public class HealthReminderPlugin : PluginBase
     private IPluginHost? _host;
     private CancellationTokenSource? _cts;
 
-    private static readonly string[] SitMessages =
-    [
-        "起来活动一下吧～坐太久尾巴要长在椅子上啦！🐱",
-        "站起来伸个懒腰～你现在的姿势像一只煮熟的小虾米🦐",
-        "该起来走走啦！再坐下去椅子都要长在你身上了🪑",
-        "活动时间到！让血液循环起来，不然腿要变成果冻了🦵✨",
-    ];
+    /// <summary>取当前语言的健康提醒词条</summary>
+    private static string T(string key) =>
+        I18nManager.Instance.GetResource($"Localization.HealthReminder.{key}");
 
-    private static readonly string[] EyeMessages =
-    [
-        "看看窗外吧～一直盯着屏幕，眼睛会变成熊猫眼的🐼",
-        "闭眼休息10秒？你的眼睛已经为你工作很久了哦～👀💤",
-        "远方看一看～屏幕虽好看，眼睛更重要呀🌈",
-        "眨眼运动时间！盯着屏幕太久眼睛都忘记怎么眨啦👁️",
-    ];
-
-    private static readonly string[] DrinkMessages =
-    [
-        "喝水时间到！你的身体正在喊「我好渴啊～」💧",
-        "该喝水啦！皮肤的水分余额已不足，请及时充值💦",
-        "吨吨吨～喝口水再继续吧！你认真的样子很可爱，但也要记得喝水🥤",
-        "水！你现在需要水！不然就要变成小鱼干了🐟",
-    ];
+    private static readonly string[] SitMessageKeys = ["SitMsg1", "SitMsg2", "SitMsg3", "SitMsg4"];
+    private static readonly string[] EyeMessageKeys = ["EyeMsg1", "EyeMsg2", "EyeMsg3", "EyeMsg4"];
+    private static readonly string[] DrinkMessageKeys = ["DrinkMsg1", "DrinkMsg2", "DrinkMsg3", "DrinkMsg4"];
 
     private DateTime _lastSit = DateTime.MinValue;
     private DateTime _lastEye = DateTime.MinValue;
     private DateTime _lastDrink = DateTime.MinValue;
     private DateTime _lastActiveDate = DateTime.Today;
 
-    public override string Name => "健康提醒";
+    public override string Name => T("Name");
 
     public override async Task InitializeAsync(IPluginHost host)
     {
@@ -52,32 +37,32 @@ public class HealthReminderPlugin : PluginBase
         // 注册配置
         host.RegisterConfig(new PluginConfigSection
         {
-            Title = "健康提醒",
+            Title = T("Name"),
             Emoji = "🧘",
             Fields = new()
             {
                 new()
                 {
-                    Key = KeyEnabled, Label = "启用健康提醒",
+                    Key = KeyEnabled, Label = T("EnabledLabel"),
                     Type = PluginConfigFieldType.Boolean,
                     DefaultValue = "true",
-                    Description = "开启后将按设定间隔自动弹出健康提醒",
+                    Description = T("EnabledDesc"),
                 },
                 new()
                 {
-                    Key = KeySit, Label = "久坐间隔（分钟）",
+                    Key = KeySit, Label = T("SitLabel"),
                     Type = PluginConfigFieldType.Number,
                     DefaultValue = "55", MinValue = 15, MaxValue = 120,
                 },
                 new()
                 {
-                    Key = KeyEye, Label = "用眼间隔（分钟）",
+                    Key = KeyEye, Label = T("EyeLabel"),
                     Type = PluginConfigFieldType.Number,
                     DefaultValue = "25", MinValue = 10, MaxValue = 90,
                 },
                 new()
                 {
-                    Key = KeyDrink, Label = "喝水间隔（分钟）",
+                    Key = KeyDrink, Label = T("DrinkLabel"),
                     Type = PluginConfigFieldType.Number,
                     DefaultValue = "40", MinValue = 15, MaxValue = 120,
                 },
@@ -87,13 +72,13 @@ public class HealthReminderPlugin : PluginBase
         // 设置入口
         host.RegisterAction(new PluginAction
         {
-            Name = "设置",
+            Name = T("Settings"),
             Emoji = "⚙️",
-            Group = "🧘 健康提醒",
+            Group = T("Group"),
             Target = ActionTarget.ContextMenu,
             Callback = () =>
             {
-                host.ShowConfigDialog("健康提醒");
+                host.ShowConfigDialog(T("Name"));
                 return Task.CompletedTask;
             },
         });
@@ -153,19 +138,19 @@ public class HealthReminderPlugin : PluginBase
         if ((now - _lastSit).TotalMinutes >= sitMin)
         {
             _lastSit = now;
-            _host.ShowThought("🧘 久坐提醒", SitMessages[Random.Shared.Next(SitMessages.Length)]);
+            _host.ShowThought(T("SitTitle"), T(SitMessageKeys[Random.Shared.Next(SitMessageKeys.Length)]));
         }
 
         if ((now - _lastEye).TotalMinutes >= eyeMin)
         {
             _lastEye = now;
-            _host.ShowThought("👀 用眼提醒", EyeMessages[Random.Shared.Next(EyeMessages.Length)]);
+            _host.ShowThought(T("EyeTitle"), T(EyeMessageKeys[Random.Shared.Next(EyeMessageKeys.Length)]));
         }
 
         if ((now - _lastDrink).TotalMinutes >= drinkMin)
         {
             _lastDrink = now;
-            _host.ShowThought("💧 喝水提醒", DrinkMessages[Random.Shared.Next(DrinkMessages.Length)]);
+            _host.ShowThought(T("DrinkTitle"), T(DrinkMessageKeys[Random.Shared.Next(DrinkMessageKeys.Length)]));
         }
     }
 
