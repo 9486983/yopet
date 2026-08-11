@@ -43,3 +43,7 @@ MyPersonalTool/bin/Release/**/plugins/*.dll
 
 ## Reasonix runtime
 .reasonix/
+
+## Installer output
+installer/*.msi
+installer/*.wixpdb
