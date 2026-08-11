@@ -3,6 +3,7 @@ using Avalonia.Controls;
 using Avalonia.Input;
 using Avalonia.Layout;
 using Avalonia.Media;
+using Lang.Avalonia;
 
 namespace yopet.Views;
 
@@ -15,8 +16,8 @@ public static class ConfirmDialog
     {
         var tcs = new TaskCompletionSource<bool>();
 
-        var yesBtn = DialogHelper.CreateButton("✅ 确定", primary: true);
-        var noBtn = DialogHelper.CreateButton("❌ 取消");
+        var yesBtn = DialogHelper.CreateButton(I18nManager.Instance.GetResource("Localization.Dialogs.Confirm"), primary: true);
+        var noBtn = DialogHelper.CreateButton(I18nManager.Instance.GetResource("Localization.Dialogs.Cancel"));
 
         yesBtn.Click += (_, _) => tcs.TrySetResult(true);
         noBtn.Click += (_, _) => tcs.TrySetResult(false);

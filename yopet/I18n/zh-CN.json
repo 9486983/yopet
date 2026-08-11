@@ -4,13 +4,23 @@
   "cultureName": "zh-CN",
   "Localization": {
     "App": {
-      "Title": "My Personal Tool"
+      "Title": "电子宠物"
     },
     "PetWindow": {
-      "MenuPetdex": "宠物图鉴",
-      "MenuClose": "关闭宠物",
-      "MenuUnlock": "解锁",
-      "MenuEndSession": "结束会话"
+      "MenuPetdex": "📕 宠物图鉴",
+      "MenuClose": "✕ 关闭宠物",
+      "MenuUnlock": "🔓 解锁「{0}」",
+      "MenuEndSession": "⏹️ 结束{0}{1}",
+      "Session": "会话",
+      "CancelTaskTip": "点击取消任务",
+      "ConfigLoadFailed": "❌ 配置页加载失败",
+      "InstallingTitle": "⏳ 安装中",
+      "Installing": "正在安装 {0}...",
+      "TimeoutTitle": "⏱️ 超时",
+      "InstallTimeout": "安装 {0} 超时（120秒）",
+      "InstalledTitle": "✅ 安装成功",
+      "Installed": "{0} 已安装",
+      "InstallFailedTitle": "❌ 安装失败"
     },
     "Petdex": {
       "Title": "🎮 Petdex 宠物",
@@ -22,12 +32,19 @@
       "Hint": "💡 点击选择 · 在上方输入框直接安装新宠物"
     },
     "Dialogs": {
-      "Ok": "确定",
+      "Confirm": "✅ 确定",
       "Cancel": "取消",
-      "Close": "关闭",
-      "Confirm": "确认",
-      "Input": "输入",
-      "Error": "错误"
+      "Save": "💾 保存",
+      "CronEveryMinute": "每分钟",
+      "CronEvery5Minutes": "每5分钟",
+      "CronEvery10Minutes": "每10分钟",
+      "CronEvery30Minutes": "每30分钟",
+      "CronEveryHour": "每小时",
+      "CronDaily0": "每天0点",
+      "CronDaily9": "每天9点",
+      "CronWeekly0": "每周日0点",
+      "CronMonthly1": "每月1号0点",
+      "CronTemplate": "模板"
     }
   }
 }

@@ -206,12 +206,12 @@ public partial class PetWindow : Window
         if (_vm.IsSessionActive)
         {
             var session = _vm.CurrentSession;
-            var title = session?.Title ?? "会话";
+            var title = session?.Title ?? I18nManager.Instance.GetResource("Localization.PetWindow.Session");
             var status = session?.Status ?? "";
             var statusSuffix = string.IsNullOrEmpty(status) ? "" : $"（{status}）";
             var endItem = new MenuItem
             {
-                Header = $"⏹️ 结束{title}{statusSuffix}",
+                Header = string.Format(I18nManager.Instance.GetResource("Localization.PetWindow.MenuEndSession"), title, statusSuffix),
                 FontSize = 13,
                 Foreground = ThemeBrush("TextPrimary"),
             };
@@ -225,7 +225,7 @@ public partial class PetWindow : Window
             var n = _vm.ActivatedFileAction?.Name ?? "";
             var unlockItem = new MenuItem
             {
-                Header = "\U0001f513 解锁「" + n + "」",
+                Header = string.Format(I18nManager.Instance.GetResource("Localization.PetWindow.MenuUnlock"), n),
                 FontSize = 13, Foreground = ThemeBrush("TextPrimary"),
             };
             unlockItem.Click += (_, _) => _vm.DeactivateAction();
@@ -235,7 +235,7 @@ public partial class PetWindow : Window
 
         var dexItem = new MenuItem
         {
-            Header = "\U0001f4d6 宠物图鉴",
+            Header = I18nManager.Instance.GetResource("Localization.PetWindow.MenuPetdex"),
             FontSize = 13, Foreground = ThemeBrush("TextPrimary"),
         };
         dexItem.Click += (_, _) => OpenPetdex();
@@ -260,7 +260,7 @@ public partial class PetWindow : Window
 
         var closeItem = new MenuItem
         {
-            Header = "✕ 关闭宠物", FontSize = 13,
+            Header = I18nManager.Instance.GetResource("Localization.PetWindow.MenuClose"), FontSize = 13,
             Foreground = new SolidColorBrush(Color.Parse("#E81123")),
         };
         closeItem.Click += (_, _) => Close();
@@ -350,20 +350,23 @@ public partial class PetWindow : Window
         proc.BeginOutputReadLine();
         proc.BeginErrorReadLine();
 
-        _vm?.ShowFileDropInfo("⏳ 安装中", $"正在安装 {petName}...");
+        _vm?.ShowFileDropInfo(I18nManager.Instance.GetResource("Localization.PetWindow.InstallingTitle"),
+            string.Format(I18nManager.Instance.GetResource("Localization.PetWindow.Installing"), petName));
 
         var exitTask = proc.WaitForExitAsync();
         var completed = await Task.WhenAny(exitTask, Task.Delay(120_000));
         if (completed != exitTask)
         {
             proc.Kill();
-            _vm?.ShowFileDropInfo("⏱️ 超时", $"安装 {petName} 超时（120秒）");
+            _vm?.ShowFileDropInfo(I18nManager.Instance.GetResource("Localization.PetWindow.TimeoutTitle"),
+                string.Format(I18nManager.Instance.GetResource("Localization.PetWindow.InstallTimeout"), petName));
             return;
         }
 
         if (proc.ExitCode == 0)
         {
-            _vm?.ShowFileDropInfo("✅ 安装成功", $"{petName} 已安装");
+            _vm?.ShowFileDropInfo(I18nManager.Instance.GetResource("Localization.PetWindow.InstalledTitle"),
+                string.Format(I18nManager.Instance.GetResource("Localization.PetWindow.Installed"), petName));
             _vm?.ReloadPetdexPets();
             config.NotifyDataChanged();
         }
@@ -371,7 +374,7 @@ public partial class PetWindow : Window
         {
             var err = output.ToString().Trim();
             if (err.Length > 100) err = err[..100] + "...";
-            _vm?.ShowFileDropInfo("❌ 安装失败", err);
+            _vm?.ShowFileDropInfo(I18nManager.Instance.GetResource("Localization.PetWindow.InstallFailedTitle"), err);
         }
     }
 

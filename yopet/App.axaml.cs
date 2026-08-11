@@ -138,7 +138,7 @@ public partial class App : Application
                 {
                     System.Diagnostics.Debug.WriteLine($"[ConfigDialog] Error: {ex}");
                     // 出错时尝试用简单方式显示
-                    pluginHost.ShowThought("❌ 配置页加载失败", ex.Message);
+                    pluginHost.ShowThought(I18nManager.Instance.GetResource("Localization.PetWindow.ConfigLoadFailed"), ex.Message);
                 }
             };
 

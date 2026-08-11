@@ -4,13 +4,23 @@
   "cultureName": "en-US",
   "Localization": {
     "App": {
-      "Title": "My Personal Tool"
+      "Title": "Desktop Pet"
     },
     "PetWindow": {
-      "MenuPetdex": "Petdex",
-      "MenuClose": "Close Pet",
-      "MenuUnlock": "Unlock",
-      "MenuEndSession": "End Session"
+      "MenuPetdex": "📕 Petdex",
+      "MenuClose": "✕ Close Pet",
+      "MenuUnlock": "🔓 Unlock「{0}」",
+      "MenuEndSession": "⏹️ End {0}{1}",
+      "Session": "Session",
+      "CancelTaskTip": "Click to cancel task",
+      "ConfigLoadFailed": "❌ Failed to load config page",
+      "InstallingTitle": "⏳ Installing",
+      "Installing": "Installing {0}...",
+      "TimeoutTitle": "⏱️ Timeout",
+      "InstallTimeout": "Installing {0} timed out (120s)",
+      "InstalledTitle": "✅ Installed",
+      "Installed": "{0} installed",
+      "InstallFailedTitle": "❌ Install failed"
     },
     "Petdex": {
       "Title": "🎮 Petdex Pets",
@@ -22,12 +32,19 @@
       "Hint": "💡 Click to select · install a new pet via the input above"
     },
     "Dialogs": {
-      "Ok": "OK",
+      "Confirm": "✅ OK",
       "Cancel": "Cancel",
-      "Close": "Close",
-      "Confirm": "Confirm",
-      "Input": "Input",
-      "Error": "Error"
+      "Save": "💾 Save",
+      "CronEveryMinute": "Every minute",
+      "CronEvery5Minutes": "Every 5 minutes",
+      "CronEvery10Minutes": "Every 10 minutes",
+      "CronEvery30Minutes": "Every 30 minutes",
+      "CronEveryHour": "Every hour",
+      "CronDaily0": "Every day at 0:00",
+      "CronDaily9": "Every day at 9:00",
+      "CronWeekly0": "Every Sunday at 0:00",
+      "CronMonthly1": "On the 1st at 0:00",
+      "CronTemplate": "Template"
     }
   }
 }

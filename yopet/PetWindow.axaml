@@ -1,9 +1,10 @@
 <Window xmlns="https://github.com/avaloniaui"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:c="https://codewf.com"
         xmlns:controls="clr-namespace:yopet.Controls"
         x:Class="yopet.PetWindow"
         x:CompileBindings="False"
-        Title="电子宠物"
+        Title="{c:I18n Localization.App.Title}"
         Width="160" MinWidth="120"
         Height="160" MinHeight="120"
         WindowStartupLocation="Manual"
@@ -87,7 +88,7 @@
           HorizontalAlignment="Right" VerticalAlignment="Top"
           Margin="0,13,13,0"
           Cursor="Hand"
-          ToolTip.Tip="点击取消任务"
+          ToolTip.Tip="{c:I18n Localization.PetWindow.CancelTaskTip}"
           Background="Transparent"
           PointerPressed="OnCancelTaskPointerPressed">
       <!-- 轨道背景圆圈（不拦截点击） -->
