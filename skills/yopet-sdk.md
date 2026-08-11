@@ -639,3 +639,39 @@ var text = I18nManager.Instance.GetResource("Localization.Dialogs.Ok");
 ### 切换语言
 
 主程序通过 `IPluginHost.SetLanguage("en-US")`（或 SettingPlugin 的语言下拉）切换，所有已绑定的 UI 自动刷新。
+
+### 动作的动态名称（语言切换即时刷新）
+
+右键菜单动作的 `Name`/`Group`/`Description` 是注册时快照，切语言后不会自动更新。需要在切换时即时刷新时，用 `LocalizedDisplay` 提供**每次渲染求值的动态文本**：
+
+```csharp
+host.RegisterAction(new PluginAction
+{
+    Name = T("SettingsAction"),   // 静态快照（启动语言）
+    Group = T("Group"),
+    Display = LocalizedDisplay.Of(
+        name: () => T("SettingsAction"),
+        group: () => T("Group"),
+        description: () => T("SettingsActionDesc")),   // 每次渲染求值
+    Target = ActionTarget.ContextMenu,
+    Callback = () => { host.ShowConfigDialog("my_config"); return Task.CompletedTask; },
+});
+```
+
+`LocalizedDisplay` 位于 `yopet.Core.Models`，对应字段为 null 时回退到静态字符串。
+
+### 配置弹窗的稳定定位（Key）
+
+`ShowConfigDialog` 按 `PluginConfigSection.Key` 优先匹配，其次按 `Title` 匹配。**注册配置时必须设置稳定 Key，回调里用 Key 定位，不要用运行时 T() 拼标题**——否则切语言后 Key 匹配不到（`Title` 是注册时快照，运行时 T() 取当前语言，二者会失配导致弹窗打不开）：
+
+```csharp
+host.RegisterConfig(new PluginConfigSection
+{
+    Key = "my_config",            // 稳定英文 id，不受语言切换影响
+    Title = T("ConfigTitle"),
+    ...
+}, Name);
+
+// 回调中：
+host.ShowConfigDialog("my_config");
+```

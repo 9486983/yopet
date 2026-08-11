@@ -639,3 +639,39 @@ var text = I18nManager.Instance.GetResource("Localization.Dialogs.Ok");
 ### Switching Language
 
 The main app switches via `IPluginHost.SetLanguage("en-US")` (or the SettingPlugin language dropdown); all bound UI refreshes automatically.
+
+### Dynamic Action Names (Instant Refresh on Language Switch)
+
+`Name`/`Group`/`Description` of context-menu actions are snapshots taken at registration time and do not update after a language switch. To refresh them immediately, provide **per-render evaluated** text via `LocalizedDisplay`:
+
+```csharp
+host.RegisterAction(new PluginAction
+{
+    Name = T("SettingsAction"),   // static snapshot (startup language)
+    Group = T("Group"),
+    Display = LocalizedDisplay.Of(
+        name: () => T("SettingsAction"),
+        group: () => T("Group"),
+        description: () => T("SettingsActionDesc")),   // evaluated on each render
+    Target = ActionTarget.ContextMenu,
+    Callback = () => { host.ShowConfigDialog("my_config"); return Task.CompletedTask; },
+});
+```
+
+`LocalizedDisplay` lives in `yopet.Core.Models`; a null field falls back to the static string.
+
+### Stable Config Dialog Lookup (Key)
+
+`ShowConfigDialog` matches `PluginConfigSection.Key` first, then `Title`. **Always set a stable Key when registering config and use that Key in callbacks — never build the lookup title with runtime `T()`**: `Title` is a registration-time snapshot while runtime `T()` returns the current language, so they mismatch after a switch and the dialog would not open:
+
+```csharp
+host.RegisterConfig(new PluginConfigSection
+{
+    Key = "my_config",            // stable English id, unaffected by language switches
+    Title = T("ConfigTitle"),
+    ...
+}, Name);
+
+// in the callback:
+host.ShowConfigDialog("my_config");
+```

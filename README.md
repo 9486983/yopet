@@ -62,7 +62,21 @@ The legacy settings window was removed — settings now live in the **SettingPlu
 | 🚀 Auto-start | Cross-platform (Windows registry / macOS LaunchAgents / Linux autostart) |
 | 🐱 Animation speed | 30–300 ms/frame slider |
 | 🎨 Dark mode | Theme toggle |
+| 🌐 Language | zh-CN / en-US dropdown, applies immediately |
 | 🧩 Plugin list | Browse loaded plugins |
+
+### 🌐 Multi-language (i18n)
+
+Built on **Lang.Avalonia** (MIT). All UI text lives in the key store under `yopet/I18n/`:
+
+| File | Culture |
+|------|---------|
+| `I18n/zh-CN.json` | Simplified Chinese (default) |
+| `I18n/en-US.json` | English |
+
+- **Switch language**: right-click pet → ⚙️ Settings → Language dropdown (applies immediately; menu/actions refresh in place)
+- Keys follow `Localization.<Module>.<Name>` (e.g. `Localization.PetWindow.MenuPetdex`); missing keys fall back to the raw key string for easy detection
+- **Plugin texts share the unified key store** — plugin entries are added to the same `I18n/*.json` files (see `skills/yopet-sdk.md` §8)
 
 ---
 

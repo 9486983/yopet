@@ -62,7 +62,21 @@
 | 🚀 开机自启 | 跨平台（Windows 注册表 / macOS LaunchAgents / Linux autostart） |
 | 🐱 动画速度 | 30–300 ms/帧 滑块 |
 | 🎨 深色模式 | 主题切换 |
+| 🌐 语言 | zh-CN / en-US 下拉，即时生效 |
 | 🧩 插件列表 | 浏览已加载插件 |
+
+### 🌐 多语言（i18n）
+
+基于 **Lang.Avalonia**（MIT）。所有界面文本集中在 `yopet/I18n/` 词条库：
+
+| 文件 | 语言 |
+|------|------|
+| `I18n/zh-CN.json` | 简体中文（默认） |
+| `I18n/en-US.json` | English |
+
+- **切换语言**：右键宠物 → ⚙️ 设置 → 语言下拉（即时生效，菜单/动作就地刷新）
+- key 遵循 `Localization.<模块>.<名称>`（如 `Localization.PetWindow.MenuPetdex`）；key 缺失时回退显示原始 key 便于发现
+- **插件文本共用统一词条库**——插件词条并入同一 `I18n/*.json`（见 `skills/yopet-sdk.md` 第 8 章）
 
 ---
 
