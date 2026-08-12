@@ -7,7 +7,7 @@
       "Title": "电子宠物"
     },
     "PetWindow": {
-      "MenuPetdex": "📕 宠物图鉴",
+      "MenuPetdex": "📒 宠物图鉴",
       "MenuClose": "✕ 关闭宠物",
       "MenuUnlock": "🔓 解锁「{0}」",
       "MenuEndSession": "⏹️ 结束{0}{1}",
@@ -318,6 +318,10 @@
       "DoneMsg": "共整理 {0} 张图片到：\n{1}",
       "ContinueTitle": "📋 继续",
       "ContinueMsg": "已整理 {0}/10 张，再拖入一些吧"
+    },
+    "SystemUsagePlugin": {
+      "Name": "💻 占用率监控",
+      "Format": "CPU: {0}%\n内存: {1}%（{2} / {3}）"
     }
   }
 }

@@ -175,6 +175,7 @@ public partial class PetWindow : Window
         if ((now - _lastClick).TotalMilliseconds < 350)
         {
             _lastClick = DateTime.MinValue;
+            _vm?.OnPetDoubleClicked(); // 通知插件（事件池）
             OpenPetdex();
         }
         else
@@ -184,10 +185,20 @@ public partial class PetWindow : Window
             {
                 await Task.Delay(400);
                 if ((DateTime.Now - _lastClick).TotalMilliseconds >= 380)
+                {
+                    _vm?.OnPetClicked(); // 通知插件（事件池）
                     _vm?.SingleClickCommand.Execute(null);
+                }
             });
         }
     }
+
+    // ── 悬浮提示（事件绑定与转发，业务由事件池协调） ──
+    private void OnPetPointerEntered(object? sender, PointerEventArgs e)
+        => _vm?.OnPetHoverEntered();
+
+    private void OnPetPointerExited(object? sender, PointerEventArgs e)
+        => _vm?.OnPetHoverExited();
 
     // ── 右键菜单 ──
     private static SolidColorBrush ThemeBrush(string key, uint fallback = 0xFFFFFFFF)

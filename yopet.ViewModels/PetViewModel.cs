@@ -15,6 +15,9 @@ public partial class PetViewModel : ObservableObject
     private CancellationTokenSource? _pageCts;
     private int _dragGeneration;
 
+    // ── 宠物悬浮提示（来自插件事件池） ──
+    private readonly PluginEventPool? _eventPool;
+
     // ── 精灵图属性 ──
 
     [ObservableProperty]
@@ -150,11 +153,13 @@ public partial class PetViewModel : ObservableObject
     public PetViewModel(IConfigService configService, IDispatcherService dispatcher,
         IPetdexService petdexService,
         List<PetActionConfig>? pluginActions = null,
-        List<FileActionConfig>? fileActions = null)
+        List<FileActionConfig>? fileActions = null,
+        PluginEventPool? eventPool = null)
     {
         _configService = configService;
         _dispatcher = dispatcher;
         _petdexService = petdexService;
+        _eventPool = eventPool;
 
         // 加载插件注册的文件动作
         if (fileActions != null && fileActions.Count > 0)
@@ -410,6 +415,22 @@ public partial class PetViewModel : ObservableObject
             _dispatcher.Post(() => IsShowingThought = false);
         }, ct);
     }
+
+    // ── 宠物悬浮提示（事件绑定与触发，展示由插件调用气泡组件完成） ──
+
+    /// <summary>鼠标进入宠物：触发事件池悬浮进入事件（由 PetWindow 事件绑定调用）</summary>
+    public void OnPetHoverEntered() => _eventPool?.Publish(EventNames.PetHoverEntered);
+
+    /// <summary>鼠标离开宠物：触发事件池悬浮离开事件（由 PetWindow 事件绑定调用）</summary>
+    public void OnPetHoverExited() => _eventPool?.Publish(EventNames.PetHoverExited);
+
+    // ── 宠物单击/双击（事件绑定与触发，插件可订阅响应） ──
+
+    /// <summary>单击宠物：触发事件池单击事件（由 PetWindow 识别后调用）</summary>
+    public void OnPetClicked() => _eventPool?.Publish(EventNames.PetClicked);
+
+    /// <summary>双击宠物：触发事件池双击事件（由 PetWindow 识别后调用）</summary>
+    public void OnPetDoubleClicked() => _eventPool?.Publish(EventNames.PetDoubleClicked);
 
     public void Cleanup()
     {

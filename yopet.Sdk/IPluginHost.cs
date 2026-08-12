@@ -105,4 +105,12 @@ public interface IPluginHost
 
     /// <summary>已加载的插件信息列表（只读展示用）</summary>
     IReadOnlyList<PluginInfo> LoadedPlugins { get; }
+
+    // ── 插件事件池（常用事件统一注册与管理） ──
+
+    /// <summary>
+    /// 插件事件池 —— 悬浮提示等常用事件统一在此注册与管理（含冲突检测、优先级）。
+    /// 事件名请使用 <see cref="EventNames"/> 中的常量。
+    /// </summary>
+    PluginEventPool Events { get; }
 }

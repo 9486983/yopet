@@ -16,6 +16,8 @@
         PointerPressed="OnWindowPointerPressed"
         PointerMoved="OnWindowPointerMoved"
         PointerReleased="OnWindowPointerReleased"
+        PointerEntered="OnPetPointerEntered"
+        PointerExited="OnPetPointerExited"
         DragDrop.AllowDrop="True">
 
   <Grid DragDrop.AllowDrop="True"

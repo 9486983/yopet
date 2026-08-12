@@ -80,6 +80,9 @@ public class PluginHostImpl : IPluginHost
     /// <summary>列表弹窗回调</summary>
     public Func<ListDialogConfig, Task>? OnShowListDialog { get; set; }
 
+    /// <summary>插件事件池 —— 悬浮提示等常用事件统一注册与管理（含冲突检测、优先级）</summary>
+    public PluginEventPool Events { get; } = new();
+
     /// <summary>日志输出</summary>
     public event Action<string>? LogEmitted;
 

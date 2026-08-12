@@ -85,7 +85,8 @@ public partial class App : Application
             // ── 宠物窗口 ──
             var petVm = new PetViewModel(configService, dispatcher, petdexService,
                 pluginHost.PluginActions,
-                pluginHost.FileActions);
+                pluginHost.FileActions,
+                pluginHost.Events);
             PetViewModel = petVm;
             var petWindow = new PetWindow
             {
@@ -124,6 +125,15 @@ public partial class App : Application
                 Avalonia.Threading.Dispatcher.UIThread.Post(() => petVm.OnSessionEnded());
             petVm.EndSessionCallback = () =>
                 pluginHost.CurrentSession?.Cancel();
+
+            // ── 插件事件池冲突提示（重复注册/多插件共存时展示给用户，仅注册阶段触发一次） ──
+            pluginHost.Events.ConflictDetected += (_, args) =>
+                Avalonia.Threading.Dispatcher.UIThread.Post(() =>
+                {
+                    System.Diagnostics.Debug.WriteLine($"[EventPool] {args.Message}");
+                    if (App.PetViewModel is { } vm)
+                        vm.ShowFileDropInfo("⚠️ 插件事件冲突", args.Message);
+                });
 
             // ── 连接插件配置弹窗 ──
             pluginHost.OnShowPluginConfig = async section =>

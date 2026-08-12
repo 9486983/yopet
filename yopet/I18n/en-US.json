@@ -7,7 +7,7 @@
       "Title": "Desktop Pet"
     },
     "PetWindow": {
-      "MenuPetdex": "📕 Petdex",
+      "MenuPetdex": "📒 Petdex",
       "MenuClose": "✕ Close Pet",
       "MenuUnlock": "🔓 Unlock「{0}」",
       "MenuEndSession": "⏹️ End {0}{1}",
@@ -318,6 +318,10 @@
       "DoneMsg": "Organized {0} images into:\n{1}",
       "ContinueTitle": "📋 Keep Going",
       "ContinueMsg": "Organized {0}/10, keep dropping more"
+    },
+    "SystemUsagePlugin": {
+      "Name": "💻 System Usage Monitor",
+      "Format": "CPU: {0}%\nMemory: {1}% ({2} / {3})"
     }
   }
 }
