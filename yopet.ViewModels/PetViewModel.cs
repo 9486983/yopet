@@ -106,6 +106,25 @@ public partial class PetViewModel : ObservableObject
     /// <summary>取消任务回调（由 App 层设置，调用插件 host.CancelCurrentTask）</summary>
     public Action? CancelTaskCallback { get; set; }
 
+    /// <summary>热重载插件回调（由 App 层设置，调用宿主重载并刷新动作列表）</summary>
+    public Action? ReloadPluginsCallback { get; set; }
+
+    /// <summary>
+    /// 刷新插件注册的右键动作（热重载后调用，右键菜单下次打开即生效）。
+    /// </summary>
+    public void RefreshPluginActions(IEnumerable<PetActionConfig>? pluginActions)
+    {
+        Actions.Clear();
+        if (pluginActions != null) Actions.AddRange(pluginActions);
+    }
+
+    /// <summary>刷新插件注册的文件动作（热重载后调用）</summary>
+    public void RefreshFileActions(IEnumerable<FileActionConfig>? fileActions)
+    {
+        _fileActions.Clear();
+        if (fileActions != null) _fileActions.AddRange(fileActions);
+    }
+
     // ── 会话多步工作流 ──
 
     /// <summary>当前活跃会话（无则为 null）</summary>

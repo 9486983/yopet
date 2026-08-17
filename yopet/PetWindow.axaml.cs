@@ -251,6 +251,14 @@ public partial class PetWindow : Window
         };
         dexItem.Click += (_, _) => OpenPetdex();
         menu.Items.Add(dexItem);
+
+        var reloadItem = new MenuItem
+        {
+            Header = I18nManager.Instance.GetResource("Localization.PetWindow.ReloadPlugins"),
+            FontSize = 13, Foreground = ThemeBrush("TextPrimary"),
+        };
+        reloadItem.Click += (_, _) => _vm?.ReloadPluginsCallback?.Invoke();
+        menu.Items.Add(reloadItem);
         menu.Items.Add(new Separator());
 
         var groups = _vm.Actions.GroupBy(a =>

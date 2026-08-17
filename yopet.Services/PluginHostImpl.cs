@@ -4,11 +4,12 @@ using System.Globalization;
 using yopet.Core.Interfaces;
 using yopet.Core.Models;
 using yopet.Sdk;
+using yopet.Services.PluginHosting;
 
 namespace yopet.Services;
 
 /// <summary>插件宿主实现 —— 插件通过此对象与主程序交互</summary>
-public class PluginHostImpl : IPluginHost
+public class PluginHostImpl : IPluginHost, IPluginStateResetter
 {
     private readonly IConfigService _config;
     private readonly LoggerService _loggerService;
@@ -373,4 +374,25 @@ public class PluginHostImpl : IPluginHost
             Version = p.Version,
             Description = p.Description,
         }).ToList() ?? new List<PluginInfo>();
+
+    // ── 热重载 ──
+
+    /// <summary>热重载所有插件：清理→卸载→重新加载→初始化（由主程序 UI 触发）</summary>
+    public async Task ReloadAllAsync()
+    {
+        if (_pluginLoader == null) return;
+        await _pluginLoader.ReloadAllAsync(this);
+    }
+
+    /// <summary>
+    /// 重置插件在宿主上注册的残留状态（热重载前调用），
+    /// 避免新旧插件实例的动作、激活态、会话互相串扰。
+    /// </summary>
+    void IPluginStateResetter.ResetPluginState()
+    {
+        PluginActions.Clear();
+        FileActions.Clear();
+        ActivatedAction = null;
+        _currentSession?.Cancel();
+    }
 }

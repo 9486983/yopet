@@ -118,6 +118,27 @@ public partial class App : Application
             petVm.CancelTaskCallback = () =>
                 pluginHost.CancelCurrentTask();
 
+            // ── 热重载插件（右键菜单触发：清理→卸载→重载→初始化→刷新 UI 动作） ──
+            petVm.ReloadPluginsCallback = async () =>
+            {
+                try
+                {
+                    await pluginHost.ReloadAllAsync();
+                    petVm.RefreshPluginActions(pluginHost.PluginActions);
+                    petVm.RefreshFileActions(pluginHost.FileActions);
+                    petVm.ShowFileDropInfo(
+                        I18nManager.Instance.GetResource("Localization.PetWindow.ReloadPluginsDone"),
+                        string.Format(I18nManager.Instance.GetResource("Localization.PetWindow.ReloadPluginsDoneMsg"),
+                            pluginHost.PluginActions.Count, pluginHost.FileActions.Count));
+                }
+                catch (Exception ex)
+                {
+                    petVm.ShowFileDropInfo(
+                        I18nManager.Instance.GetResource("Localization.PetWindow.ReloadPluginsFailed"),
+                        ex.Message);
+                }
+            };
+
             // ── 连接会话事件 ──
             pluginHost.OnSessionStarted = session =>
                 Avalonia.Threading.Dispatcher.UIThread.Post(() => petVm.OnSessionStarted(session));
