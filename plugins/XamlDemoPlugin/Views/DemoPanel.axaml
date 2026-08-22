@@ -1,0 +1,26 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             x:Class="XamlDemoPlugin.Views.DemoPanel"
+             x:CompileBindings="False"
+             Width="320">
+  <StackPanel Spacing="10" Margin="16">
+    <Border Background="#3319c8b9" CornerRadius="8" Padding="10">
+      <StackPanel Spacing="4">
+        <TextBlock Text="🧩 XAML 示例面板" FontSize="16" FontWeight="Bold"/>
+        <TextBlock Text="此页面由插件 dll 内嵌的编译型 .axaml 构建（Avalonia 12.0.3）"
+                   FontSize="11" Foreground="#99FFFFFF" TextWrapping="Wrap"/>
+      </StackPanel>
+    </Border>
+
+    <TextBox x:Name="Input" Watermark="输入点什么…"/>
+
+    <Border Background="#22FFFFFF" CornerRadius="6" Padding="8">
+      <TextBlock Text="{Binding Message}" TextWrapping="Wrap"/>
+    </Border>
+
+    <Button Content="点击反馈" Click="OnButtonClick"/>
+
+    <TextBlock Text="提示：点击宠物外部可关闭此弹窗"
+               FontSize="10" Foreground="#888888" HorizontalAlignment="Center"/>
+  </StackPanel>
+</UserControl>

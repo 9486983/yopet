@@ -70,6 +70,7 @@
            PlacementTarget="{Binding ElementName=PetBody}"
            HorizontalOffset="0"
            VerticalOffset="-8"
+           IsLightDismissEnabled="True"
            WindowManagerAddShadowHint="False">
       <ContentControl x:Name="DialogContent" />
     </Popup>

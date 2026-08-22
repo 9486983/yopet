@@ -202,6 +202,13 @@ public partial class App : Application
             pluginHost.OnShowListDialog = async config =>
                 await Views.ListDialog.ShowAsync(petWindow, config);
 
+            // ── 连接插件自定义页面弹窗（插件 dll 内嵌 XAML，点击弹窗外部关闭） ──
+            pluginHost.OnShowCustomView = (view, _) =>
+            {
+                Avalonia.Threading.Dispatcher.UIThread.Post(() => PetWindow.ShowDialogOn(petWindow, view));
+                return Task.CompletedTask;
+            };
+
             desktop.MainWindow = petWindow;
         }
 

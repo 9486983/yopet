@@ -1,3 +1,4 @@
+using Avalonia.Controls;
 using yopet.Core.Models;
 
 namespace yopet.Sdk;
@@ -113,4 +114,15 @@ public interface IPluginHost
     /// 事件名请使用 <see cref="EventNames"/> 中的常量。
     /// </summary>
     PluginEventPool Events { get; }
+
+    // ── 插件自定义页面（dll 内嵌编译型 XAML 或代码构建的 Control） ──
+
+    /// <summary>
+    /// 在宿主弹窗中显示插件自定义页面。
+    /// 页面实例由插件创建（建议工厂方法），宿主仅负责展示；点击弹窗外部可关闭。
+    /// 使用方式与约束见 docs/plugin-custom-ui-guideline.md（插件必须显式引用 Avalonia 12.0.3）。
+    /// </summary>
+    /// <param name="view">插件构建的页面实例（Control）</param>
+    /// <param name="title">可选标题（页面自带标题时可传 null）</param>
+    Task ShowCustomViewAsync(Control view, string? title = null);
 }

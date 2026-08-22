@@ -326,6 +326,11 @@
     "SystemUsagePlugin": {
       "Name": "💻 System Usage Monitor",
       "Format": "CPU: {0}%\nMemory: {1}% ({2} / {3})"
+    },
+    "XamlDemoPlugin": {
+      "Name": "XAML Demo",
+      "OpenAction": "Open XAML Panel",
+      "OpenActionDesc": "Show a compiled XAML page embedded in the plugin DLL"
     }
   }
 }

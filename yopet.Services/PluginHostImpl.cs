@@ -1,4 +1,5 @@
 using System.Collections.Concurrent;
+using Avalonia.Controls;
 using Lang.Avalonia;
 using System.Globalization;
 using yopet.Core.Interfaces;
@@ -80,6 +81,9 @@ public class PluginHostImpl : IPluginHost, IPluginStateResetter
 
     /// <summary>列表弹窗回调</summary>
     public Func<ListDialogConfig, Task>? OnShowListDialog { get; set; }
+
+    /// <summary>显示插件自定义页面的 UI 回调（由 App 层设置，传入已实例化的 Control）</summary>
+    public Func<Control, string?, Task>? OnShowCustomView { get; set; }
 
     /// <summary>插件事件池 —— 悬浮提示等常用事件统一注册与管理（含冲突检测、优先级）</summary>
     public PluginEventPool Events { get; } = new();
@@ -316,6 +320,13 @@ public class PluginHostImpl : IPluginHost, IPluginStateResetter
     {
         if (OnShowListDialog != null)
             return OnShowListDialog(config);
+        return Task.CompletedTask;
+    }
+
+    public Task ShowCustomViewAsync(Control view, string? title = null)
+    {
+        if (OnShowCustomView != null)
+            return OnShowCustomView(view, title);
         return Task.CompletedTask;
     }
 

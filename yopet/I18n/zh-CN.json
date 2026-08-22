@@ -326,6 +326,11 @@
     "SystemUsagePlugin": {
       "Name": "💻 占用率监控",
       "Format": "CPU: {0}%\n内存: {1}%（{2} / {3}）"
+    },
+    "XamlDemoPlugin": {
+      "Name": "XAML 示例",
+      "OpenAction": "打开 XAML 面板",
+      "OpenActionDesc": "在宿主弹窗中显示插件内嵌的编译型 XAML 页面"
     }
   }
 }
