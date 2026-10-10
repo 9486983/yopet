@@ -15,6 +15,9 @@ public partial class PetViewModel : ObservableObject
     private CancellationTokenSource? _pageCts;
     private int _dragGeneration;
 
+    // ── 宠物悬浮提示（来自插件事件池） ──
+    private readonly PluginEventPool? _eventPool;
+
     // ── 精灵图属性 ──
 
     [ObservableProperty]
@@ -71,13 +74,8 @@ public partial class PetViewModel : ObservableObject
     /// <summary>已安装的 Petdex 宠物列表</summary>
     public List<PetDefinition> PetdexPets { get; private set; } = [];
 
-    /// <summary>默认交互动作（右键菜单用）</summary>
-    public List<PetActionConfig> Actions { get; } =
-    [
-        new() { Name = "喂食", Emoji = "🍔", Reaction = "😋", Description = "喂好吃的" },
-        new() { Name = "玩耍", Emoji = "🎮", Reaction = "🎉", Description = "一起玩" },
-        new() { Name = "摸摸", Emoji = "❤️", Reaction = "🥰", Description = "轻轻抚摸" },
-    ];
+    /// <summary>交互动作（右键菜单用，由插件注册）</summary>
+    public List<PetActionConfig> Actions { get; } = [];
 
     /// <summary>文件拖放动作（径向菜单用）</summary>
     public List<FileActionConfig> FileActions => _fileActions;
@@ -107,6 +105,25 @@ public partial class PetViewModel : ObservableObject
 
     /// <summary>取消任务回调（由 App 层设置，调用插件 host.CancelCurrentTask）</summary>
     public Action? CancelTaskCallback { get; set; }
+
+    /// <summary>热重载插件回调（由 App 层设置，调用宿主重载并刷新动作列表）</summary>
+    public Action? ReloadPluginsCallback { get; set; }
+
+    /// <summary>
+    /// 刷新插件注册的右键动作（热重载后调用，右键菜单下次打开即生效）。
+    /// </summary>
+    public void RefreshPluginActions(IEnumerable<PetActionConfig>? pluginActions)
+    {
+        Actions.Clear();
+        if (pluginActions != null) Actions.AddRange(pluginActions);
+    }
+
+    /// <summary>刷新插件注册的文件动作（热重载后调用）</summary>
+    public void RefreshFileActions(IEnumerable<FileActionConfig>? fileActions)
+    {
+        _fileActions.Clear();
+        if (fileActions != null) _fileActions.AddRange(fileActions);
+    }
 
     // ── 会话多步工作流 ──
 
@@ -155,11 +172,13 @@ public partial class PetViewModel : ObservableObject
     public PetViewModel(IConfigService configService, IDispatcherService dispatcher,
         IPetdexService petdexService,
         List<PetActionConfig>? pluginActions = null,
-        List<FileActionConfig>? fileActions = null)
+        List<FileActionConfig>? fileActions = null,
+        PluginEventPool? eventPool = null)
     {
         _configService = configService;
         _dispatcher = dispatcher;
         _petdexService = petdexService;
+        _eventPool = eventPool;
 
         // 加载插件注册的文件动作
         if (fileActions != null && fileActions.Count > 0)
@@ -415,6 +434,22 @@ public partial class PetViewModel : ObservableObject
             _dispatcher.Post(() => IsShowingThought = false);
         }, ct);
     }
+
+    // ── 宠物悬浮提示（事件绑定与触发，展示由插件调用气泡组件完成） ──
+
+    /// <summary>鼠标进入宠物：触发事件池悬浮进入事件（由 PetWindow 事件绑定调用）</summary>
+    public void OnPetHoverEntered() => _eventPool?.Publish(EventNames.PetHoverEntered);
+
+    /// <summary>鼠标离开宠物：触发事件池悬浮离开事件（由 PetWindow 事件绑定调用）</summary>
+    public void OnPetHoverExited() => _eventPool?.Publish(EventNames.PetHoverExited);
+
+    // ── 宠物单击/双击（事件绑定与触发，插件可订阅响应） ──
+
+    /// <summary>单击宠物：触发事件池单击事件（由 PetWindow 识别后调用）</summary>
+    public void OnPetClicked() => _eventPool?.Publish(EventNames.PetClicked);
+
+    /// <summary>双击宠物：触发事件池双击事件（由 PetWindow 识别后调用）</summary>
+    public void OnPetDoubleClicked() => _eventPool?.Publish(EventNames.PetDoubleClicked);
 
     public void Cleanup()
     {

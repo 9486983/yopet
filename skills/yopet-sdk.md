@@ -1,5 +1,17 @@
 # yopet Plugin SDK 开发指南
 
+> ## ⚠️ 跨平台约束（强制要求）
+>
+> yopet 是跨平台桌面应用（Windows / macOS / Linux 均需可编译、可运行）。开发或修改插件时必须遵守以下规则：
+>
+> 1. **禁止裸调用平台专属 API**：不得直接使用注册表、`user32.dll` / `gdi32.dll` 等 P/Invoke、`powershell`、`cmd.exe`、`explorer.exe`、`notepad.exe`、`shutdown` / `powercfg` 等 Windows 专属命令、可执行文件或路径。
+> 2. **优先使用跨平台方案**：剪贴板优先用 Avalonia 内置 `Clipboard` API；打开文件/目录/URL 用 `Process.Start` + 按平台分支的命令（macOS 用 `open`，Windows 用 `explorer.exe` 等）。
+> 3. **平台 API 必须守卫**：确需平台专属 API 时，必须用 `OperatingSystem.IsWindows()` / `OperatingSystem.IsMacOS()` 守卫包裹，并提供非目标平台的降级实现（返回 false、提示不可用或跳过功能），禁止让整个插件初始化失败。
+> 4. **路径与进程跨平台**：路径一律用 `Path.Combine`，禁止硬编码 `\`、`C:\`、`python.exe` 等；可执行文件探测需覆盖各平台命名（如 `python` / `python3` / `py`）。
+> 5. **优雅降级而非依赖异常**：插件 `InitializeAsync` 抛出的异常虽会被宿主捕获并跳过，但平台不可用时应在代码内显式降级，而不是靠异常兜底。
+
+---
+
 当你需要开发、修改或理解 yopet 桌面宠物应用的插件时使用。本文档涵盖 `yopet.Sdk` 命名空间下所有核心接口和类的使用方法。
 
 ---
@@ -568,7 +580,6 @@ public class MyPlugin : PluginBase { }
 | `plugins/DeepSeekPlugin/` | 定时任务、HTTP 调用、配置持久化、消息队列 |
 | `plugins/FileUtilityPlugin/` | 径向菜单、文件操作、RunWithAnimation 动画 |
 | `plugins/PythonScriptPlugin/` | 列表弹窗（含下拉操作）、配置分组、定时任务、输入框交互 |
-| `plugins/WebAnalyzerPlugin/` | 输入框、确认框、文件保存、API 调用 |
 | `plugins/SessionDemoPlugin/` | 会话工作流完整示例 |
 | `plugins/AgentHooksPlugin/` | 动态配置开关、列表弹窗数据刷新、多 Provider 管理 |
 | `plugins/HealthReminder/` | 定时任务、配置监听、随机消息 |
@@ -593,3 +604,74 @@ public class MyPlugin : PluginBase { }
 - 插件 DLL 使用 `AssemblyLoadContext(isCollectible: true)` 加载，理论上支持热重载
 - 插件项目需要引用 `yopet.Sdk`，后者已引用 `yopet.Core`（`ItemType` 等模型）
 - 每个插件的 `.csproj` 需以 `net9.0` 为目标框架
+
+---
+
+## 8. 多语言（i18n）
+
+主程序已集成 **Lang.Avalonia**（12.0.3.3，MIT），插件可直接使用其 API 与 XAML 标记扩展。
+
+### 词条库约定（统一词条库）
+
+- 所有语言词条（主程序 + 各插件）统一放在主程序 `yopet/I18n/` 目录的 JSON 文件中：`zh-CN.json`（简体中文）、`en-US.json`（English）
+- 新增词条时必须**同时**在两种语言文件里补充
+- key 命名约定：`Localization.<插件名>.<类别>.<名称>`，如 `Localization.SettingPlugin.AutoStart.Label`
+- 禁止在插件内另建语言文件再注册：Lang.Avalonia 对同一 `cultureName` 是覆盖式合并，后加载者会覆盖先加载者的词条
+
+### XAML 中使用
+
+```xml
+<Window xmlns:c="https://codewf.com" ...>
+  <TextBlock Text="{c:I18n Localization.Dialogs.Ok}" />
+</Window>
+```
+
+- 当前 .NET 9 SDK（Roslyn 4.14）下 `Lang.Avalonia.Analysis` 生成器不可用（需 Roslyn 5.3），故使用**字符串 key**；升级到 .NET 10 SDK 后可引入 Analysis 获得编译期 key 检查
+- key 缺失时回退显示原始 key 字符串，便于发现拼写错误
+
+### C# 中使用
+
+```csharp
+using Lang.Avalonia;
+var text = I18nManager.Instance.GetResource("Localization.Dialogs.Ok");
+```
+
+### 切换语言
+
+主程序通过 `IPluginHost.SetLanguage("en-US")`（或 SettingPlugin 的语言下拉）切换，所有已绑定的 UI 自动刷新。
+
+### 动作的动态名称（语言切换即时刷新）
+
+右键菜单动作的 `Name`/`Group`/`Description` 是注册时快照，切语言后不会自动更新。需要在切换时即时刷新时，用 `LocalizedDisplay` 提供**每次渲染求值的动态文本**：
+
+```csharp
+host.RegisterAction(new PluginAction
+{
+    Name = T("SettingsAction"),   // 静态快照（启动语言）
+    Group = T("Group"),
+    Display = LocalizedDisplay.Of(
+        name: () => T("SettingsAction"),
+        group: () => T("Group"),
+        description: () => T("SettingsActionDesc")),   // 每次渲染求值
+    Target = ActionTarget.ContextMenu,
+    Callback = () => { host.ShowConfigDialog("my_config"); return Task.CompletedTask; },
+});
+```
+
+`LocalizedDisplay` 位于 `yopet.Core.Models`，对应字段为 null 时回退到静态字符串。
+
+### 配置弹窗的稳定定位（Key）
+
+`ShowConfigDialog` 按 `PluginConfigSection.Key` 优先匹配，其次按 `Title` 匹配。**注册配置时必须设置稳定 Key，回调里用 Key 定位，不要用运行时 T() 拼标题**——否则切语言后 Key 匹配不到（`Title` 是注册时快照，运行时 T() 取当前语言，二者会失配导致弹窗打不开）：
+
+```csharp
+host.RegisterConfig(new PluginConfigSection
+{
+    Key = "my_config",            // 稳定英文 id，不受语言切换影响
+    Title = T("ConfigTitle"),
+    ...
+}, Name);
+
+// 回调中：
+host.ShowConfigDialog("my_config");
+```

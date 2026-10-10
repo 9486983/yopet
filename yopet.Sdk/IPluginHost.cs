@@ -1,9 +1,11 @@
+using Avalonia.Controls;
+using yopet.Core.Models;
+
 namespace yopet.Sdk;
 
 /// <summary>插件宿主接口 —— 插件通过此接口与主程序交互</summary>
 public interface IPluginHost
-{
-    // ── 日志（独立对象，所有日志方法放这里） ──
+{    // ── 日志（独立对象，所有日志方法放这里） ──
     IPluginLogger Logger { get; }
 
     // ── 定时任务（独立对象，所有调度方法放这里） ──
@@ -81,4 +83,46 @@ public interface IPluginHost
 
     /// <summary>输出日志（兼容旧版）</summary>
     void Log(string message);
+
+    // ── 宿主设置（供设置类插件使用） ──
+
+    /// <summary>获取当前宠物动画速度（ms/帧）</summary>
+    double GetAnimationSpeedMs();
+
+    /// <summary>设置宠物动画速度（ms/帧），立即生效并持久化</summary>
+    void SetAnimationSpeedMs(double ms);
+
+    /// <summary>获取当前是否深色主题</summary>
+    bool GetDarkTheme();
+
+    /// <summary>设置深色/浅色主题，立即生效并持久化</summary>
+    void SetDarkTheme(bool isDark);
+
+    /// <summary>获取当前界面语言（culture name，如 zh-CN）</summary>
+    string GetLanguage();
+
+    /// <summary>切换界面语言（culture name，如 zh-CN / en-US），立即生效并持久化</summary>
+    void SetLanguage(string cultureName);
+
+    /// <summary>已加载的插件信息列表（只读展示用）</summary>
+    IReadOnlyList<PluginInfo> LoadedPlugins { get; }
+
+    // ── 插件事件池（常用事件统一注册与管理） ──
+
+    /// <summary>
+    /// 插件事件池 —— 悬浮提示等常用事件统一在此注册与管理（含冲突检测、优先级）。
+    /// 事件名请使用 <see cref="EventNames"/> 中的常量。
+    /// </summary>
+    PluginEventPool Events { get; }
+
+    // ── 插件自定义页面（dll 内嵌编译型 XAML 或代码构建的 Control） ──
+
+    /// <summary>
+    /// 在宿主弹窗中显示插件自定义页面。
+    /// 页面实例由插件创建（建议工厂方法），宿主仅负责展示；点击弹窗外部可关闭。
+    /// 使用方式与约束见 docs/plugin-custom-ui-guideline.md（插件必须显式引用 Avalonia 12.0.3）。
+    /// </summary>
+    /// <param name="view">插件构建的页面实例（Control）</param>
+    /// <param name="title">可选标题（页面自带标题时可传 null）</param>
+    Task ShowCustomViewAsync(Control view, string? title = null);
 }

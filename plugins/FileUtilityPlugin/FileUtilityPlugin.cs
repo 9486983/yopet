@@ -2,6 +2,7 @@ using System.IO.Compression;
 using System.Security.Cryptography;
 using yopet.Core.Models;
 using yopet.Sdk;
+using Lang.Avalonia;
 
 namespace FileUtilityPlugin;
 
@@ -17,7 +18,9 @@ public class FileUtilityPlugin : PluginBase
         ".rb", ".php", ".sql", ".r", ".swift", ".kt", ".dart",
     };
 
-    public override string Name => "文件工具";
+    private static string T(string key) => I18nManager.Instance.GetResource($"Localization.FileUtilityPlugin.{key}");
+
+    public override string Name => T("Name");
 
     public override async Task InitializeAsync(IPluginHost host)
     {
@@ -36,8 +39,8 @@ public class FileUtilityPlugin : PluginBase
     {
         host.RegisterAction(new PluginAction
         {
-            Name = "查看详情", Emoji = "🔍",
-            Description = "自动识别：文件夹/文件/文本预览",
+            Name = T("ActionViewDetails"), Emoji = "🔍",
+            Description = T("ActionViewDetailsDescription"),
             Target = ActionTarget.RadialMenu, AcceptType = ItemType.Both, CanActivate = true,
             FileCallback = async (paths) =>
             {
@@ -47,33 +50,33 @@ public class FileUtilityPlugin : PluginBase
                     if (Directory.Exists(path))
                     {
                         var dir = new DirectoryInfo(path);
-                        host.ShowThought("📁 文件夹详情",
-                            $"名称: {dir.Name}\n位置: {dir.FullName}\n" +
-                            $"子文件夹: {dir.GetDirectories().Length} 个\n" +
-                            $"文件: {dir.GetFiles().Length} 个\n" +
-                            $"总大小: {FormatSize(dir.GetFiles().Sum(f => f.Length))}");
+                        host.ShowThought(T("FolderDetailsTitle"),
+                            string.Format(T("FolderDetailsText1"), dir.Name, dir.FullName) +
+                            string.Format(T("FolderSubCount"), dir.GetDirectories().Length) +
+                            string.Format(T("FolderFileCount"), dir.GetFiles().Length) +
+                            string.Format(T("TotalSize"), FormatSize(dir.GetFiles().Sum(f => f.Length))));
                         host.ShowReaction("📁"); return;
                     }
 
                     var fi = new FileInfo(path);
-                    if (!fi.Exists) { host.ShowThought("❌ 错误", "文件不存在"); return; }
+                    if (!fi.Exists) { host.ShowThought(T("ErrorTitle"), T("FileNotExists")); return; }
 
                     if (TextExtensions.Contains(fi.Extension.ToLowerInvariant()))
                     {
                         var text = await File.ReadAllTextAsync(path);
-                        var preview = text.Length > 500 ? text[..500] + "\n\n…（仅显示前 500 字符）" : text;
-                        host.ShowThought("📄 文本预览",
-                            $"文件: {fi.Name}  大小: {FormatSize(fi.Length)}\n\n─── 内容预览 ───\n{preview}");
+                        var preview = text.Length > 500 ? text[..500] + "\n\n" + T("PreviewTruncated") : text;
+                        host.ShowThought(T("TextPreviewTitle"),
+                            string.Format(T("TextPreviewText"), fi.Name, FormatSize(fi.Length), preview));
                     }
                     else
                     {
-                        host.ShowThought("📄 文件详情",
-                            $"名称: {fi.Name}\n大小: {FormatSize(fi.Length)}\n" +
-                            $"位置: {fi.DirectoryName}\n修改: {fi.LastWriteTime:yyyy-MM-dd HH:mm}");
+                        host.ShowThought(T("FileDetailsTitle"),
+                            string.Format(T("FileDetailsText1"), fi.Name, FormatSize(fi.Length)) +
+                            string.Format(T("FileDetailsText2"), fi.DirectoryName, fi.LastWriteTime));
                     }
                     host.ShowReaction("🔍");
                 }
-                catch (Exception ex) { host.ShowThought("❌ 错误", ex.Message); }
+                catch (Exception ex) { host.ShowThought(T("ErrorTitle"), ex.Message); }
             },
         });
     }
@@ -83,8 +86,8 @@ public class FileUtilityPlugin : PluginBase
     {
         host.RegisterAction(new PluginAction
         {
-            Name = "打开位置", Emoji = "📂",
-            Description = "在资源管理器中定位文件",
+            Name = T("ActionOpenLocation"), Emoji = "📂",
+            Description = T("ActionOpenLocationDescription"),
             Target = ActionTarget.RadialMenu, AcceptType = ItemType.Both, CanActivate = true,
             FileCallback = async (paths) =>
             {
@@ -104,8 +107,8 @@ public class FileUtilityPlugin : PluginBase
     {
         host.RegisterAction(new PluginAction
         {
-            Name = "复制路径", Emoji = "📋",
-            Description = "复制完整路径到剪贴板",
+            Name = T("ActionCopyPath"), Emoji = "📋",
+            Description = T("ActionCopyPathDescription"),
             Target = ActionTarget.RadialMenu, AcceptType = ItemType.Both, CanActivate = true,
             FileCallback = async (paths) =>
             {
@@ -131,8 +134,8 @@ public class FileUtilityPlugin : PluginBase
     {
         host.RegisterAction(new PluginAction
         {
-            Name = "计算 MD5", Emoji = "🔐",
-            Description = "计算文件 MD5 哈希值",
+            Name = T("ActionMd5"), Emoji = "🔐",
+            Description = T("ActionMd5Description"),
             Target = ActionTarget.RadialMenu, AcceptType = ItemType.File, CanActivate = true,
             FileCallback = async (paths) =>
             {
@@ -143,11 +146,11 @@ public class FileUtilityPlugin : PluginBase
                     {
                         using var stream = File.OpenRead(paths[0]);
                         var hash = Convert.ToHexString(MD5.HashData(stream)).ToLowerInvariant();
-                        host.ShowThought("🔐 MD5 哈希", $"{Path.GetFileName(paths[0])}\n\n{hash}");
+                        host.ShowThought(T("Md5Title"), $"{Path.GetFileName(paths[0])}\n\n{hash}");
                     });
                     host.ShowReaction("🔐");
                 }
-                catch (Exception ex) { host.ShowThought("❌ 错误", ex.Message); }
+                catch (Exception ex) { host.ShowThought(T("ErrorTitle"), ex.Message); }
             },
         });
     }
@@ -157,8 +160,8 @@ public class FileUtilityPlugin : PluginBase
     {
         host.RegisterAction(new PluginAction
         {
-            Name = "压缩为 ZIP", Emoji = "📦",
-            Description = "将文件/文件夹压缩为 ZIP",
+            Name = T("ActionZip"), Emoji = "📦",
+            Description = T("ActionZipDescription"),
             Target = ActionTarget.RadialMenu, AcceptType = ItemType.Both, CanActivate = true,
             FileCallback = async (paths) =>
             {
@@ -186,13 +189,13 @@ public class FileUtilityPlugin : PluginBase
                             using var fs = File.OpenRead(path);
                             fs.CopyTo(es);
                         }
-                        host.ShowThought("📦 压缩完成",
-                            $"已创建: {Path.GetFileName(zipPath)}\n" +
-                            $"大小: {FormatSize(new FileInfo(zipPath).Length)}");
+                        host.ShowThought(T("ZipDoneTitle"),
+                            string.Format(T("ZipCreatedText"), Path.GetFileName(zipPath)) +
+                            string.Format(T("ZipSizeText"), FormatSize(new FileInfo(zipPath).Length)));
                     });
                     host.ShowReaction("📦");
                 }
-                catch (Exception ex) { host.ShowThought("❌ 错误", ex.Message); }
+                catch (Exception ex) { host.ShowThought(T("ErrorTitle"), ex.Message); }
             },
         });
     }
@@ -202,8 +205,8 @@ public class FileUtilityPlugin : PluginBase
     {
         host.RegisterAction(new PluginAction
         {
-            Name = "记事本打开", Emoji = "🖥️",
-            Description = "用记事本打开文件（文本类）",
+            Name = T("ActionNotepad"), Emoji = "🖥️",
+            Description = T("ActionNotepadDescription"),
             Target = ActionTarget.RadialMenu, AcceptType = ItemType.File, CanActivate = true,
             FileCallback = async (paths) =>
             {
@@ -214,7 +217,7 @@ public class FileUtilityPlugin : PluginBase
                         System.Diagnostics.Process.Start("notepad.exe", paths[0]);
                         host.ShowReaction("🖥️");
                     }
-                    catch (Exception ex) { host.ShowThought("❌ 错误", ex.Message); }
+                    catch (Exception ex) { host.ShowThought(T("ErrorTitle"), ex.Message); }
                 }
             },
         });
@@ -225,9 +228,9 @@ public class FileUtilityPlugin : PluginBase
     {
         host.RegisterAction(new PluginAction
         {
-            Name = "睡眠测试 10s",
+            Name = T("ActionSleepTest"),
             Emoji = "💤",
-            Description = "多动画轮换: 思考/开心交替 10 秒，可取消",
+            Description = T("ActionSleepTestDescription"),
             Target = ActionTarget.RadialMenu,
             AcceptType = ItemType.Both,
             FileCallback = async (paths) =>
@@ -241,16 +244,16 @@ public class FileUtilityPlugin : PluginBase
                             for (var i = 10; i > 0; i--)
                             {
                                 token.ThrowIfCancellationRequested();
-                                host.ShowThought("💤 睡眠测试",
-                                    $"剩余 {i} 秒…（点击右上角进度环取消）");
+                                host.ShowThought(T("SleepTestTitle"),
+                                    string.Format(T("SleepTestRemaining"), i));
                                 await Task.Delay(1000, token);
                             }
                         });
-                    host.ShowThought("✅ 测试完成", "睡眠结束，动画已自动恢复待机。");
+                    host.ShowThought(T("TestDoneTitle"), T("TestDoneMsg"));
                 }
                 catch (OperationCanceledException)
                 {
-                    host.ShowThought("⏹️ 已取消", "任务已被用户取消，动画已恢复。");
+                    host.ShowThought(T("CanceledTitle"), T("CanceledMsg"));
                 }
             },
         });

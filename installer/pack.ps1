@@ -98,6 +98,23 @@ foreach ($file in $pluginFiles) {
     $sb.AppendLine("            </Component>") | Out-Null
 }
 $sb.AppendLine('          </Directory>') | Out-Null
+
+# I18n localization JSON files subdirectory
+$i18nPublishDir = Join-Path $PublishDir "I18n"
+if (Test-Path $i18nPublishDir) {
+    $sb.AppendLine('          <Directory Id="i18nDir" Name="I18n">') | Out-Null
+    foreach ($file in Get-ChildItem -File $i18nPublishDir -Filter "*.json") {
+        $baseId = "i18n_" + [System.IO.Path]::GetFileNameWithoutExtension($file.Name) -replace '[^a-zA-Z0-9_]', '_'
+        $id = $baseId; $suffix = 0
+        while ($compRefs -contains $id) { $suffix++; $id = "${baseId}_$suffix" }
+        $compRefs.Add($id)
+        $sb.AppendLine("            <Component Id=`"$id`" Guid=`"*`">") | Out-Null
+        $sb.AppendLine("              <File Source=`"!(bindpath.i18n)\$($file.Name)`" />") | Out-Null
+        $sb.AppendLine("            </Component>") | Out-Null
+    }
+    $sb.AppendLine('          </Directory>') | Out-Null
+}
+
 $sb.AppendLine('        </Directory>') | Out-Null
 $sb.AppendLine('      </Directory>') | Out-Null
 $sb.AppendLine('    </StandardDirectory>') | Out-Null
@@ -148,6 +165,7 @@ Write-Host "[5/5] Building MSI..."
 wix build $WxsFile -out $OutputMsi -arch x64 -ext WixToolset.UI.wixext `
     -loc $locWxl `
     -bindpath pub="$PublishDir" -bindpath plugins="$PluginsDir" `
+    -bindpath i18n="$(Join-Path $PublishDir 'I18n')" `
     -intermediatefolder "$env:TEMP\_wix_build"
 if ($LASTEXITCODE -ne 0) { throw "MSI build failed" }
 

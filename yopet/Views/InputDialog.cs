@@ -3,6 +3,7 @@ using Avalonia.Controls;
 using Avalonia.Input;
 using Avalonia.Layout;
 using Avalonia.Media;
+using Lang.Avalonia;
 using yopet.Sdk;
 
 namespace yopet.Views;
@@ -28,8 +29,8 @@ public static class InputDialog
             FontSize = 13,
         };
 
-        var okBtn = DialogHelper.CreateButton("✅ 确定", primary: true);
-        var cancelBtn = DialogHelper.CreateButton("取消");
+        var okBtn = DialogHelper.CreateButton(I18nManager.Instance.GetResource("Localization.Dialogs.Confirm"), primary: true);
+        var cancelBtn = DialogHelper.CreateButton(I18nManager.Instance.GetResource("Localization.Dialogs.Cancel"));
 
         okBtn.Click += (_, _) => tcs.TrySetResult(textBox.Text);
         cancelBtn.Click += (_, _) => tcs.TrySetResult(null);

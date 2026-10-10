@@ -3,10 +3,7 @@
   <ItemGroup>
     <ProjectReference Include="..\yopet.Core\yopet.Core.csproj" />
     <ProjectReference Include="..\yopet.Sdk\yopet.Sdk.csproj" />
-  </ItemGroup>
-
-  <ItemGroup>
-    <PackageReference Include="Microsoft.Win32.SystemEvents" Version="9.0.0" />
+    <PackageReference Include="Lang.Avalonia" Version="12.1.1.2" />
   </ItemGroup>
 
   <PropertyGroup>

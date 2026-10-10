@@ -1,12 +1,16 @@
 using System.Collections.Concurrent;
+using Avalonia.Controls;
+using Lang.Avalonia;
+using System.Globalization;
 using yopet.Core.Interfaces;
 using yopet.Core.Models;
 using yopet.Sdk;
+using yopet.Services.PluginHosting;
 
 namespace yopet.Services;
 
 /// <summary>插件宿主实现 —— 插件通过此对象与主程序交互</summary>
-public class PluginHostImpl : IPluginHost
+public class PluginHostImpl : IPluginHost, IPluginStateResetter
 {
     private readonly IConfigService _config;
     private readonly LoggerService _loggerService;
@@ -78,12 +82,19 @@ public class PluginHostImpl : IPluginHost
     /// <summary>列表弹窗回调</summary>
     public Func<ListDialogConfig, Task>? OnShowListDialog { get; set; }
 
+    /// <summary>显示插件自定义页面的 UI 回调（由 App 层设置，传入已实例化的 Control）</summary>
+    public Func<Control, string?, Task>? OnShowCustomView { get; set; }
+
+    /// <summary>插件事件池 —— 悬浮提示等常用事件统一注册与管理（含冲突检测、优先级）</summary>
+    public PluginEventPool Events { get; } = new();
+
     /// <summary>日志输出</summary>
     public event Action<string>? LogEmitted;
 
-    public PluginHostImpl(IConfigService config, LoggerService? logger = null, CronSchedulerService? scheduler = null)
+    public PluginHostImpl(IConfigService config, LoggerService? logger = null, CronSchedulerService? scheduler = null, PluginLoader? pluginLoader = null)
     {
         _config = config;
+        _pluginLoader = pluginLoader;
         _loggerService = logger ?? new LoggerService(
             Path.Combine(AppDomain.CurrentDomain.BaseDirectory, ".yopet", "logs"));
         _schedulerService = scheduler ?? new CronSchedulerService();
@@ -139,6 +150,7 @@ public class PluginHostImpl : IPluginHost
                 Reaction = action.Emoji,
                 Description = action.Description,
                 Group = action.Group,
+                Display = action.Display,
                 ActionCallback = action.Callback,
             });
         }
@@ -204,9 +216,11 @@ public class PluginHostImpl : IPluginHost
         PluginConfigs.Add(config);
     }
 
-    void IPluginHost.ShowConfigDialog(string sectionTitle)
+    void IPluginHost.ShowConfigDialog(string configKey)
     {
-        var section = PluginConfigs.FirstOrDefault(s => s.Title == sectionTitle);
+        // 优先按稳定 Key 匹配，其次按 Title 匹配（兼容旧写法）
+        var section = PluginConfigs.FirstOrDefault(s => s.Key == configKey)
+                      ?? PluginConfigs.FirstOrDefault(s => s.Title == configKey);
         if (section != null && OnShowPluginConfig != null)
             _ = OnShowPluginConfig(section);
     }
@@ -309,6 +323,13 @@ public class PluginHostImpl : IPluginHost
         return Task.CompletedTask;
     }
 
+    public Task ShowCustomViewAsync(Control view, string? title = null)
+    {
+        if (OnShowCustomView != null)
+            return OnShowCustomView(view, title);
+        return Task.CompletedTask;
+    }
+
     public string? GetConfig(string key) => _config.GetPluginValue(key);
     public void SetConfig(string key, string value) { _config.SetPluginValue(key, value); }
 
@@ -316,5 +337,73 @@ public class PluginHostImpl : IPluginHost
     {
         System.Diagnostics.Debug.WriteLine($"[Plugin] {message}");
         LogEmitted?.Invoke(message);
+    }
+
+    // ── 宿主设置（供设置类插件使用） ──
+
+    private readonly PluginLoader? _pluginLoader;
+
+    public double GetAnimationSpeedMs() => _config.Config.AnimFrameDurationMs;
+
+    public void SetAnimationSpeedMs(double ms)
+    {
+        _config.Config.AnimFrameDurationMs = Math.Clamp(ms, 30, 300);
+        _config.Save();
+        PetEvents.NotifyConfigSaved();
+    }
+
+    public bool GetDarkTheme() => _config.Config.IsDarkTheme;
+
+    public void SetDarkTheme(bool isDark)
+    {
+        _config.Config.IsDarkTheme = isDark;
+        _config.Save();
+        PetEvents.NotifyThemeChanged(isDark);
+    }
+
+    public string GetLanguage() => _config.Config.Language;
+
+    public void SetLanguage(string cultureName)
+    {
+        if (string.IsNullOrWhiteSpace(cultureName)) return;
+        _config.Config.Language = cultureName;
+        _config.Save();
+        try
+        {
+            I18nManager.Instance.Culture = new CultureInfo(cultureName);
+        }
+        catch (CultureNotFoundException)
+        {
+            // 无效文化名:保留配置,但不切换
+        }
+    }
+
+    public IReadOnlyList<PluginInfo> LoadedPlugins =>
+        _pluginLoader?.Plugins.Select(p => new PluginInfo
+        {
+            Name = p.Name,
+            Version = p.Version,
+            Description = p.Description,
+        }).ToList() ?? new List<PluginInfo>();
+
+    // ── 热重载 ──
+
+    /// <summary>热重载所有插件：清理→卸载→重新加载→初始化（由主程序 UI 触发）</summary>
+    public async Task ReloadAllAsync()
+    {
+        if (_pluginLoader == null) return;
+        await _pluginLoader.ReloadAllAsync(this);
+    }
+
+    /// <summary>
+    /// 重置插件在宿主上注册的残留状态（热重载前调用），
+    /// 避免新旧插件实例的动作、激活态、会话互相串扰。
+    /// </summary>
+    void IPluginStateResetter.ResetPluginState()
+    {
+        PluginActions.Clear();
+        FileActions.Clear();
+        ActivatedAction = null;
+        _currentSession?.Cancel();
     }
 }

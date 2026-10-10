@@ -33,25 +33,12 @@ public class ConfigService : IConfigService
                 var json = File.ReadAllText(ConfigPath);
                 var cfg = JsonSerializer.Deserialize<AppConfig>(json);
                 if (cfg != null)
-                {
-                    if (cfg.PetActions.Count == 0)
-                        cfg.PetActions = DefaultActions();
                     return cfg;
-                }
             }
         }
         catch { }
-        var defaults = new AppConfig();
-        defaults.PetActions = DefaultActions();
-        return defaults;
+        return new AppConfig();
     }
-
-    private static List<PetActionConfig> DefaultActions() => new()
-    {
-        new() { Name = "喂食", Emoji = "🍔", Reaction = "😋", Description = "喂好吃的" },
-        new() { Name = "玩耍", Emoji = "🎮", Reaction = "🎉", Description = "一起玩" },
-        new() { Name = "摸摸", Emoji = "❤️", Reaction = "🥰", Description = "轻轻抚摸" },
-    };
 
     public void Save()
     {

@@ -5,6 +5,7 @@ using Avalonia.Input;
 using Avalonia.Media;
 using Avalonia.Platform.Storage;
 using Avalonia.Threading;
+using Lang.Avalonia;
 using yopet.Core.Models;
 using yopet.Sdk;
 using yopet.ViewModels;
@@ -174,6 +175,7 @@ public partial class PetWindow : Window
         if ((now - _lastClick).TotalMilliseconds < 350)
         {
             _lastClick = DateTime.MinValue;
+            _vm?.OnPetDoubleClicked(); // 通知插件（事件池）
             OpenPetdex();
         }
         else
@@ -183,10 +185,20 @@ public partial class PetWindow : Window
             {
                 await Task.Delay(400);
                 if ((DateTime.Now - _lastClick).TotalMilliseconds >= 380)
+                {
+                    _vm?.OnPetClicked(); // 通知插件（事件池）
                     _vm?.SingleClickCommand.Execute(null);
+                }
             });
         }
     }
+
+    // ── 悬浮提示（事件绑定与转发，业务由事件池协调） ──
+    private void OnPetPointerEntered(object? sender, PointerEventArgs e)
+        => _vm?.OnPetHoverEntered();
+
+    private void OnPetPointerExited(object? sender, PointerEventArgs e)
+        => _vm?.OnPetHoverExited();
 
     // ── 右键菜单 ──
     private static SolidColorBrush ThemeBrush(string key, uint fallback = 0xFFFFFFFF)
@@ -205,12 +217,12 @@ public partial class PetWindow : Window
         if (_vm.IsSessionActive)
         {
             var session = _vm.CurrentSession;
-            var title = session?.Title ?? "会话";
+            var title = session?.Title ?? I18nManager.Instance.GetResource("Localization.PetWindow.Session");
             var status = session?.Status ?? "";
             var statusSuffix = string.IsNullOrEmpty(status) ? "" : $"（{status}）";
             var endItem = new MenuItem
             {
-                Header = $"⏹️ 结束{title}{statusSuffix}",
+                Header = string.Format(I18nManager.Instance.GetResource("Localization.PetWindow.MenuEndSession"), title, statusSuffix),
                 FontSize = 13,
                 Foreground = ThemeBrush("TextPrimary"),
             };
@@ -224,7 +236,7 @@ public partial class PetWindow : Window
             var n = _vm.ActivatedFileAction?.Name ?? "";
             var unlockItem = new MenuItem
             {
-                Header = "\U0001f513 解锁「" + n + "」",
+                Header = string.Format(I18nManager.Instance.GetResource("Localization.PetWindow.MenuUnlock"), n),
                 FontSize = 13, Foreground = ThemeBrush("TextPrimary"),
             };
             unlockItem.Click += (_, _) => _vm.DeactivateAction();
@@ -234,14 +246,23 @@ public partial class PetWindow : Window
 
         var dexItem = new MenuItem
         {
-            Header = "\U0001f4d6 宠物图鉴",
+            Header = I18nManager.Instance.GetResource("Localization.PetWindow.MenuPetdex"),
             FontSize = 13, Foreground = ThemeBrush("TextPrimary"),
         };
         dexItem.Click += (_, _) => OpenPetdex();
         menu.Items.Add(dexItem);
+
+        var reloadItem = new MenuItem
+        {
+            Header = I18nManager.Instance.GetResource("Localization.PetWindow.ReloadPlugins"),
+            FontSize = 13, Foreground = ThemeBrush("TextPrimary"),
+        };
+        reloadItem.Click += (_, _) => _vm?.ReloadPluginsCallback?.Invoke();
+        menu.Items.Add(reloadItem);
         menu.Items.Add(new Separator());
 
-        var groups = _vm.Actions.GroupBy(a => string.IsNullOrEmpty(a.Group) ? "" : a.Group).ToList();
+        var groups = _vm.Actions.GroupBy(a =>
+            string.IsNullOrEmpty(a.Display?.Group?.Invoke() ?? a.Group) ? "" : (a.Display?.Group?.Invoke() ?? a.Group)).ToList();
         foreach (var group in groups)
         {
             if (string.IsNullOrEmpty(group.Key))
@@ -257,21 +278,9 @@ public partial class PetWindow : Window
         }
         menu.Items.Add(new Separator());
 
-        var settingsItem = new MenuItem
-        {
-            Header = "⚙️ 打开设置", FontSize = 13, Foreground = ThemeBrush("TextPrimary"),
-        };
-        settingsItem.Click += (_, _) =>
-        {
-            var w = App.SettingsWindow;
-            if (w != null) { w.Show(); w.WindowState = WindowState.Normal; w.Activate(); }
-        };
-        menu.Items.Add(settingsItem);
-        menu.Items.Add(new Separator());
-
         var closeItem = new MenuItem
         {
-            Header = "✕ 关闭宠物", FontSize = 13,
+            Header = I18nManager.Instance.GetResource("Localization.PetWindow.MenuClose"), FontSize = 13,
             Foreground = new SolidColorBrush(Color.Parse("#E81123")),
         };
         closeItem.Click += (_, _) => Close();
@@ -301,7 +310,7 @@ public partial class PetWindow : Window
         var config = new ListDialogConfig
         {
             LayoutMode = ListDialogLayoutMode.CardGrid,
-            Title = "Petdex 宠物",
+            Title = I18nManager.Instance.GetResource("Localization.Petdex.Title"),
             Emoji = "🎮",
             CardTextKey = "name",
             CardFallbackEmoji = "🎮",
@@ -312,10 +321,12 @@ public partial class PetWindow : Window
         config.ToolbarActions.Add(new ListToolbarAction
         {
             Emoji = "⏬",
-            Label = "Install",
+            Label = I18nManager.Instance.GetResource("Localization.Petdex.Install"),
             Callback = async () =>
             {
-                var petName = await InputDialog.ShowAsync(this, "安装宠物", "宠物名...");
+                var petName = await InputDialog.ShowAsync(this,
+                    I18nManager.Instance.GetResource("Localization.Petdex.InstallPetTitle"),
+                    I18nManager.Instance.GetResource("Localization.Petdex.InstallPetPlaceholder"));
                 if (string.IsNullOrEmpty(petName)) return;
                 await InstallPet(petName, config);
             },
@@ -359,20 +370,23 @@ public partial class PetWindow : Window
         proc.BeginOutputReadLine();
         proc.BeginErrorReadLine();
 
-        _vm?.ShowFileDropInfo("⏳ 安装中", $"正在安装 {petName}...");
+        _vm?.ShowFileDropInfo(I18nManager.Instance.GetResource("Localization.PetWindow.InstallingTitle"),
+            string.Format(I18nManager.Instance.GetResource("Localization.PetWindow.Installing"), petName));
 
         var exitTask = proc.WaitForExitAsync();
         var completed = await Task.WhenAny(exitTask, Task.Delay(120_000));
         if (completed != exitTask)
         {
             proc.Kill();
-            _vm?.ShowFileDropInfo("⏱️ 超时", $"安装 {petName} 超时（120秒）");
+            _vm?.ShowFileDropInfo(I18nManager.Instance.GetResource("Localization.PetWindow.TimeoutTitle"),
+                string.Format(I18nManager.Instance.GetResource("Localization.PetWindow.InstallTimeout"), petName));
             return;
         }
 
         if (proc.ExitCode == 0)
         {
-            _vm?.ShowFileDropInfo("✅ 安装成功", $"{petName} 已安装");
+            _vm?.ShowFileDropInfo(I18nManager.Instance.GetResource("Localization.PetWindow.InstalledTitle"),
+                string.Format(I18nManager.Instance.GetResource("Localization.PetWindow.Installed"), petName));
             _vm?.ReloadPetdexPets();
             config.NotifyDataChanged();
         }
@@ -380,7 +394,7 @@ public partial class PetWindow : Window
         {
             var err = output.ToString().Trim();
             if (err.Length > 100) err = err[..100] + "...";
-            _vm?.ShowFileDropInfo("❌ 安装失败", err);
+            _vm?.ShowFileDropInfo(I18nManager.Instance.GetResource("Localization.PetWindow.InstallFailedTitle"), err);
         }
     }
 
@@ -453,10 +467,13 @@ public partial class PetWindow : Window
     {
         var item = new MenuItem
         {
-            Header = $"{a.Emoji} {a.Name}",
+            Header = $"{a.Emoji} {a.Display?.Name?.Invoke() ?? a.Name}",
             FontSize = 13, Foreground = ThemeBrush("TextPrimary"),
         };
-        ToolTip.SetTip(item, a.Description);
+        // 仅在有描述内容时设置 tooltip，避免悬浮显示空白提示框
+        var desc = a.Display?.Description?.Invoke() ?? a.Description;
+        if (!string.IsNullOrWhiteSpace(desc))
+            ToolTip.SetTip(item, desc);
         var cap = a;
         item.Click += (_, _) => _vm?.PerformActionCommand.Execute(cap);
         return item;

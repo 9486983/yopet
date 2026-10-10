@@ -3,6 +3,7 @@ using Avalonia.Controls;
 using Avalonia.Input;
 using Avalonia.Layout;
 using Avalonia.Media;
+using Lang.Avalonia;
 using yopet.Sdk;
 
 namespace yopet.Views;
@@ -185,15 +186,15 @@ public static class PluginConfigDialog
                     };
                     var presets = field.CronPresets ?? new()
                     {
-                        new() { Label = "每分钟", Value = "* * * * *" },
-                        new() { Label = "每5分钟", Value = "*/5 * * * *" },
-                        new() { Label = "每10分钟", Value = "*/10 * * * *" },
-                        new() { Label = "每30分钟", Value = "*/30 * * * *" },
-                        new() { Label = "每小时", Value = "0 * * * *" },
-                        new() { Label = "每天0点", Value = "0 0 * * *" },
-                        new() { Label = "每天9点", Value = "0 9 * * *" },
-                        new() { Label = "每周日0点", Value = "0 0 * * 0" },
-                        new() { Label = "每月1号0点", Value = "0 0 1 * *" },
+                        new() { Label = I18nManager.Instance.GetResource("Localization.Dialogs.CronEveryMinute"), Value = "* * * * *" },
+                        new() { Label = I18nManager.Instance.GetResource("Localization.Dialogs.CronEvery5Minutes"), Value = "*/5 * * * *" },
+                        new() { Label = I18nManager.Instance.GetResource("Localization.Dialogs.CronEvery10Minutes"), Value = "*/10 * * * *" },
+                        new() { Label = I18nManager.Instance.GetResource("Localization.Dialogs.CronEvery30Minutes"), Value = "*/30 * * * *" },
+                        new() { Label = I18nManager.Instance.GetResource("Localization.Dialogs.CronEveryHour"), Value = "0 * * * *" },
+                        new() { Label = I18nManager.Instance.GetResource("Localization.Dialogs.CronDaily0"), Value = "0 0 * * *" },
+                        new() { Label = I18nManager.Instance.GetResource("Localization.Dialogs.CronDaily9"), Value = "0 9 * * *" },
+                        new() { Label = I18nManager.Instance.GetResource("Localization.Dialogs.CronWeekly0"), Value = "0 0 * * 0" },
+                        new() { Label = I18nManager.Instance.GetResource("Localization.Dialogs.CronMonthly1"), Value = "0 0 1 * *" },
                     };
                     var presetCb = new ComboBox
                     {
@@ -201,7 +202,7 @@ public static class PluginConfigDialog
                         DisplayMemberBinding = new global::Avalonia.Data.Binding("Label"),
                         SelectedValueBinding = new global::Avalonia.Data.Binding("Value"),
                         Height = 34, Width = 120, CornerRadius = new CornerRadius(8), FontSize = 12,
-                        PlaceholderText = "模板",
+                        PlaceholderText = I18nManager.Instance.GetResource("Localization.Dialogs.CronTemplate"),
                         Foreground = new SolidColorBrush(fgColor),
                         Background = new SolidColorBrush(bgPage),
                         BorderBrush = new SolidColorBrush(borderColor),
@@ -324,8 +325,8 @@ public static class PluginConfigDialog
         var errorList = new StackPanel { Spacing = 2, Margin = new Thickness(0, 4, 0, 0), IsVisible = false };
 
         // ── 按钮 ──
-        var saveBtn = DialogHelper.CreateButton("💾 保存", width: 100, primary: true);
-        var cancelBtn = DialogHelper.CreateButton("取消", width: 100);
+        var saveBtn = DialogHelper.CreateButton(I18nManager.Instance.GetResource("Localization.Dialogs.Save"), width: 100, primary: true);
+        var cancelBtn = DialogHelper.CreateButton(I18nManager.Instance.GetResource("Localization.Dialogs.Cancel"), width: 100);
 
         // ── 滚动容器 ──
         var scrollViewer = new ScrollViewer

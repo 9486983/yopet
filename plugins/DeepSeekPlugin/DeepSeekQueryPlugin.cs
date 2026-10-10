@@ -1,5 +1,7 @@
 using yopet.Sdk;
 using System.Text.Json;
+using Lang.Avalonia;
+using yopet.Core.Models;
 
 namespace DeepSeekPlugin;
 
@@ -21,8 +23,12 @@ public class DeepSeekQueryPlugin : PluginBase
     private PeriodicTimer? _timer;
     private CancellationTokenSource? _timerCts;
 
-    public override string Name => "DeepSeek 查询";
-    public override string Description => "查询 DeepSeek API 余额和缓存状态";
+    /// <summary>取当前语言的 DeepSeek 词条</summary>
+    private static string T(string key) =>
+        I18nManager.Instance.GetResource($"Localization.DeepSeekPlugin.{key}");
+
+    public override string Name => T("Name");
+    public override string Description => T("Description");
 
     public override async Task InitializeAsync(IPluginHost host)
     {
@@ -32,6 +38,7 @@ public class DeepSeekQueryPlugin : PluginBase
         // ── 注册配置定义 ──
         host.RegisterConfig(new PluginConfigSection
         {
+            Key = "deepseek",
             Title = "DeepSeek API",
             Emoji = "🔑",
             Fields = new()
@@ -43,33 +50,33 @@ public class DeepSeekQueryPlugin : PluginBase
                     Type = PluginConfigFieldType.Password,
                     IsRequired = true,
                     Placeholder = "sk-...",
-                    Description = "从 DeepSeek 控制台获取",
+                    Description = T("ApiKeyDesc"),
                 },
                 new()
                 {
                     Key = KeyAutoQuery,
-                    Label = "定时查询余额",
+                    Label = T("AutoQueryLabel"),
                     Type = PluginConfigFieldType.Boolean,
                     DefaultValue = "false",
-                    Description = "开启后将按下方间隔自动查询余额并显示气泡",
+                    Description = T("AutoQueryDesc"),
                 },
                 new()
                 {
                     Key = KeyInterval,
-                    Label = "查询间隔（分钟）",
+                    Label = T("IntervalLabel"),
                     Type = PluginConfigFieldType.Number,
                     DefaultValue = "30",
                     MinValue = 1,
                     MaxValue = 180,
-                    Description = "两次自动查询之间的间隔时间",
+                    Description = T("IntervalDesc"),
                 },
                 new()
                 {
                     Key = KeySummaryUrl,
-                    Label = "用量查询接口",
+                    Label = T("UsageApiLabel"),
                     Type = PluginConfigFieldType.String,
                     DefaultValue = "https://platform.deepseek.com/api/v0/users/get_user_summary",
-                    Description = "待后续接入，当前暂未使用",
+                    Description = T("UsageApiDesc"),
                 },
             },
         }, Name);
@@ -81,24 +88,32 @@ public class DeepSeekQueryPlugin : PluginBase
 
         host.RegisterAction(new PluginAction
         {
-            Name = "设置",
+            Name = T("SettingsAction"),
             Emoji = "⚙️",
-            Description = "配置 DeepSeek API Key 和定时查询参数",
-            Group = "🔑 DeepSeek",
+            Description = T("SettingsActionDesc"),
+            Group = T("Group"),
+            Display = LocalizedDisplay.Of(
+                name: () => T("SettingsAction"),
+                group: () => T("Group"),
+                description: () => T("SettingsActionDesc")),
             Target = ActionTarget.ContextMenu,
             Callback = () =>
             {
-                host.ShowConfigDialog("DeepSeek API");
+                host.ShowConfigDialog("deepseek");
                 return Task.CompletedTask;
             },
         });
 
         host.RegisterAction(new PluginAction
         {
-            Name = "查询余额",
+            Name = T("QueryBalance"),
             Emoji = "💰",
-            Description = "查询 DeepSeek API 余额",
-            Group = "🔑 DeepSeek",
+            Description = T("QueryBalanceDesc"),
+            Group = T("Group"),
+            Display = LocalizedDisplay.Of(
+                name: () => T("QueryBalance"),
+                group: () => T("Group"),
+                description: () => T("QueryBalanceDesc")),
             Target = ActionTarget.ContextMenu,
             Callback = async () => await QueryBalance(),
         });
@@ -171,7 +186,7 @@ public class DeepSeekQueryPlugin : PluginBase
         if (string.IsNullOrEmpty(apiKey))
         {
             if (!silent)
-                _host.ShowThought("⚠️ 未配置", "请在设置 → DeepSeek API 中填写 API Key");
+                _host.ShowThought(T("NotConfiguredTitle"), T("NotConfiguredMsg"));
             return;
         }
 
@@ -197,25 +212,25 @@ public class DeepSeekQueryPlugin : PluginBase
             if (string.IsNullOrEmpty(balance) || balance == "0")
             {
                 if (!silent)
-                    _host.ShowThought("💰 余额", "暂未获取到余额信息");
+                    _host.ShowThought(T("NoBalanceTitle"), T("NoBalanceMsg"));
                 return;
             }
 
-            var status = isAvailable ? "✅ 可用" : "❌ 不可用";
-            var title = "💰 DeepSeek 余额";
-            _host.ShowThought(title, $"{status}\n💰 余额: ¥{balance}");
+            var status = isAvailable ? T("StatusAvailable") : T("StatusUnavailable");
+            var title = T("BalanceTitle");
+            _host.ShowThought(title, string.Format(T("BalanceText"), status, balance));
             _host.ShowReaction("💰");
         }
         catch (HttpRequestException ex)
         {
             if (!silent)
-                _host.ShowThought("❌ 查询失败",
-                    $"网络错误: {ex.Message}\n\n请检查 API Key 是否正确");
+                _host.ShowThought(T("QueryFailedTitle"),
+                    string.Format(T("NetworkErrorMsg"), ex.Message));
         }
         catch (Exception ex)
         {
             if (!silent)
-                _host.ShowThought("❌ 查询失败", ex.Message);
+                _host.ShowThought(T("QueryFailedTitle"), ex.Message);
         }
     }
 

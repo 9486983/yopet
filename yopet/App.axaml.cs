@@ -4,7 +4,10 @@ using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Input.Platform;
 using Avalonia.Markup.Xaml;
 using Avalonia.Styling;
+using Lang.Avalonia;
+using Lang.Avalonia.Json;
 using Microsoft.Extensions.DependencyInjection;
+using System.Globalization;
 using yopet.Core.Interfaces;
 using yopet.Services;
 using yopet.ViewModels;
@@ -13,7 +16,6 @@ namespace yopet;
 
 public partial class App : Application
 {
-    public static Window? SettingsWindow { get; private set; }
     public static PetViewModel? PetViewModel { get; private set; }
 
     private ServiceProvider? _serviceProvider;
@@ -41,8 +43,6 @@ public partial class App : Application
             services.AddSingleton<PluginLoader>();
 
             // ViewModels（Singleton）
-            services.AddSingleton<MainViewModel>();
-
             _serviceProvider = services.BuildServiceProvider();
 
             // ── 从容器解析服务 ──
@@ -52,6 +52,21 @@ public partial class App : Application
             var pluginHost = _serviceProvider.GetRequiredService<PluginHostImpl>();
             var pluginLoader = _serviceProvider.GetRequiredService<PluginLoader>();
             var config = configService.Config;
+
+            // ── 注册多语言资源（JSON 文件位于输出目录 I18n/） ──
+            try
+            {
+                var culture = string.IsNullOrWhiteSpace(config.Language)
+                    ? new CultureInfo("zh-CN")
+                    : new CultureInfo(config.Language);
+                I18nManager.Instance.Register(new JsonLangPlugin(), culture, out var i18nError);
+                if (!string.IsNullOrWhiteSpace(i18nError))
+                    System.Diagnostics.Debug.WriteLine($"[I18n] 注册失败: {i18nError}");
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"[I18n] 注册异常: {ex.Message}");
+            }
 
             // ── 加载主题资源 ──
             LoadThemeResources(config.IsDarkTheme);
@@ -67,15 +82,11 @@ public partial class App : Application
             // ── 启动定时任务调度器 ──
             pluginHost.SchedulerService.Start();
 
-            // ── 主设置窗口（MainViewModel 由 DI 构建，自动注入 PluginLoader） ──
-            var mainVm = _serviceProvider.GetRequiredService<MainViewModel>();
-            var mainWindow = new MainWindow { DataContext = mainVm };
-            SettingsWindow = mainWindow;
-
             // ── 宠物窗口 ──
             var petVm = new PetViewModel(configService, dispatcher, petdexService,
                 pluginHost.PluginActions,
-                pluginHost.FileActions);
+                pluginHost.FileActions,
+                pluginHost.Events);
             PetViewModel = petVm;
             var petWindow = new PetWindow
             {
@@ -107,6 +118,27 @@ public partial class App : Application
             petVm.CancelTaskCallback = () =>
                 pluginHost.CancelCurrentTask();
 
+            // ── 热重载插件（右键菜单触发：清理→卸载→重载→初始化→刷新 UI 动作） ──
+            petVm.ReloadPluginsCallback = async () =>
+            {
+                try
+                {
+                    await pluginHost.ReloadAllAsync();
+                    petVm.RefreshPluginActions(pluginHost.PluginActions);
+                    petVm.RefreshFileActions(pluginHost.FileActions);
+                    petVm.ShowFileDropInfo(
+                        I18nManager.Instance.GetResource("Localization.PetWindow.ReloadPluginsDone"),
+                        string.Format(I18nManager.Instance.GetResource("Localization.PetWindow.ReloadPluginsDoneMsg"),
+                            pluginHost.PluginActions.Count, pluginHost.FileActions.Count));
+                }
+                catch (Exception ex)
+                {
+                    petVm.ShowFileDropInfo(
+                        I18nManager.Instance.GetResource("Localization.PetWindow.ReloadPluginsFailed"),
+                        ex.Message);
+                }
+            };
+
             // ── 连接会话事件 ──
             pluginHost.OnSessionStarted = session =>
                 Avalonia.Threading.Dispatcher.UIThread.Post(() => petVm.OnSessionStarted(session));
@@ -114,6 +146,15 @@ public partial class App : Application
                 Avalonia.Threading.Dispatcher.UIThread.Post(() => petVm.OnSessionEnded());
             petVm.EndSessionCallback = () =>
                 pluginHost.CurrentSession?.Cancel();
+
+            // ── 插件事件池冲突提示（重复注册/多插件共存时展示给用户，仅注册阶段触发一次） ──
+            pluginHost.Events.ConflictDetected += (_, args) =>
+                Avalonia.Threading.Dispatcher.UIThread.Post(() =>
+                {
+                    System.Diagnostics.Debug.WriteLine($"[EventPool] {args.Message}");
+                    if (App.PetViewModel is { } vm)
+                        vm.ShowFileDropInfo("⚠️ 插件事件冲突", args.Message);
+                });
 
             // ── 连接插件配置弹窗 ──
             pluginHost.OnShowPluginConfig = async section =>
@@ -128,7 +169,7 @@ public partial class App : Application
                 {
                     System.Diagnostics.Debug.WriteLine($"[ConfigDialog] Error: {ex}");
                     // 出错时尝试用简单方式显示
-                    pluginHost.ShowThought("❌ 配置页加载失败", ex.Message);
+                    pluginHost.ShowThought(I18nManager.Instance.GetResource("Localization.PetWindow.ConfigLoadFailed"), ex.Message);
                 }
             };
 
@@ -160,6 +201,13 @@ public partial class App : Application
             // ── 连接插件列表弹窗回调 ──
             pluginHost.OnShowListDialog = async config =>
                 await Views.ListDialog.ShowAsync(petWindow, config);
+
+            // ── 连接插件自定义页面弹窗（插件 dll 内嵌 XAML，点击弹窗外部关闭） ──
+            pluginHost.OnShowCustomView = (view, _) =>
+            {
+                Avalonia.Threading.Dispatcher.UIThread.Post(() => PetWindow.ShowDialogOn(petWindow, view));
+                return Task.CompletedTask;
+            };
 
             desktop.MainWindow = petWindow;
         }

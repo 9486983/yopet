@@ -1,5 +1,17 @@
 # yopet Plugin SDK Guide
 
+> ## ⚠️ Cross-Platform Requirement (Mandatory)
+>
+> yopet is a cross-platform desktop application (must compile and run on Windows / macOS / Linux). When developing or modifying plugins, you MUST follow these rules:
+>
+> 1. **No bare platform-specific API calls**: never directly use the Windows Registry, P/Invoke into `user32.dll` / `gdi32.dll`, or Windows-only executables/commands such as `powershell`, `cmd.exe`, `explorer.exe`, `notepad.exe`, `shutdown`, `powercfg`, or hard-coded Windows paths.
+> 2. **Prefer cross-platform solutions**: use the Avalonia built-in `Clipboard` API for clipboard; use `Process.Start` with per-platform branching for opening files/directories/URLs (`open` on macOS, `explorer.exe` on Windows, etc.).
+> 3. **Guard any platform-specific API**: when a platform-specific API is truly required, wrap it with `OperatingSystem.IsWindows()` / `OperatingSystem.IsMacOS()` and provide a graceful fallback on other platforms (return false, show "not available", or skip the feature) — never let plugin initialization fail.
+> 4. **Cross-platform paths & processes**: always use `Path.Combine`; never hard-code `\`, `C:\`, `python.exe`, etc.; executable detection must cover per-platform names (e.g. `python` / `python3` / `py`).
+> 5. **Degrade gracefully instead of relying on exceptions**: exceptions thrown by plugin `InitializeAsync` are caught and skipped by the host, but you should degrade explicitly in code rather than relying on exceptions as a fallback.
+
+---
+
 Use this guide when developing, modifying, or understanding plugins for the yopet desktop pet application. It covers all core interfaces and classes in the `yopet.Sdk` namespace.
 
 ---
@@ -568,7 +580,6 @@ The project includes several plugins for reference:
 | `plugins/DeepSeekPlugin/` | Scheduled tasks, HTTP calls, config persistence, message queue |
 | `plugins/FileUtilityPlugin/` | Radial menu, file operations, RunWithAnimation |
 | `plugins/PythonScriptPlugin/` | List dialog (with dropdown actions), config groups, scheduled tasks, input dialog |
-| `plugins/WebAnalyzerPlugin/` | Input dialog, confirm dialog, file save, API calls |
 | `plugins/SessionDemoPlugin/` | Complete session workflow example |
 | `plugins/AgentHooksPlugin/` | Dynamic config toggles, list dialog data refresh, multi-Provider management |
 | `plugins/HealthReminder/` | Scheduled tasks, config listening, randomized messages |
@@ -593,3 +604,74 @@ The project includes several plugins for reference:
 - Plugin DLLs are loaded via `AssemblyLoadContext(isCollectible: true)`, theoretically supporting hot-reload
 - Plugin projects need to reference `yopet.Sdk`, which already references `yopet.Core` (for `ItemType` etc.)
 - Each plugin's `.csproj` must target `net9.0`
+
+---
+
+## 8. Localization (i18n)
+
+The main app integrates **Lang.Avalonia** (12.0.3.3, MIT). Plugins can use its API and XAML markup extension directly.
+
+### Key Store Convention (Unified Key Store)
+
+- All language entries (main app + all plugins) live in the main app's `yopet/I18n/` JSON files: `zh-CN.json` (Simplified Chinese) and `en-US.json` (English)
+- When adding a key you MUST add it to **both** language files
+- Key naming convention: `Localization.<PluginName>.<Category>.<Name>`, e.g. `Localization.SettingPlugin.AutoStart.Label`
+- Do NOT create separate language files in a plugin and register them: Lang.Avalonia merges entries per `cultureName` by overwriting, so a later registration would wipe out earlier entries
+
+### Usage in XAML
+
+```xml
+<Window xmlns:c="https://codewf.com" ...>
+  <TextBlock Text="{c:I18n Localization.Dialogs.Ok}" />
+</Window>
+```
+
+- Under the current .NET 9 SDK (Roslyn 4.14) the `Lang.Avalonia.Analysis` generator is unavailable (it requires Roslyn 5.3), so **string keys** are used; after upgrading to the .NET 10 SDK you can add Analysis for compile-time key checking
+- A missing key falls back to the raw key string, which makes typos easy to spot
+
+### Usage in C#
+
+```csharp
+using Lang.Avalonia;
+var text = I18nManager.Instance.GetResource("Localization.Dialogs.Ok");
+```
+
+### Switching Language
+
+The main app switches via `IPluginHost.SetLanguage("en-US")` (or the SettingPlugin language dropdown); all bound UI refreshes automatically.
+
+### Dynamic Action Names (Instant Refresh on Language Switch)
+
+`Name`/`Group`/`Description` of context-menu actions are snapshots taken at registration time and do not update after a language switch. To refresh them immediately, provide **per-render evaluated** text via `LocalizedDisplay`:
+
+```csharp
+host.RegisterAction(new PluginAction
+{
+    Name = T("SettingsAction"),   // static snapshot (startup language)
+    Group = T("Group"),
+    Display = LocalizedDisplay.Of(
+        name: () => T("SettingsAction"),
+        group: () => T("Group"),
+        description: () => T("SettingsActionDesc")),   // evaluated on each render
+    Target = ActionTarget.ContextMenu,
+    Callback = () => { host.ShowConfigDialog("my_config"); return Task.CompletedTask; },
+});
+```
+
+`LocalizedDisplay` lives in `yopet.Core.Models`; a null field falls back to the static string.
+
+### Stable Config Dialog Lookup (Key)
+
+`ShowConfigDialog` matches `PluginConfigSection.Key` first, then `Title`. **Always set a stable Key when registering config and use that Key in callbacks — never build the lookup title with runtime `T()`**: `Title` is a registration-time snapshot while runtime `T()` returns the current language, so they mismatch after a switch and the dialog would not open:
+
+```csharp
+host.RegisterConfig(new PluginConfigSection
+{
+    Key = "my_config",            // stable English id, unaffected by language switches
+    Title = T("ConfigTitle"),
+    ...
+}, Name);
+
+// in the callback:
+host.ShowConfigDialog("my_config");
+```

@@ -1,3 +1,5 @@
+using Lang.Avalonia;
+using yopet.Core.Models;
 using yopet.Sdk;
 
 namespace AgentHooksPlugin;
@@ -10,10 +12,14 @@ namespace AgentHooksPlugin;
     Description = "统一管理所有 AI 助手的 Hooks 监测：响应内容、命令执行、文件更改等")]
 public class AgentHooksPlugin : PluginBase
 {
+    /// <summary>取当前语言的 Agent Hooks 词条</summary>
+    private static string T(string key) =>
+        I18nManager.Instance.GetResource($"Localization.AgentHooksPlugin.{key}");
+
     private readonly List<HookProviderBase> _providers = new();
     private IPluginHost? _host;
 
-    public override string Name => "Agent 钩子";
+    public override string Name => T("Name");
 
     public override async Task InitializeAsync(IPluginHost host)
     {
@@ -27,10 +33,14 @@ public class AgentHooksPlugin : PluginBase
         // ── 右键菜单 ──
         host.RegisterAction(new PluginAction
         {
-            Name = "Agent 设置",
+            Name = T("SettingsAction"),
             Emoji = "👾",
-            Description = "查看和管理所有 AI 助手的 Hooks 监测",
-            Group = "👾 Agent 钩子",
+            Description = T("SettingsActionDesc"),
+            Group = T("Group"),
+            Display = LocalizedDisplay.Of(
+                name: () => T("SettingsAction"),
+                group: () => T("Group"),
+                description: () => T("SettingsActionDesc")),
             Target = ActionTarget.ContextMenu,
             Callback = ShowAgentList,
         });
@@ -75,7 +85,7 @@ public class AgentHooksPlugin : PluginBase
 
         _listConfig = new ListDialogConfig
         {
-            Title = "Agent 钩子",
+            Title = T("ListTitle"),
             Emoji = "👾",
             LayoutMode = ListDialogLayoutMode.Table,
             DataSource = BuildAgentList,
@@ -90,7 +100,7 @@ public class AgentHooksPlugin : PluginBase
                 new()
                 {
                     Key = "status",
-                    Header = "状态",
+                    Header = T("ColStatus"),
                     Width = 100,
                 },
                 new()
@@ -105,7 +115,7 @@ public class AgentHooksPlugin : PluginBase
                         {
                             Emoji = "@toggle_emoji",
                             Label = "@toggle_label",
-                            Tooltip = "启动或暂停此 Agent 的监测",
+                            Tooltip = T("ToggleTooltip"),
                             Callback = row =>
                             {
                                 if (row.TryGetValue("id", out var id))
@@ -123,15 +133,15 @@ public class AgentHooksPlugin : PluginBase
                         new()
                         {
                             Emoji = "⚙️",
-                            Label = "设置",
-                            Tooltip = "编辑此 Agent 的详细配置",
+                            Label = T("SettingsButtonLabel"),
+                            Tooltip = T("SettingsButtonTooltip"),
                             Callback = row =>
                             {
                                 if (row.TryGetValue("id", out var id))
                                 {
                                     var provider = _providers.FirstOrDefault(p => p.Id == id);
                                     if (provider != null)
-                                        _host?.ShowConfigDialog($"Agent: {provider.Name}");
+                                        _host?.ShowConfigDialog(provider.ConfigSection.Key);
                                 }
                                 return Task.CompletedTask;
                             },
@@ -155,9 +165,9 @@ public class AgentHooksPlugin : PluginBase
             {
                 ["id"] = p.Id,
                 ["label"] = $"{p.Emoji} {p.Name}",
-                ["status"] = running ? "🟢 运行中" : "🔴 已暂停",
+                ["status"] = running ? T("ListStatusRunning") : T("ListStatusPaused"),
                 ["toggle_emoji"] = running ? "⏹" : "▶️",
-                ["toggle_label"] = running ? "暂停" : "启动",
+                ["toggle_label"] = running ? T("PauseLabel") : T("StartLabel"),
             };
         }).ToList();
 
@@ -173,13 +183,13 @@ public class AgentHooksPlugin : PluginBase
         {
             provider.Stop();
             _host.SetConfig($"{provider.ConfigPrefix}_enabled", "false");
-            _host.ShowThought($"⏹️ {provider.Name}", "监测已暂停");
+            _host.ShowThought($"⏹️ {provider.Name}", T("MonitorPaused"));
         }
         else
         {
             _host.SetConfig($"{provider.ConfigPrefix}_enabled", "true");
             provider.Start(_host);
-            _host.ShowThought($"▶️ {provider.Name}", "监测已启动");
+            _host.ShowThought($"▶️ {provider.Name}", T("MonitorStarted"));
         }
     }
 
