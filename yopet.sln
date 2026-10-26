@@ -33,6 +33,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "PythonScriptPlugin", "plugi
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "XamlDemoPlugin", "plugins\XamlDemoPlugin\XamlDemoPlugin.csproj", "{6E319B95-1B3C-488B-83CE-AD9715E0805F}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ProgramSchedulerPlugin", "plugins\ProgramSchedulerPlugin\ProgramSchedulerPlugin.csproj", "{C4D5E6F7-A8B9-4C1D-8E2F-3A4B5C6D7E8F}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -211,6 +213,18 @@ Global
 		{6E319B95-1B3C-488B-83CE-AD9715E0805F}.Release|x64.Build.0 = Release|Any CPU
 		{6E319B95-1B3C-488B-83CE-AD9715E0805F}.Release|x86.ActiveCfg = Release|Any CPU
 		{6E319B95-1B3C-488B-83CE-AD9715E0805F}.Release|x86.Build.0 = Release|Any CPU
+		{C4D5E6F7-A8B9-4C1D-8E2F-3A4B5C6D7E8F}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{C4D5E6F7-A8B9-4C1D-8E2F-3A4B5C6D7E8F}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{C4D5E6F7-A8B9-4C1D-8E2F-3A4B5C6D7E8F}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{C4D5E6F7-A8B9-4C1D-8E2F-3A4B5C6D7E8F}.Debug|x64.Build.0 = Debug|Any CPU
+		{C4D5E6F7-A8B9-4C1D-8E2F-3A4B5C6D7E8F}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{C4D5E6F7-A8B9-4C1D-8E2F-3A4B5C6D7E8F}.Debug|x86.Build.0 = Debug|Any CPU
+		{C4D5E6F7-A8B9-4C1D-8E2F-3A4B5C6D7E8F}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{C4D5E6F7-A8B9-4C1D-8E2F-3A4B5C6D7E8F}.Release|Any CPU.Build.0 = Release|Any CPU
+		{C4D5E6F7-A8B9-4C1D-8E2F-3A4B5C6D7E8F}.Release|x64.ActiveCfg = Release|Any CPU
+		{C4D5E6F7-A8B9-4C1D-8E2F-3A4B5C6D7E8F}.Release|x64.Build.0 = Release|Any CPU
+		{C4D5E6F7-A8B9-4C1D-8E2F-3A4B5C6D7E8F}.Release|x86.ActiveCfg = Release|Any CPU
+		{C4D5E6F7-A8B9-4C1D-8E2F-3A4B5C6D7E8F}.Release|x86.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -225,5 +239,6 @@ Global
 		{15717E36-DF3E-4A9D-B7E0-5943DFD0F2A9} = {07D57EEB-2F50-60C4-C011-FE4FA775C9A8}
 		{BCF7584A-BB7A-42C0-BE91-619378A01822} = {07D57EEB-2F50-60C4-C011-FE4FA775C9A8}
 		{6E319B95-1B3C-488B-83CE-AD9715E0805F} = {07D57EEB-2F50-60C4-C011-FE4FA775C9A8}
+		{C4D5E6F7-A8B9-4C1D-8E2F-3A4B5C6D7E8F} = {07D57EEB-2F50-60C4-C011-FE4FA775C9A8}
 	EndGlobalSection
 EndGlobal
