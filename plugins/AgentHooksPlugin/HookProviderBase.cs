@@ -39,11 +39,23 @@ public abstract class HookProviderBase : IDisposable
     protected bool _isRunning;
 
     /// <summary>
+    /// 工作状态在无后续事件时的自动恢复时间（毫秒）。
+    /// 0 表示关闭自动恢复，完全依赖 session_end / stop 等结束事件。
+    /// </summary>
+    protected virtual int WorkingIdleTimeoutMs => 0;
+
+    private IPluginHost? _host;
+    private readonly object _workingLock = new();
+    private bool _isWorking;
+    private CancellationTokenSource? _workingCts;
+
+    /// <summary>
     /// 启动监听。
     /// 基类设置 _isRunning = true，子类实现具体的监听逻辑。
     /// </summary>
     public virtual void Start(IPluginHost host)
     {
+        _host = host;
         _isRunning = true;
     }
 
@@ -54,12 +66,31 @@ public abstract class HookProviderBase : IDisposable
     public virtual void Stop()
     {
         _isRunning = false;
+        StopWorking();
+        _host = null;
     }
 
     /// <summary>处理一条事件（由子类在捕获到事件时调用，统一路由到宿主队列）</summary>
     protected void DispatchEvent(IPluginHost host, string type, string title, string text, int durationMs)
     {
         if (!_isRunning) return;
+
+        switch (type)
+        {
+            case "session_start":
+            case "working":
+            case "bash":
+            case "command":
+            case "file":
+            case "file_change":
+                StartWorking();
+                break;
+
+            case "stop":
+                StopWorking();
+                break;
+        }
+
         host.EnqueueThought(new ThoughtMessage
         {
             Title = title,
@@ -71,13 +102,60 @@ public abstract class HookProviderBase : IDisposable
     /// <summary>处理 session_end 事件（停止动画，收工排队不冲掉前面的消息）</summary>
     protected void DispatchSessionEnd(IPluginHost host)
     {
-        host.StopAnimation();
+        StopWorking();
         host.EnqueueThought(new ThoughtMessage
         {
             Title = Name,
             Text = T("WorkDone"),
             DurationMs = 3000,
         });
+    }
+
+    /// <summary>进入工作状态，播放工作动画</summary>
+    protected void StartWorking()
+    {
+        var host = _host;
+        if (!_isRunning || host == null) return;
+
+        lock (_workingLock)
+        {
+            _isWorking = true;
+            host.StartAnimation(PetAnimation.Running);
+
+            _workingCts?.Cancel();
+            _workingCts?.Dispose();
+            _workingCts = null;
+
+            if (WorkingIdleTimeoutMs <= 0) return;
+
+            var cts = new CancellationTokenSource();
+            _workingCts = cts;
+            _ = Task.Run(async () =>
+            {
+                try { await Task.Delay(WorkingIdleTimeoutMs, cts.Token); }
+                catch (TaskCanceledException) { return; }
+                StopWorking();
+            });
+        }
+    }
+
+    /// <summary>退出工作状态，恢复待机动画</summary>
+    protected void StopWorking()
+    {
+        var host = _host;
+        CancellationTokenSource? cts;
+
+        lock (_workingLock)
+        {
+            if (!_isWorking) return;
+            _isWorking = false;
+            cts = _workingCts;
+            _workingCts = null;
+        }
+
+        cts?.Cancel();
+        cts?.Dispose();
+        host?.StopAnimation();
     }
 
     public virtual void Dispose() { Stop(); }

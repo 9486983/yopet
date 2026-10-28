@@ -46,7 +46,7 @@
 | 插件 | 说明 |
 |------|------|
 | 📌 **PinTopPlugin** | Ctrl+Alt+T 置顶/取消置顶窗口，带可定制的半透明边框指示 |
-| 👾 **AgentHooksPlugin** | 统一管理 AI 助手监测（Reasonix、Claude Code 等），追踪响应/命令/文件变更 |
+| 👾 **AgentHooksPlugin** | 统一管理 AI 助手监测（Reasonix、Claude Code、opencode 等），追踪响应/命令/文件变更 |
 | 🔑 **DeepSeekPlugin** | 查询 DeepSeek API 余额和使用量，支持定时自动查询 |
 | 📁 **FileUtilityPlugin** | 文件详情、MD5 哈希、ZIP 压缩、资源管理器定位、记事本打开、复制路径 |
 | 🧘 **HealthReminder** | 久坐/用眼/喝水定时提醒（现已实现为插件） |

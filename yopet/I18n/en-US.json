@@ -138,6 +138,7 @@
       "WorkDone": "Done for today ✨",
       "ClaudeDesc": "Listen to Claude Code's system Hooks: sessions, responses, command execution, file changes, etc.",
       "ReasonixDesc": "Listen to Reasonix Code's system Hooks: response content, command execution, file changes, etc.",
+      "OpencodeDesc": "Listen to opencode's plugin events: sessions, responses, command execution, file changes, etc.",
       "EnabledLabel": "Enable monitoring",
       "EnabledDesc": "Listen for {0} events and show them on the pet bubble",
       "ShowBashLabel": "Show command execution",

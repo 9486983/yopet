@@ -29,6 +29,7 @@ public class AgentHooksPlugin : PluginBase
         // ── 注册所有 Provider ──
         RegisterProvider(new ReasonixHookProvider());
         RegisterProvider(new ClaudeCodeHookProvider());
+        RegisterProvider(new OpencodeHookProvider());
 
         // ── 右键菜单 ──
         host.RegisterAction(new PluginAction

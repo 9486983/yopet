@@ -46,7 +46,7 @@ Hot-loadable plugin system with a rich SDK. Plugins are loaded from `plugins/` d
 | Plugin | Description |
 |--------|-------------|
 | 📌 **PinTopPlugin** | Ctrl+Alt+T to toggle window always-on-top with customizable overlay borders |
-| 👾 **AgentHooksPlugin** | Unified monitoring for AI assistants (Reasonix, Claude Code) — tracks responses, commands, file changes |
+| 👾 **AgentHooksPlugin** | Unified monitoring for AI assistants (Reasonix, Claude Code, opencode) — tracks responses, commands, file changes |
 | 🔑 **DeepSeekPlugin** | Query DeepSeek API balance, usage stats, and cache hit rate; supports scheduled auto-query |
 | 📁 **FileUtilityPlugin** | File details, MD5 hash, ZIP compression, open in explorer/notepad, copy path |
 | 🧘 **HealthReminder** | Sitting/eye/drink reminders with configurable intervals (now implemented as a plugin) |

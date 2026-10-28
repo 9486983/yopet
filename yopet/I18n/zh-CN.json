@@ -138,6 +138,7 @@
       "WorkDone": "收工 ✨",
       "ClaudeDesc": "监听 Claude Code 的系统 Hooks：会话、响应、命令执行、文件更改等",
       "ReasonixDesc": "监听 Reasonix Code 的系统 Hooks：响应内容、命令执行、文件更改等",
+      "OpencodeDesc": "监听 opencode 的插件事件：会话、响应内容、命令执行、文件变更等",
       "EnabledLabel": "启用监测",
       "EnabledDesc": "监听 {0} 事件并显示在宠物气泡上",
       "ShowBashLabel": "显示命令执行",

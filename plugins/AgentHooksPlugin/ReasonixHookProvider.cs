@@ -25,6 +25,9 @@ public class ReasonixHookProvider : HookProviderBase
     public override string Description => T("ReasonixDesc");
     public override string ConfigPrefix => "reasonix_";
 
+    /// <summary>Reasonix CLI 不触发 session_start/end，工具执行后 15 秒自动恢复待机</summary>
+    protected override int WorkingIdleTimeoutMs => 15000;
+
     private static readonly string EventsDir = Path.Combine(
         Environment.GetFolderPath(Environment.SpecialFolder.UserProfile),
         ".petdex", "events");
