@@ -24,6 +24,8 @@ public class FileRadialMenu : Window
     private const double MenuSize = 300;
     private const double Radius = 88;
     private const double ItemSize = 72;
+    private const int ItemAppearStaggerMs = 10;
+    private const int ItemScaleDurationMs = 110;
 
     // 全圆分 12 份（以时钟为参考），ArcPosition 指定从第几份开始
     // 选项依次占据连续的 1 份位置，不跳格
@@ -94,7 +96,7 @@ public class FileRadialMenu : Window
                 RenderTransform = new ScaleTransform(0.6, 0.6),
                 Transitions = new Transitions
                 {
-                    new DoubleTransition { Property = OpacityProperty, Duration = TimeSpan.FromMilliseconds(250), Easing = new CubicEaseOut() },
+                    new DoubleTransition { Property = OpacityProperty, Duration = TimeSpan.FromMilliseconds(100), Easing = new CubicEaseOut() },
                 },
                 Child = new StackPanel
                 {
@@ -192,7 +194,7 @@ public class FileRadialMenu : Window
 
         this.Transitions = new Transitions
         {
-            new DoubleTransition { Property = OpacityProperty, Duration = TimeSpan.FromMilliseconds(150) },
+            new DoubleTransition { Property = OpacityProperty, Duration = TimeSpan.FromMilliseconds(80) },
         };
     }
 
@@ -209,13 +211,16 @@ public class FileRadialMenu : Window
 
         for (var i = 0; i < _items.Count; i++)
         {
-            var delay = Math.Max(10, 30 - i * 10);
-            var scaleMs = Math.Max(60, 180 - i * 50);
-            await Task.Delay(delay);
+            await Task.Delay(ItemAppearStaggerMs);
             _items[i].Opacity = 1;
-            await AnimateScale(_items[i], 0.6, 1.0, scaleMs, new CubicEaseOut());
-            _itemReady[i] = true;
+            _ = AnimateItemIn(_items[i], i);
         }
+    }
+
+    private async Task AnimateItemIn(Border item, int index)
+    {
+        await AnimateScale(item, 0.6, 1.0, ItemScaleDurationMs, new CubicEaseOut());
+        _itemReady[index] = true;
     }
 
     private static async Task AnimateScale(Border item, double from, double to, int ms, Easing easing)
