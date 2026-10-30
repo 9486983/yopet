@@ -77,7 +77,7 @@ public partial class App : Application
 
             // ── 加载并初始化插件 ──
             pluginLoader.LoadFromDirectory(Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "plugins"));
-            _ = pluginLoader.InitializeAllAsync(pluginHost);
+            var pluginInitTask = pluginLoader.InitializeAllAsync(pluginHost);
 
             // ── 启动定时任务调度器 ──
             pluginHost.SchedulerService.Start();
@@ -88,6 +88,12 @@ public partial class App : Application
                 pluginHost.FileActions,
                 pluginHost.Events);
             PetViewModel = petVm;
+            petVm.RefreshActionsCallback = () =>
+            {
+                petVm.RefreshPluginActions(pluginHost.PluginActions);
+                petVm.RefreshFileActions(pluginHost.FileActions);
+            };
+            _ = RefreshPluginsWhenReadyAsync(pluginInitTask, petVm, pluginHost);
             var petWindow = new PetWindow
             {
                 DataContext = petVm,
@@ -213,6 +219,19 @@ public partial class App : Application
         }
 
         base.OnFrameworkInitializationCompleted();
+    }
+
+    private static async Task RefreshPluginsWhenReadyAsync(
+        Task initTask, PetViewModel petVm, PluginHostImpl pluginHost)
+    {
+        try { await initTask; }
+        catch { }
+
+        Avalonia.Threading.Dispatcher.UIThread.Post(() =>
+        {
+            petVm.RefreshPluginActions(pluginHost.PluginActions);
+            petVm.RefreshFileActions(pluginHost.FileActions);
+        });
     }
 
     /// <summary>加载主题资源 + 设置 Fluent 主题</summary>

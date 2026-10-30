@@ -23,4 +23,10 @@ public class PluginConfigSection
 
     /// <summary>保存前校验回调。返回空列表=通过；返回错误消息列表=校验失败</summary>
     public Func<Dictionary<string, string?>, List<string>>? Validate { get; set; }
+
+    /// <summary>注册该配置的插件名称（由宿主在注册时自动填充）</summary>
+    public string? PluginName { get; set; }
+
+    /// <summary>是否从统一设置页隐藏（内部编辑表单等可设为 true）</summary>
+    public bool HideFromSettings { get; set; }
 }

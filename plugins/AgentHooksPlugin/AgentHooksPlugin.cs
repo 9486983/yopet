@@ -131,22 +131,6 @@ public class AgentHooksPlugin : PluginBase
                                 return Task.CompletedTask;
                             },
                         },
-                        new()
-                        {
-                            Emoji = "⚙️",
-                            Label = T("SettingsButtonLabel"),
-                            Tooltip = T("SettingsButtonTooltip"),
-                            Callback = row =>
-                            {
-                                if (row.TryGetValue("id", out var id))
-                                {
-                                    var provider = _providers.FirstOrDefault(p => p.Id == id);
-                                    if (provider != null)
-                                        _host?.ShowConfigDialog(provider.ConfigSection.Key);
-                                }
-                                return Task.CompletedTask;
-                            },
-                        },
                     },
                 },
             },

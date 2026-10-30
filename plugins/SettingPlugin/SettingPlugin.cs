@@ -15,6 +15,7 @@ public class SettingPlugin : PluginBase
     private const string KeyLanguage = "st_language";
 
     private IPluginHost? _host;
+    private PluginConfigSection? _section;
 
     /// <summary>取当前语言的插件词条</summary>
     private static string T(string key) =>
@@ -30,7 +31,7 @@ public class SettingPlugin : PluginBase
         await base.InitializeAsync(host);
 
         // ── 配置表单 ──
-        host.RegisterConfig(new PluginConfigSection
+        _section = new PluginConfigSection
         {
             Key = "setting",
             Title = T("Name"),
@@ -76,7 +77,8 @@ public class SettingPlugin : PluginBase
                     Description = T("LanguageDesc"),
                 },
             },
-        }, Name);
+        };
+        host.RegisterConfig(_section, Name);
 
         // ── 首次同步主程序当前值到插件配置（未设置过时） ──
         if (host.GetConfig(KeyAutoStart) == null)
@@ -91,12 +93,16 @@ public class SettingPlugin : PluginBase
         // ── 右键菜单入口 ──
         host.RegisterAction(new PluginAction
         {
-            Name = T("Name"),
+            Name = T("SettingsCenter"),
             Emoji = "⚙️",
             Group = T("Group"),
-            Display = LocalizedDisplay.Of(name: () => T("Name"), group: () => T("Group")),
+            Description = T("SettingsCenterDesc"),
+            Display = LocalizedDisplay.Of(
+                name: () => T("SettingsCenter"),
+                group: () => T("Group"),
+                description: () => T("SettingsCenterDesc")),
             Target = ActionTarget.ContextMenu,
-            Callback = () => { host.ShowConfigDialog("setting"); return Task.CompletedTask; },
+            Callback = async () => await ShowUnifiedSettingsAsync(host),
         });
 
         host.RegisterAction(new PluginAction
@@ -111,8 +117,14 @@ public class SettingPlugin : PluginBase
 
         // ── 配置变更即时生效 ──
         host.ConfigValueChanged += OnConfigChanged;
+        host.LanguageChanged += OnLanguageChanged;
 
         host.Log("设置插件已加载");
+    }
+
+    private static async Task ShowUnifiedSettingsAsync(IPluginHost host)
+    {
+        await host.ShowCustomViewAsync(new UnifiedSettingsView(host), T("SettingsCenter"));
     }
 
     private async Task ShowPluginListAsync(IPluginHost host)
@@ -134,6 +146,44 @@ public class SettingPlugin : PluginBase
                 }).ToList()),
         };
         await host.ShowListDialog(config);
+    }
+
+    private void OnLanguageChanged(object? sender, string cultureName)
+    {
+        RefreshSectionLabels();
+    }
+
+    private void RefreshSectionLabels()
+    {
+        var section = _section;
+        if (section == null) return;
+
+        var name = T("Name");
+        section.Title = name;
+        section.PluginName = name;
+
+        foreach (var field in section.Fields)
+        {
+            switch (field.Key)
+            {
+                case KeyAutoStart:
+                    field.Label = T("AutoStartLabel");
+                    field.Description = T("AutoStartDesc");
+                    break;
+                case KeyAnimSpeed:
+                    field.Label = T("AnimSpeedLabel");
+                    field.Description = T("AnimSpeedDesc");
+                    break;
+                case KeyDarkTheme:
+                    field.Label = T("DarkThemeLabel");
+                    field.Description = T("DarkThemeDesc");
+                    break;
+                case KeyLanguage:
+                    field.Label = T("LanguageLabel");
+                    field.Description = T("LanguageDesc");
+                    break;
+            }
+        }
     }
 
     private void OnConfigChanged(object? sender, string key)
@@ -169,7 +219,11 @@ public class SettingPlugin : PluginBase
 
     public override Task CleanupAsync()
     {
-        if (_host != null) _host.ConfigValueChanged -= OnConfigChanged;
+        if (_host != null)
+        {
+            _host.ConfigValueChanged -= OnConfigChanged;
+            _host.LanguageChanged -= OnLanguageChanged;
+        }
         return base.CleanupAsync();
     }
 }

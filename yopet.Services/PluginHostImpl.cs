@@ -44,8 +44,14 @@ public class PluginHostImpl : IPluginHost, IPluginStateResetter
     /// <summary>插件注册的配置定义</summary>
     public List<PluginConfigSection> PluginConfigs { get; } = new();
 
+    /// <summary>插件注册的配置定义（只读，供统一设置页使用）</summary>
+    public IReadOnlyList<PluginConfigSection> PluginConfigSections => PluginConfigs;
+
     /// <summary>配置变更事件</summary>
     public event EventHandler<string>? ConfigValueChanged;
+
+    /// <summary>语言切换成功后触发，供插件刷新本地化文本。</summary>
+    public event EventHandler<string>? LanguageChanged;
 
     /// <summary>打开插件配置弹窗的回调（由 UI 层设置）</summary>
     public Func<PluginConfigSection, Task>? OnShowPluginConfig { get; set; }
@@ -211,8 +217,13 @@ public class PluginHostImpl : IPluginHost, IPluginStateResetter
 
     void IPluginHost.RegisterConfig(PluginConfigSection config, string? pluginName)
     {
-        // 替换同名的已有配置（插件热加载场景）
-        PluginConfigs.RemoveAll(c => c.Title == config.Title);
+        if (!string.IsNullOrWhiteSpace(pluginName))
+            config.PluginName = pluginName;
+
+        // 替换同一 Key 的已有配置（插件热加载场景）；无 Key 时回退到标题匹配
+        PluginConfigs.RemoveAll(c => !string.IsNullOrWhiteSpace(config.Key)
+            ? string.Equals(c.Key, config.Key, StringComparison.OrdinalIgnoreCase)
+            : c.Title == config.Title);
         PluginConfigs.Add(config);
     }
 
@@ -333,6 +344,11 @@ public class PluginHostImpl : IPluginHost, IPluginStateResetter
     public string? GetConfig(string key) => _config.GetPluginValue(key);
     public void SetConfig(string key, string value) { _config.SetPluginValue(key, value); }
 
+    void IPluginHost.SaveConfigValues(IReadOnlyDictionary<string, string?> values)
+    {
+        SavePluginConfig(values.ToDictionary(kv => kv.Key, kv => kv.Value));
+    }
+
     public void Log(string message)
     {
         System.Diagnostics.Debug.WriteLine($"[Plugin] {message}");
@@ -371,6 +387,7 @@ public class PluginHostImpl : IPluginHost, IPluginStateResetter
         try
         {
             I18nManager.Instance.Culture = new CultureInfo(cultureName);
+            LanguageChanged?.Invoke(this, cultureName);
         }
         catch (CultureNotFoundException)
         {
@@ -403,6 +420,7 @@ public class PluginHostImpl : IPluginHost, IPluginStateResetter
     {
         PluginActions.Clear();
         FileActions.Clear();
+        PluginConfigs.Clear();
         ActivatedAction = null;
         _currentSession?.Cancel();
     }

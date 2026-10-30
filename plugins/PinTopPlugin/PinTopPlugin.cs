@@ -53,10 +53,6 @@ public class PinTopPlugin : PluginBase
                 new() { Key = "pt_border_thickness", Label = T("BorderThicknessLabel"), Type = PluginConfigFieldType.Number, DefaultValue = "3", MinValue = 1, MaxValue = 20 },
                 new() { Key = "pt_border_radius", Label = T("BorderRadiusLabel"), Type = PluginConfigFieldType.Number, DefaultValue = "8", MinValue = 0, MaxValue = 30 },
             }}, Name);
-        host.RegisterAction(new PluginAction { Name = T("SettingsAction"), Emoji = "📌", Group = T("Group"), Target = ActionTarget.ContextMenu,
-            Display = LocalizedDisplay.Of(name: () => T("SettingsAction"), group: () => T("Group")),
-            Callback = () => { host.ShowConfigDialog("pintop"); return Task.CompletedTask; } });
-
         host.RegisterAction(new PluginAction
         {
             Name = T("PinnedWindows"),

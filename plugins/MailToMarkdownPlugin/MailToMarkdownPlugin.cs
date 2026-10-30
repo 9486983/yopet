@@ -32,24 +32,6 @@ public class MailToMarkdownPlugin : PluginBase
             FileCallback = paths => ConvertAsync(paths, host),
         });
 
-        host.RegisterAction(new PluginAction
-        {
-            Name = T("ConfigName"),
-            Emoji = "⚙️",
-            Group = T("Group"),
-            Description = T("ConfigDescription"),
-            Display = LocalizedDisplay.Of(
-                name: () => T("ConfigName"),
-                group: () => T("Group"),
-                description: () => T("ConfigDescription")),
-            Target = ActionTarget.ContextMenu,
-            Callback = () =>
-            {
-                host.ShowConfigDialog("mail2md");
-                return Task.CompletedTask;
-            },
-        });
-
         host.RegisterConfig(new PluginConfigSection
         {
             Key = "mail2md",

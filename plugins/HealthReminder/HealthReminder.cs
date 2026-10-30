@@ -71,21 +71,6 @@ public class HealthReminderPlugin : PluginBase
             },
         }, Name);
 
-        // 设置入口
-        host.RegisterAction(new PluginAction
-        {
-            Name = T("Settings"),
-            Emoji = "⚙️",
-            Group = T("Group"),
-            Display = LocalizedDisplay.Of(name: () => T("Settings"), group: () => T("Group")),
-            Target = ActionTarget.ContextMenu,
-            Callback = () =>
-            {
-                host.ShowConfigDialog("health_reminder");
-                return Task.CompletedTask;
-            },
-        });
-
         // 监听配置变更
         host.ConfigValueChanged += OnConfigChanged;
 

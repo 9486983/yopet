@@ -52,7 +52,7 @@
     },
     "SettingPlugin": {
       "Name": "设置",
-      "Description": "开机自启、动画速度、深色模式与插件列表管理",
+      "Description": "开机自启、动画速度、深色模式与所有插件设置统一管理",
       "Group": "⚙️ 设置",
       "PluginList": "插件列表",
       "ColPlugin": "插件",
@@ -64,7 +64,14 @@
       "DarkThemeLabel": "深色模式",
       "DarkThemeDesc": "切换深色 / 浅色主题",
       "LanguageLabel": "语言 / Language",
-      "LanguageDesc": "切换界面语言，立即生效"
+      "LanguageDesc": "切换界面语言，立即生效",
+      "SettingsCenter": "设置中心",
+      "SettingsCenterDesc": "在一个页面中统一管理所有插件的设置",
+      "SelectPlugin": "选择插件",
+      "Save": "保存",
+      "Saved": "已保存",
+      "NoChanges": "没有需要保存的更改",
+      "NoSettings": "暂无可配置的插件设置"
     },
     "HealthReminder": {
       "Name": "健康提醒",

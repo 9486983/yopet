@@ -91,24 +91,6 @@ public class PythonScriptPlugin : PluginBase
             Callback = async () => await QuickRun(host),
         });
 
-        host.RegisterAction(new PluginAction
-        {
-            Name = T("PluginConfigName"),
-            Emoji = "⚙️",
-            Group = T("GroupPythonScripts"),
-            Description = T("PluginConfigDesc"),
-            Display = LocalizedDisplay.Of(
-                name: () => T("PluginConfigName"),
-                group: () => T("GroupPythonScripts"),
-                description: () => T("PluginConfigDesc")),
-            Target = ActionTarget.ContextMenu,
-            Callback = () =>
-            {
-                host.ShowConfigDialog("python");
-                return Task.CompletedTask;
-            },
-        });
-
         // ── 插件配置（演示新 SDK 字段类型） ──
         host.RegisterConfig(new PluginConfigSection
         {

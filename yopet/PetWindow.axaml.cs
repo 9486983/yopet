@@ -2,10 +2,13 @@ using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Controls.Primitives;
 using Avalonia.Input;
+using Avalonia.Interactivity;
 using Avalonia.Media;
 using Avalonia.Platform.Storage;
 using Avalonia.Threading;
+using Avalonia.VisualTree;
 using Lang.Avalonia;
+using System.Runtime.CompilerServices;
 using yopet.Core.Models;
 using yopet.Sdk;
 using yopet.ViewModels;
@@ -33,12 +36,50 @@ public partial class PetWindow : Window
     /// <summary>气泡定位目标（供弹窗 Popup 定位用）</summary>
     public Control BubbleTarget => PetBody;
 
+    private readonly ConditionalWeakTable<ComboBox, object> _comboBoxDropDownHandlers = new();
+
     /// <summary>在 DialogPopup 中显示内容，返回控制权</summary>
     public Popup ShowDialog(Control content)
     {
+        DialogPopup.IsLightDismissEnabled = true;
+        content.RemoveHandler(InputElement.PointerPressedEvent, OnDialogPointerPressed);
+        content.AddHandler(InputElement.PointerPressedEvent, OnDialogPointerPressed, RoutingStrategies.Tunnel);
+
         DialogContent.Content = content;
         DialogPopup.IsOpen = true;
         return DialogPopup;
+    }
+
+    private void OnDialogPointerPressed(object? sender, PointerPressedEventArgs e)
+    {
+        if (e.Source is not Visual source) return;
+
+        var combo = source.FindAncestorOfType<ComboBox>();
+        if (combo == null || combo.IsEditable || !combo.IsEnabled) return;
+
+        if (!_comboBoxDropDownHandlers.TryGetValue(combo, out _))
+        {
+            _comboBoxDropDownHandlers.Add(combo, new object());
+            combo.DropDownClosed += (_, _) => DialogPopup.IsLightDismissEnabled = true;
+        }
+
+        if (combo.IsDropDownOpen)
+        {
+            combo.IsDropDownOpen = false;
+            DialogPopup.IsLightDismissEnabled = true;
+            e.Handled = true;
+            return;
+        }
+
+        DialogPopup.IsLightDismissEnabled = false;
+        combo.IsDropDownOpen = true;
+        e.Handled = true;
+
+        _ = Task.Delay(600).ContinueWith(_ => Dispatcher.UIThread.Post(() =>
+        {
+            if (!combo.IsDropDownOpen)
+                DialogPopup.IsLightDismissEnabled = true;
+        }));
     }
 
     public static Popup ShowDialogOn(Window owner, Control content)
@@ -261,6 +302,7 @@ public partial class PetWindow : Window
         menu.Items.Add(reloadItem);
         menu.Items.Add(new Separator());
 
+        _vm.RefreshActionsCallback?.Invoke();
         var groups = _vm.Actions.GroupBy(a =>
             string.IsNullOrEmpty(a.Display?.Group?.Invoke() ?? a.Group) ? "" : (a.Display?.Group?.Invoke() ?? a.Group)).ToList();
         foreach (var group in groups)
@@ -268,13 +310,19 @@ public partial class PetWindow : Window
             if (string.IsNullOrEmpty(group.Key))
             {
                 foreach (var a in group) menu.Items.Add(BuildMenuItem(a));
+                continue;
             }
-            else
+
+            var items = group.ToList();
+            if (items.Count == 1)
             {
-                var sub = new MenuItem { Header = group.Key, FontSize = 13, Foreground = ThemeBrush("TextPrimary") };
-                foreach (var a in group) sub.Items.Add(BuildMenuItem(a));
-                menu.Items.Add(sub);
+                menu.Items.Add(BuildMenuItem(items[0]));
+                continue;
             }
+
+            var sub = new MenuItem { Header = group.Key, FontSize = 13, Foreground = ThemeBrush("TextPrimary") };
+            foreach (var a in items) sub.Items.Add(BuildMenuItem(a));
+            menu.Items.Add(sub);
         }
         menu.Items.Add(new Separator());
 

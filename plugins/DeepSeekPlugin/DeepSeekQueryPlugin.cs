@@ -88,24 +88,6 @@ public class DeepSeekQueryPlugin : PluginBase
 
         host.RegisterAction(new PluginAction
         {
-            Name = T("SettingsAction"),
-            Emoji = "⚙️",
-            Description = T("SettingsActionDesc"),
-            Group = T("Group"),
-            Display = LocalizedDisplay.Of(
-                name: () => T("SettingsAction"),
-                group: () => T("Group"),
-                description: () => T("SettingsActionDesc")),
-            Target = ActionTarget.ContextMenu,
-            Callback = () =>
-            {
-                host.ShowConfigDialog("deepseek");
-                return Task.CompletedTask;
-            },
-        });
-
-        host.RegisterAction(new PluginAction
-        {
             Name = T("QueryBalance"),
             Emoji = "💰",
             Description = T("QueryBalanceDesc"),

@@ -202,6 +202,7 @@ public class ProgramSchedulerPlugin : PluginBase
             Key = "psp_edit",
             Title = T("FormTitle"),
             Emoji = "🚀",
+            HideFromSettings = true,
             Fields = new()
             {
                 new()

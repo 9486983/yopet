@@ -109,6 +109,8 @@ public partial class PetViewModel : ObservableObject
     /// <summary>热重载插件回调（由 App 层设置，调用宿主重载并刷新动作列表）</summary>
     public Action? ReloadPluginsCallback { get; set; }
 
+    public Action? RefreshActionsCallback { get; set; }
+
     /// <summary>
     /// 刷新插件注册的右键动作（热重载后调用，右键菜单下次打开即生效）。
     /// </summary>

@@ -52,7 +52,7 @@
     },
     "SettingPlugin": {
       "Name": "Settings",
-      "Description": "Auto-start, animation speed, dark mode and plugin list management",
+      "Description": "Auto-start, animation speed, dark mode and unified plugin settings",
       "Group": "⚙️ Settings",
       "PluginList": "Plugin List",
       "ColPlugin": "Plugin",
@@ -64,7 +64,14 @@
       "DarkThemeLabel": "Dark mode",
       "DarkThemeDesc": "Toggle dark / light theme",
       "LanguageLabel": "Language",
-      "LanguageDesc": "Switch UI language, applies immediately"
+      "LanguageDesc": "Switch UI language, applies immediately",
+      "SettingsCenter": "Settings Center",
+      "SettingsCenterDesc": "Manage all plugin settings in one page",
+      "SelectPlugin": "Select plugin",
+      "Save": "Save",
+      "Saved": "Saved",
+      "NoChanges": "No changes to save",
+      "NoSettings": "No plugin settings available"
     },
     "HealthReminder": {
       "Name": "Health Reminder",

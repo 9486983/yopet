@@ -81,6 +81,9 @@ public interface IPluginHost
     string? GetConfig(string key);
     void SetConfig(string key, string value);
 
+    /// <summary>批量保存配置值，并触发 <see cref="ConfigValueChanged"/> 通知相关插件</summary>
+    void SaveConfigValues(IReadOnlyDictionary<string, string?> values);
+
     /// <summary>输出日志（兼容旧版）</summary>
     void Log(string message);
 
@@ -104,8 +107,14 @@ public interface IPluginHost
     /// <summary>切换界面语言（culture name，如 zh-CN / en-US），立即生效并持久化</summary>
     void SetLanguage(string cultureName);
 
+    /// <summary>Raised after the language is switched successfully.</summary>
+    event EventHandler<string>? LanguageChanged;
+
     /// <summary>已加载的插件信息列表（只读展示用）</summary>
     IReadOnlyList<PluginInfo> LoadedPlugins { get; }
+
+    /// <summary>当前已注册的全部插件配置分区（按注册顺序，可用于统一设置页）</summary>
+    IReadOnlyList<PluginConfigSection> PluginConfigSections { get; }
 
     // ── 插件事件池（常用事件统一注册与管理） ──
 
