@@ -103,7 +103,7 @@ public class DeepSeekQueryPlugin : PluginBase
         // ── 启动定时查询（如果已启用） ──
         RestartTimerIfNeeded();
 
-        host.Log("DeepSeek 查询插件 v2.0 已加载");
+        Logger.Info("DeepSeek 查询插件 v2.0 已加载");
     }
 
     private string? GetApiKey() => _host?.GetConfig(KeyApiKey);

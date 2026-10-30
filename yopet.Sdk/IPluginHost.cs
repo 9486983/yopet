@@ -84,8 +84,6 @@ public interface IPluginHost
     /// <summary>批量保存配置值，并触发 <see cref="ConfigValueChanged"/> 通知相关插件</summary>
     void SaveConfigValues(IReadOnlyDictionary<string, string?> values);
 
-    /// <summary>输出日志（兼容旧版）</summary>
-    void Log(string message);
 
     // ── 宿主设置（供设置类插件使用） ──
 

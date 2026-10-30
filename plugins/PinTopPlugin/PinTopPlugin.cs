@@ -72,7 +72,7 @@ public class PinTopPlugin : PluginBase
             var key = ParseKey(host.GetConfig("pt_key") ?? "T");
             StartPump(mod, key);
         }
-        host.Log("窗口置顶器插件已加载");
+        Logger.Info("窗口置顶器插件已加载");
         return Task.CompletedTask;
     }
 

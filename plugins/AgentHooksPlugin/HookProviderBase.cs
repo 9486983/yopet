@@ -45,6 +45,7 @@ public abstract class HookProviderBase : IDisposable
     protected virtual int WorkingIdleTimeoutMs => 0;
 
     private IPluginHost? _host;
+    protected IPluginLogger? Logger { get; private set; }
     private readonly object _workingLock = new();
     private bool _isWorking;
     private CancellationTokenSource? _workingCts;
@@ -56,6 +57,7 @@ public abstract class HookProviderBase : IDisposable
     public virtual void Start(IPluginHost host)
     {
         _host = host;
+        Logger = host.Logger.For(GetType().Name);
         _isRunning = true;
     }
 
@@ -68,6 +70,7 @@ public abstract class HookProviderBase : IDisposable
         _isRunning = false;
         StopWorking();
         _host = null;
+        Logger = null;
     }
 
     /// <summary>处理一条事件（由子类在捕获到事件时调用，统一路由到宿主队列）</summary>

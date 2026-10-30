@@ -47,11 +47,11 @@ public class OpencodeHookProvider : JsonlHookProviderBase
             }
 
             File.WriteAllText(PluginFile, PluginScriptContent, new UTF8Encoding(false));
-            host.Log("[OpencodeHook] 已安装 opencode 插件: yopet-hooks.js");
+            Logger?.Info("[OpencodeHook] 已安装 opencode 插件: yopet-hooks.js");
         }
         catch (Exception ex)
         {
-            host.Log($"[OpencodeHook] 安装 opencode 插件失败: {ex.Message}");
+            Logger?.Warn($"[OpencodeHook] 安装 opencode 插件失败: {ex.Message}");
         }
     }
 

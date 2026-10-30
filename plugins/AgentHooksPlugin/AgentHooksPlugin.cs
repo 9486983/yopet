@@ -46,7 +46,7 @@ public class AgentHooksPlugin : PluginBase
             Callback = ShowAgentList,
         });
 
-        host.Log($"Agent 钩子插件已加载 ({_providers.Count} 个 Provider)");
+        Logger.Info($"Agent 钩子插件已加载 ({_providers.Count} 个 Provider)");
     }
 
     /// <summary>注册一个 Provider，自动配置并启动</summary>

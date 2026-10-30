@@ -36,26 +36,24 @@ public class ProgramSchedulerPlugin : PluginBase
     private IPluginHost? _host;
     private ListDialogConfig? _listConfig;
     private DateTime _lastApply = DateTime.MinValue;
-    private string _logDir = "";
-    private readonly object _logLock = new();
 
     /// <summary>取当前语言的插件词条</summary>
     private static string T(string key) =>
         I18nManager.Instance.GetResource($"Localization.ProgramSchedulerPlugin.{key}");
 
-    /// <summary>写插件日志（{pluginDir}/logs/yyyy-MM-dd.log），用于排查定时启停问题</summary>
-    private void Log(string message)
+    private void Log(string message) =>
+        Logger.Info(message);
+
+    private void LogWarn(string message) =>
+        Logger.Warn(message);
+
+    private void LogError(string message, Exception? ex = null) =>
+        Logger.Error(message, ex);
+
+    private void LogLauncher(string message, bool isError)
     {
-        try
-        {
-            if (string.IsNullOrEmpty(_logDir)) return;
-            Directory.CreateDirectory(_logDir);
-            var now = DateTime.Now;
-            var path = Path.Combine(_logDir, $"ProgramScheduler-{now:yyyy-MM-dd}.log");
-            lock (_logLock)
-                File.AppendAllText(path, $"[{now:HH:mm:ss}] {message}{Environment.NewLine}");
-        }
-        catch { /* 日志写入失败不影响主流程 */ }
+        if (isError) LogError(message);
+        else Log(message);
     }
 
     public override string Name => T("Name");
@@ -69,8 +67,6 @@ public class ProgramSchedulerPlugin : PluginBase
     public override Task InitializeAsync(IPluginHost host)
     {
         _host = host;
-        _logDir = Path.Combine(
-            Path.GetDirectoryName(GetType().Assembly.Location) ?? "", "logs");
         Log("插件初始化");
 
         LoadRules(host);
@@ -92,7 +88,7 @@ public class ProgramSchedulerPlugin : PluginBase
         });
 
         host.ConfigValueChanged += OnConfigChanged;
-        host.Log("程序定时启停插件已加载");
+        Log("程序定时启停插件已加载");
         return Task.CompletedTask;
     }
 
@@ -123,7 +119,7 @@ public class ProgramSchedulerPlugin : PluginBase
         }
         catch (Exception ex)
         {
-            host.Logger.Warn<ProgramSchedulerPlugin>($"解析规则失败，已忽略: {ex.Message}");
+            Logger.Warn($"解析规则失败，已忽略: {ex.Message}");
         }
     }
 
@@ -135,7 +131,7 @@ public class ProgramSchedulerPlugin : PluginBase
         }
         catch (Exception ex)
         {
-            host.Logger.Error<ProgramSchedulerPlugin>("保存规则失败", ex);
+            Logger.Error("保存规则失败", ex);
         }
     }
 
@@ -180,15 +176,27 @@ public class ProgramSchedulerPlugin : PluginBase
     private async Task OnStartAsync(ScheduleRule rule)
     {
         Log($"定时启动触发「{rule.Name}」");
-        var (ok, message) = await _launcher.LaunchAsync(rule, Log);
-        Log($"定时启动结果: {(ok ? "成功" : message)}");
+        var (ok, message) = await _launcher.LaunchAsync(rule, LogLauncher);
+        if (ok) Log($"定时启动成功「{rule.Name}」");
+        else LogError($"定时启动失败「{rule.Name}」: {message}");
     }
 
     private async Task OnStopAsync(ScheduleRule rule)
     {
         Log($"定时停止触发「{rule.Name}」");
-        var outcome = await _launcher.StopAsync(rule, Log);
-        Log($"定时停止结果: {outcome}");
+        var outcome = await _launcher.StopAsync(rule, LogLauncher);
+        switch (outcome)
+        {
+            case StopOutcome.Stopped:
+                Log($"定时停止成功「{rule.Name}」");
+                break;
+            case StopOutcome.NotRunning:
+                LogWarn($"定时停止跳过「{rule.Name}」: 进程未运行");
+                break;
+            default:
+                LogError($"定时停止失败「{rule.Name}」");
+                break;
+        }
     }
 
     // ──────────────────────────────────────────────
@@ -552,13 +560,16 @@ public class ProgramSchedulerPlugin : PluginBase
         if (rule == null) return;
 
         Log($"手动启动「{rule.Name}」");
-        var (ok, message) = await _launcher.LaunchAsync(rule, Log);
+        var (ok, message) = await _launcher.LaunchAsync(rule, LogLauncher);
         _listConfig?.NotifyDataChanged();
         if (ok)
             host.ShowThought(T("StartedTitle"), string.Format(T("StartedMsg"), rule.Name));
         else
+        {
+            LogError($"手动启动失败「{rule.Name}」: {message}");
             host.ShowThought(T("StartFailedTitle"),
                 string.Format(T("StartFailedMsg"), rule.Name, message));
+        }
     }
 
     private async Task StopNowAsync(IPluginHost host, string id)
@@ -567,17 +578,20 @@ public class ProgramSchedulerPlugin : PluginBase
         if (rule == null) return;
 
         Log($"手动停止「{rule.Name}」");
-        var outcome = await _launcher.StopAsync(rule, Log);
+        var outcome = await _launcher.StopAsync(rule, LogLauncher);
         _listConfig?.NotifyDataChanged();
         switch (outcome)
         {
             case StopOutcome.Stopped:
+                Log($"手动停止成功「{rule.Name}」");
                 host.ShowThought(T("StoppedTitle"), string.Format(T("StoppedMsg"), rule.Name));
                 break;
             case StopOutcome.NotRunning:
+                LogWarn($"手动停止跳过「{rule.Name}」: 进程未运行");
                 host.ShowThought(T("NotRunningTitle"), string.Format(T("NotRunningMsg"), rule.Name));
                 break;
             default:
+                LogError($"手动停止失败「{rule.Name}」");
                 host.ShowThought(T("StopFailedTitle"), string.Format(T("StopFailedMsg"), rule.Name));
                 break;
         }

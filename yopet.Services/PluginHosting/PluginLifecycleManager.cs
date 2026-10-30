@@ -17,11 +17,11 @@ public sealed class PluginLifecycleManager
 {
     private readonly List<LoadedPlugin> _plugins = new();
     private readonly object _lock = new();
-    private readonly Action<string>? _log;
+    private readonly IPluginLogger? _logger;
 
-    public PluginLifecycleManager(Action<string>? log = null)
+    public PluginLifecycleManager(IPluginLogger? logger = null)
     {
-        _log = log;
+        _logger = logger;
     }
 
     /// <summary>当前已加载的插件对象（只读快照，线程安全）</summary>
@@ -76,13 +76,13 @@ public sealed class PluginLifecycleManager
                         {
                             _plugins.Add(new LoadedPlugin(plugin, dllPath, context));
                         }
-                        _log?.Invoke($"已加载插件 [{plugin.Name}] <- {Path.GetFileName(dllPath)}");
+                        _logger?.Info($"已加载插件 [{plugin.Name}] <- {Path.GetFileName(dllPath)}");
                     }
                 }
             }
             catch (Exception ex)
             {
-                _log?.Invoke($"加载插件失败 [{dllPath}]: {ex.Message}");
+                _logger?.Error($"加载插件失败 [{dllPath}]: {ex.Message}");
             }
         }
     }
@@ -94,11 +94,14 @@ public sealed class PluginLifecycleManager
         {
             try
             {
+                if (loaded.Plugin is IPluginLoggerAware loggerAware)
+                    loggerAware.SetLogger(host.Logger.For(loaded.Plugin.GetType().Name));
+
                 await loaded.Plugin.InitializeAsync(host);
             }
             catch (Exception ex)
             {
-                _log?.Invoke($"初始化插件失败 [{loaded.Name}]: {ex.Message}");
+                _logger?.Error($"初始化插件失败 [{loaded.Name}]: {ex.Message}");
             }
         }
     }
@@ -131,7 +134,7 @@ public sealed class PluginLifecycleManager
         {
             await loaded.CleanupAsync();
             host.Events.UnregisterAll(loaded.Name);
-            _log?.Invoke($"已清理插件 [{loaded.Name}]");
+            _logger?.Info($"已清理插件 [{loaded.Name}]");
         }
 
         // 2) 重置宿主残留状态（动作列表、激活态、会话等）
@@ -145,13 +148,13 @@ public sealed class PluginLifecycleManager
         {
             if (!loaded.UnloadAndWait())
             {
-                _log?.Invoke($"警告：插件 [{loaded.Name}] 程序集未在超时内卸载，可能有引用泄漏");
+                _logger?.Warn($"警告：插件 [{loaded.Name}] 程序集未在超时内卸载，可能有引用泄漏");
             }
         }
 
         // 4) 重新扫描加载并初始化
         LoadFromDirectory(directory);
         await InitializeAllAsync(host);
-        _log?.Invoke($"热重载完成，共加载 {LoadedPlugins.Count} 个插件");
+        _logger?.Info($"热重载完成，共加载 {LoadedPlugins.Count} 个插件");
     }
 }
