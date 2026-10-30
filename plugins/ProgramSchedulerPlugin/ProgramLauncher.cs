@@ -24,7 +24,7 @@ internal sealed class ProgramLauncher
     private readonly object _lock = new();
 
     /// <summary>启动规则对应的程序。返回 (是否成功, 结果说明)。</summary>
-    public Task<(bool Ok, string Message)> LaunchAsync(ScheduleRule rule, Action<string>? log = null)
+    public Task<(bool Ok, string Message)> LaunchAsync(ScheduleRule rule, Action<string, bool>? log = null)
     {
         if (string.IsNullOrWhiteSpace(rule.Path))
             return Task.FromResult<(bool, string)>((false, "PathEmpty"));
@@ -59,18 +59,18 @@ internal sealed class ProgramLauncher
                 return Task.FromResult<(bool, string)>((false, "StartFailed"));
 
             lock (_lock) _running[rule.Id] = process;
-            log?.Invoke($"launched pid={process.Id} path={rule.Path}");
+            log?.Invoke($"launched pid={process.Id} path={rule.Path}", false);
             return Task.FromResult<(bool, string)>((true, "Started"));
         }
         catch (Exception ex)
         {
-            log?.Invoke($"launch failed: {ex.Message}");
+            log?.Invoke($"launch failed: {ex.Message}", true);
             return Task.FromResult<(bool, string)>((false, ex.Message));
         }
     }
 
     /// <summary>停止规则对应的程序：先优雅关闭，超时再强制结束进程树。</summary>
-    public async Task<StopOutcome> StopAsync(ScheduleRule rule, Action<string>? log = null)
+    public async Task<StopOutcome> StopAsync(ScheduleRule rule, Action<string, bool>? log = null)
     {
         var targets = new List<Process>();
         var seen = new HashSet<int>();
@@ -99,7 +99,7 @@ internal sealed class ProgramLauncher
             catch { /* 枚举失败按未找到处理 */ }
         }
 
-        log?.Invoke($"stop: name=\"{name}\", candidates={targets.Count}");
+        log?.Invoke($"stop: name=\"{name}\", candidates={targets.Count}", false);
         if (targets.Count == 0)
             return StopOutcome.NotRunning;
 
@@ -123,7 +123,7 @@ internal sealed class ProgramLauncher
                 if (!SafeHasExited(process))
                 {
                     try { process.Kill(entireProcessTree: true); }
-                    catch (Exception ex) { log?.Invoke($"kill failed pid={process.Id}: {ex.Message}"); }
+                    catch (Exception ex) { log?.Invoke($"kill failed pid={process.Id}: {ex.Message}", true); }
                 }
 
                 // 校验是否真的退出，避免假报成功
@@ -139,17 +139,17 @@ internal sealed class ProgramLauncher
                 else
                 {
                     failed++;
-                    log?.Invoke($"still running after kill pid={process.Id}");
+                    log?.Invoke($"still running after kill pid={process.Id}", true);
                 }
             }
             catch (Exception ex)
             {
                 failed++;
-                log?.Invoke($"stop error pid={SafePid(process)}: {ex.Message}");
+                log?.Invoke($"stop error pid={SafePid(process)}: {ex.Message}", true);
             }
         }
 
-        log?.Invoke($"stop done: stopped={stopped}, failed={failed}");
+        log?.Invoke($"stop done: stopped={stopped}, failed={failed}", false);
         if (stopped > 0) return StopOutcome.Stopped;
         return failed > 0 ? StopOutcome.Failed : StopOutcome.NotRunning;
     }

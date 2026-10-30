@@ -9,6 +9,7 @@ using Lang.Avalonia.Json;
 using Microsoft.Extensions.DependencyInjection;
 using System.Globalization;
 using yopet.Core.Interfaces;
+using yopet.Sdk;
 using yopet.Services;
 using yopet.ViewModels;
 
@@ -39,6 +40,9 @@ public partial class App : Application
             services.AddSingleton<IConfigService, ConfigService>();
             services.AddSingleton<IDispatcherService, AvaloniaDispatcherService>();
             services.AddSingleton<IPetdexService, PetdexService>();
+            services.AddSingleton<IPluginLogger>(_ => new PluginLogger(
+                new LoggerService(Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "plugins", "logs")),
+                "Host"));
             services.AddSingleton<PluginHostImpl>();
             services.AddSingleton<PluginLoader>();
 

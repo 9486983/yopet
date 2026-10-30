@@ -13,7 +13,6 @@ namespace yopet.Services;
 public class PluginHostImpl : IPluginHost, IPluginStateResetter
 {
     private readonly IConfigService _config;
-    private readonly LoggerService _loggerService;
     private readonly CronSchedulerService _schedulerService;
 
     /// <summary>插件日志对象（所有日志方法放这里）</summary>
@@ -94,18 +93,15 @@ public class PluginHostImpl : IPluginHost, IPluginStateResetter
     /// <summary>插件事件池 —— 悬浮提示等常用事件统一注册与管理（含冲突检测、优先级）</summary>
     public PluginEventPool Events { get; } = new();
 
-    /// <summary>日志输出</summary>
-    public event Action<string>? LogEmitted;
-
-    public PluginHostImpl(IConfigService config, LoggerService? logger = null, CronSchedulerService? scheduler = null, PluginLoader? pluginLoader = null)
+    public PluginHostImpl(IConfigService config, IPluginLogger? logger = null, CronSchedulerService? scheduler = null, PluginLoader? pluginLoader = null)
     {
         _config = config;
         _pluginLoader = pluginLoader;
-        _loggerService = logger ?? new LoggerService(
-            Path.Combine(AppDomain.CurrentDomain.BaseDirectory, ".yopet", "logs"));
+        Logger = logger ?? new PluginLogger(
+            new LoggerService(Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "plugins", "logs")),
+            "Host");
         _schedulerService = scheduler ?? new CronSchedulerService();
-        Logger = new PluginLogger(_loggerService);
-        Scheduler = new PluginScheduler(_schedulerService, Logger);
+        Scheduler = new PluginScheduler(_schedulerService, Logger.For("PluginScheduler"));
     }
 
     // ── 消息队列 ──
@@ -347,12 +343,6 @@ public class PluginHostImpl : IPluginHost, IPluginStateResetter
     void IPluginHost.SaveConfigValues(IReadOnlyDictionary<string, string?> values)
     {
         SavePluginConfig(values.ToDictionary(kv => kv.Key, kv => kv.Value));
-    }
-
-    public void Log(string message)
-    {
-        System.Diagnostics.Debug.WriteLine($"[Plugin] {message}");
-        LogEmitted?.Invoke(message);
     }
 
     // ── 宿主设置（供设置类插件使用） ──

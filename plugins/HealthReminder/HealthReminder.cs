@@ -78,7 +78,7 @@ public class HealthReminderPlugin : PluginBase
         _cts = new CancellationTokenSource();
         _ = RunTimerAsync(_cts.Token);
 
-        host.Log("健康提醒插件已加载");
+        Logger.Info("健康提醒插件已加载");
     }
 
     private void OnConfigChanged(object? sender, string key)

@@ -42,7 +42,7 @@ $skipDlls = @("yopet.Sdk.dll", "yopet.Core.dll",
 $projFiles = Get-ChildItem -Path (Join-Path $ProjectRoot "Plugins") -Recurse -Filter "*.csproj"
 foreach ($proj in $projFiles) {
     Write-Host "  Building $($proj.BaseName)..."
-    dotnet build $proj.FullName --configuration $Configuration --no-restore 2>&1 | Out-Null
+    dotnet build $proj.FullName --configuration $Configuration 2>&1 | Out-Null
     if ($LASTEXITCODE -ne 0) { throw "Plugin $($proj.BaseName) build failed" }
     $binDir = Join-Path $proj.Directory.FullName "bin\$Configuration\net9.0"
     if (Test-Path $binDir) {

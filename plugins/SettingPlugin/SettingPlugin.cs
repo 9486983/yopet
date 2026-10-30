@@ -119,7 +119,7 @@ public class SettingPlugin : PluginBase
         host.ConfigValueChanged += OnConfigChanged;
         host.LanguageChanged += OnLanguageChanged;
 
-        host.Log("设置插件已加载");
+        Logger.Info("设置插件已加载");
     }
 
     private static async Task ShowUnifiedSettingsAsync(IPluginHost host)

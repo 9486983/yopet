@@ -391,7 +391,7 @@ $json = $event | ConvertTo-Json -Compress
         }
         catch (Exception ex)
         {
-            host.Log($"[ReasonixHook] 安装 hooks 基础设施失败: {ex.Message}");
+            Logger?.Warn($"[ReasonixHook] 安装 hooks 基础设施失败: {ex.Message}");
         }
     }
 

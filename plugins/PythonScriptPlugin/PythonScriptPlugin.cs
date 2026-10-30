@@ -27,8 +27,6 @@ public class PythonScriptPlugin : PluginBase
     public override string Name => T("Name");
 
     private string _scriptsDir = "";
-    private string _logDir = "";
-    private readonly object _logLock = new();
     private ListDialogConfig? _listConfig;
     private IPluginHost? _host;
 
@@ -44,8 +42,6 @@ public class PythonScriptPlugin : PluginBase
         var pluginDir = Path.GetDirectoryName(GetType().Assembly.Location)!;
         _scriptsDir = Path.Combine(pluginDir, "scripts");
         Directory.CreateDirectory(_scriptsDir);
-        _logDir = Path.Combine(pluginDir, "logs");
-        Directory.CreateDirectory(_logDir);
         LogToFile("插件初始化完成");
         RestoreCronJobs(host);
 
@@ -426,7 +422,7 @@ public class PythonScriptPlugin : PluginBase
                 LogToFile($"解析 Python 路径: {pythonPath ?? "null (未找到)"}");
                 if (pythonPath == null)
                 {
-                    LogToFile("错误: 未找到 Python 可执行文件");
+                    LogError("未找到 Python 可执行文件");
                     host.ShowThought(T("PythonNotFoundTitle"),
                         T("PythonNotFoundContent"));
                     return;
@@ -479,12 +475,11 @@ public class PythonScriptPlugin : PluginBase
             });
 
             // 执行完毕，RunWithAnimation 已自动停止动画
-            LogToFile($"退出码: {exitCode}");
 
             if (exitCode == 0)
             {
                 var display = Truncate(output, 1500);
-                LogToFile($"执行成功, 输出 {output.Length} 字符");
+                LogToFile($"执行成功 退出码={exitCode}，输出 {output.Length} 字符");
                 host.ShowThought(string.Format(T("RunSuccessTitle"), exitCode),
                     string.Format(T("RunSuccessContent"), scriptName, display));
                 host.ShowReaction("✅", PetAnimation.Jump);
@@ -493,7 +488,7 @@ public class PythonScriptPlugin : PluginBase
             {
                 var errMsg = Truncate(error.Length > 0 ? error : output, 1000);
                 var stderrPreview = error.Length > 0 ? Truncate(error, 500) : output.Length > 0 ? Truncate(output, 500) : "(无输出)";
-                LogToFile($"执行失败 退出码={exitCode}\n  stderr: {stderrPreview}");
+                LogError($"执行失败 退出码={exitCode}\n  stderr: {stderrPreview}");
                 host.ShowThought(string.Format(T("RunFailedTitle"), exitCode),
                     string.Format(T("RunFailedContent"), scriptName, errMsg));
                 host.ShowReaction("❌", PetAnimation.Failed);
@@ -501,7 +496,7 @@ public class PythonScriptPlugin : PluginBase
         }
         catch (OperationCanceledException)
         {
-            LogToFile("执行被用户取消");
+            LogWarn("执行被用户取消");
             host.ShowThought(T("CanceledTitle"), string.Format(T("CanceledContent"), scriptName));
             host.ShowReaction("⏹️", PetAnimation.Wave);
             // 如果是定时任务触发的，自动暂停
@@ -509,12 +504,12 @@ public class PythonScriptPlugin : PluginBase
             if (!string.IsNullOrEmpty(host.GetConfig(cronKey)))
             {
                 host.Scheduler.Pause(cronKey);
-                LogToFile($"定时任务已自动暂停: {cronKey}");
+                LogWarn($"定时任务已自动暂停: {cronKey}");
             }
         }
         catch (Exception ex)
         {
-            LogToFile($"异常: {ex.GetType().Name}: {ex.Message}");
+            LogError($"执行异常: {ex.GetType().Name}", ex);
             host.ShowThought(T("RunErrorTitle"),
                 string.Format(T("RunErrorContent"), scriptName, ex.Message));
             host.ShowReaction("❌", PetAnimation.Failed);
@@ -786,7 +781,7 @@ public class PythonScriptPlugin : PluginBase
         var scriptPath = Path.Combine(_scriptsDir, scriptName);
         if (!File.Exists(scriptPath))
         {
-            host.Logger.Warn<PythonScriptPlugin>($"定时任务脚本不存在: {scriptName}");
+            Logger.Warn($"定时任务脚本不存在: {scriptName}");
             return;
         }
         await RunScript(scriptName, host);
@@ -870,7 +865,7 @@ public class PythonScriptPlugin : PluginBase
         {
             host.ShowThought(T("CronFormatErrorTitle"),
                 string.Format(T("CronFormatErrorContent"), input, ex.Message));
-            LogToFile($"定时设置失败: {input} - {ex.Message}");
+            LogError($"定时设置失败: {input}", ex);
         }
     }
 
@@ -906,25 +901,18 @@ public class PythonScriptPlugin : PluginBase
         }
         catch (Exception ex)
         {
-            LogToFile($"恢复定时任务失败: {ex.Message}");
+            LogError("恢复定时任务失败", ex);
         }
     }
 
-    /// <summary>写入日志文件（{logDir}/yyy-MM-dd.log）</summary>
-    private void LogToFile(string message)
-    {
-        try
-        {
-            var date = DateTime.Now;
-            var logPath = Path.Combine(_logDir, $"{date:yyyy-MM-dd}.log");
-            var line = $"[{date:HH:mm:ss}] {message}";
-            lock (_logLock)
-            {
-                File.AppendAllText(logPath, line + Environment.NewLine);
-            }
-        }
-        catch { /* 日志写入失败不影响主流程 */ }
-    }
+    private void LogToFile(string message) =>
+        Logger.Info(message);
+
+    private void LogWarn(string message) =>
+        Logger.Warn(message);
+
+    private void LogError(string message, Exception? ex = null) =>
+        Logger.Error(message, ex);
 
     /// <summary>中间截断文件名：保留开头 + 扩展名，中间 ...</summary>
     private static string TruncateMiddle(string name, int maxLen)

@@ -93,7 +93,7 @@ public abstract class JsonlHookProviderBase : HookProviderBase
         catch { _lastLogPosition = 0; }
 
         try { OnStarted(host); }
-        catch (Exception ex) { host.Log($"[{Id}] 启动失败: {ex.Message}"); }
+        catch (Exception ex) { Logger?.Warn($"[{Id}] 启动失败: {ex.Message}"); }
 
         try
         {
