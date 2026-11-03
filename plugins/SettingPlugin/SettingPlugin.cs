@@ -9,6 +9,10 @@ namespace SettingPlugin;
     Description = "开机自启、动画速度、深色模式与插件列表管理")]
 public class SettingPlugin : PluginBase
 {
+    public SettingPlugin(PluginContext context) : base(context)
+    {
+    }
+
     private const string KeyAutoStart = "st_auto_start";
     private const string KeyAnimSpeed = "st_anim_speed";
     private const string KeyTheme = "st_theme";

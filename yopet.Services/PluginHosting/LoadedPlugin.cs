@@ -12,6 +12,7 @@ namespace yopet.Services.PluginHosting;
 public sealed class LoadedPlugin
 {
     private readonly AssemblyLoadContext _alc;
+    private readonly PluginServiceProvider? _services;
 
     /// <summary>插件对象</summary>
     public IPlugin Plugin { get; }
@@ -28,11 +29,13 @@ public sealed class LoadedPlugin
     /// <summary>插件描述</summary>
     public string Description => Plugin.Description;
 
-    internal LoadedPlugin(IPlugin plugin, string dllPath, AssemblyLoadContext alc)
+    internal LoadedPlugin(IPlugin plugin, string dllPath, AssemblyLoadContext alc,
+        PluginServiceProvider? services = null)
     {
         Plugin = plugin;
         DllPath = dllPath;
         _alc = alc;
+        _services = services;
     }
 
     /// <summary>
@@ -47,6 +50,11 @@ public sealed class LoadedPlugin
         catch
         {
             // 插件清理失败不阻断热重载流程
+        }
+        finally
+        {
+            // 释放插件级服务作用域，并自动注销该插件遗留的全部定时任务
+            _services?.Dispose();
         }
     }
 

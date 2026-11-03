@@ -25,6 +25,7 @@ yopet.Sdk/              ← NuGet reference: yopet.Core
 ├── PluginAttribute.cs   Metadata attribute
 ├── IPluginHost.cs       Host interaction interface (core API)
 ├── IPluginLogger.cs     Logging interface
+├── PluginContext.cs     Plugin DI context (Logger / Localizer / Scheduler)
 ├── IPluginScheduler.cs  Scheduled task interface (global Quartz.NET scheduler)
 ├── ISession.cs          Multi-step session interface
 ├── PluginAction.cs      Action descriptor
@@ -66,12 +67,18 @@ namespace MyPlugin;
 [Plugin("My Plugin", Version = "1.0.0", Description = "An example plugin")]
 public class MyPlugin : PluginBase
 {
+    // The host constructs plugins through DI. PluginContext aggregates Logger / Localizer / Scheduler.
+    // Adding a future shared service only requires extending PluginContext, not every plugin constructor.
+    public MyPlugin(PluginContext context) : base(context)
+    {
+    }
+
     // PluginBase automatically reads Description from the [Plugin] attribute
     public override string Name => "My Plugin";
 
     public override async Task InitializeAsync(IPluginHost host)
     {
-        await base.InitializeAsync(host);  // saves host to this.Host
+        await base.InitializeAsync(host);  // saves host to this.Host (DI-injected services are not overwritten)
 
         // Register a context menu action
         host.RegisterAction(new PluginAction
@@ -86,7 +93,7 @@ public class MyPlugin : PluginBase
             },
         });
 
-        host.Log("My Plugin loaded");
+        Logger.Info("My Plugin loaded");
     }
 
     public override Task CleanupAsync()
@@ -96,6 +103,9 @@ public class MyPlugin : PluginBase
     }
 }
 ```
+
+> **Plugin dependency injection**: the host creates plugins with `ActivatorUtilities`. `PluginContext` already binds a plugin-specific `Logger`, `Localizer`, and an isolated `Scheduler`.
+> Plugins may append other host-registered services to their constructor (e.g. `IConfigService`). Legacy plugins without a DI constructor still work through `base.InitializeAsync(host)`.
 
 ### 2.3 Build & Deploy
 
@@ -472,7 +482,8 @@ host.Log("Simple message");
 
 ### 3.9 Scheduled Tasks
 
-> **Required convention**: the host runs a single global scheduler backed by **Quartz.NET 4.x**, registered as a DI singleton (`ISchedulerService` → `SchedulerService`) and injected through constructors. Plugins must access it only via `host.Scheduler`.
+> **Required convention**: the host runs a single global scheduler backed by **Quartz.NET 4.x**, registered as a DI singleton (`ISchedulerService` → `SchedulerService`) and injected through constructors. Plugins must access it only via `host.Scheduler` or the base-class `Scheduler`.
+> The plugin-scoped `Scheduler` prefixes job IDs automatically (e.g. `MyPlugin:my_job`) and cleans them up on plugin unload, so IDs only need to be unique within the plugin.
 > Plugins must **not** create their own `Timer` / `PeriodicTimer` / `DispatcherTimer`, and must not implement recurring work with a `Task.Delay` loop. All cron jobs, polling, delays, timeout recovery, and background cleanup must be registered on `host.Scheduler`.
 > (Short `await Task.Delay(...)` calls inside a running task for UI pacing or retries are not scheduling and remain acceptable.)
 
@@ -615,6 +626,7 @@ The project includes several plugins for reference:
 5. **Session Context is thread-safe** — `ISession.Context` is a `ConcurrentDictionary`, safe to read/write from async callbacks
 6. **Check `token.ThrowIfCancellationRequested()`** — periodically in `RunWithAnimation` loops to support user cancellation
 7. **Plugin path** — plugin DLLs are located at `AppDomain.CurrentDomain.BaseDirectory/plugins/`
+8. **Inject `PluginContext` through the constructor** — use the base `Logger` / `Localizer` / `Scheduler` properties directly instead of re-initializing them from the host; extend `PluginContext` for future shared services
 
 ---
 
@@ -624,7 +636,7 @@ The project includes several plugins for reference:
 - Plugin DLLs are loaded via `AssemblyLoadContext(isCollectible: true)`, theoretically supporting hot-reload
 - Plugin projects need to reference `yopet.Sdk`, which already references `yopet.Core` (for `ItemType` etc.)
 - Each plugin's `.csproj` must target `net10.0`
-- Always schedule through `host.Scheduler` (global Quartz.NET singleton); never create plugin-owned `Timer` / `PeriodicTimer` / `Task.Delay` loops
+- Always schedule through `host.Scheduler` or the base-class `Scheduler` (global Quartz.NET singleton, job IDs isolated per plugin); never create plugin-owned `Timer` / `PeriodicTimer` / `Task.Delay` loops
 
 ---
 

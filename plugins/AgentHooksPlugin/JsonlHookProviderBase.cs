@@ -69,9 +69,9 @@ public abstract class JsonlHookProviderBase : HookProviderBase
 
     private string CleanupJobId => $"{Id}_log_truncate";
 
-    public override void Start(IPluginHost host)
+    public override void Start(IPluginHost host, IPluginScheduler scheduler)
     {
-        base.Start(host);
+        base.Start(host, scheduler);
         if (_watcher != null) return;
 
         var logFile = LogFilePath;
@@ -102,7 +102,7 @@ public abstract class JsonlHookProviderBase : HookProviderBase
             };
             _watcher.Changed += (_, _) => OnLogChanged(host);
 
-            host.Scheduler.RegisterInterval(
+            Scheduler?.RegisterInterval(
                 CleanupJobId,
                 TimeSpan.FromMinutes(30),
                 () => { TruncateLog(); return Task.CompletedTask; },
@@ -114,7 +114,7 @@ public abstract class JsonlHookProviderBase : HookProviderBase
 
     public override void Stop()
     {
-        Host?.Scheduler.Unregister(CleanupJobId);
+        Scheduler?.Unregister(CleanupJobId);
         base.Stop();
         if (_watcher != null)
         {

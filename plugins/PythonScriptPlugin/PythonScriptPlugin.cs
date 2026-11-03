@@ -20,6 +20,11 @@ namespace PythonScriptPlugin;
     Description = "挂载、管理和运行 Python 脚本，支持拖入自动挂载与执行")]
 public class PythonScriptPlugin : PluginBase
 {
+    public PythonScriptPlugin(PluginContext context)
+        : base(context)
+    {
+    }
+
     public override string Name => T("Name");
 
     private string _scriptsDir = "";
@@ -284,7 +289,7 @@ public class PythonScriptPlugin : PluginBase
                                         var existing = host.GetConfig(cronKey);
                                         if (!string.IsNullOrEmpty(existing))
                                         {
-                                            host.Scheduler.Unregister(cronKey);
+                                            Scheduler.Unregister(cronKey);
                                             host.SetConfig(cronKey, "");
                                         }
                                         var delDir = Path.Combine(_scriptsDir, "deleted");
@@ -499,7 +504,7 @@ public class PythonScriptPlugin : PluginBase
             var cronKey = "cron_" + scriptName;
             if (!string.IsNullOrEmpty(host.GetConfig(cronKey)))
             {
-                host.Scheduler.Pause(cronKey);
+                Scheduler.Pause(cronKey);
                 LogWarn($"定时任务已自动暂停: {cronKey}");
             }
         }
@@ -798,7 +803,7 @@ public class PythonScriptPlugin : PluginBase
             currentCron);
         if (input == null) return;
 
-        host.Scheduler.Unregister(cronKey);
+        Scheduler.Unregister(cronKey);
         host.SetConfig(cronKey, "");
 
         if (string.IsNullOrWhiteSpace(input))
@@ -839,7 +844,7 @@ public class PythonScriptPlugin : PluginBase
             {
                 var num = int.Parse(m.Groups[1].Value);
                 var seconds = m.Groups[2].Value == "m" ? num * 60 : num;
-                host.Scheduler.RegisterInterval(cronKey, seconds, callback, $"⏰ {scriptName}");
+                Scheduler.RegisterInterval(cronKey, seconds, callback, $"⏰ {scriptName}");
                 host.ShowThought(T("CronSetTitle"),
                     string.Format(T("CronIntervalSetContent"), scriptName,
                         string.Format(m.Groups[2].Value == "m" ? T("MinutesFormat") : T("SecondsFormat"), num)) +
@@ -847,7 +852,7 @@ public class PythonScriptPlugin : PluginBase
             }
             else
             {
-                host.Scheduler.Register(cronKey, trimmed, callback, $"⏰ {scriptName}");
+                Scheduler.Register(cronKey, trimmed, callback, $"⏰ {scriptName}");
                 host.ShowThought(T("CronSetTitle"),
                     string.Format(T("CronSetContent"), scriptName, trimmed) +
                     (cronArgs.Length > 0 ? string.Format(T("ArgsSuffix"), cronArgs) : ""));
@@ -883,12 +888,12 @@ public class PythonScriptPlugin : PluginBase
                 {
                     var num = int.Parse(m.Groups[1].Value);
                     var seconds = m.Groups[2].Value == "m" ? num * 60 : num;
-                    host.Scheduler.RegisterInterval(cronKey, seconds,
+                    Scheduler.RegisterInterval(cronKey, seconds,
                         CreateCronCallback(name, cronKey, host), $"⏰ {name}");
                 }
                 else
                 {
-                    host.Scheduler.Register(cronKey, cronExpr,
+                    Scheduler.Register(cronKey, cronExpr,
                         CreateCronCallback(name, cronKey, host), $"⏰ {name}");
                 }
 

@@ -85,9 +85,9 @@ public class ReasonixHookProvider : HookProviderBase
         },
     };
 
-    public override void Start(IPluginHost host)
+    public override void Start(IPluginHost host, IPluginScheduler scheduler)
     {
-        base.Start(host);
+        base.Start(host, scheduler);
         if (_watcher != null) return;
 
         try { Directory.CreateDirectory(EventsDir); }
@@ -111,7 +111,7 @@ public class ReasonixHookProvider : HookProviderBase
             _watcher.Changed += (_, e) => OnNewEvent(e.FullPath, host);
 
             // 通过全局调度器定时清理旧事件文件
-            host.Scheduler.RegisterInterval(
+            Scheduler?.RegisterInterval(
                 CleanupJobId,
                 TimeSpan.FromMinutes(5),
                 () => { CleanupOldFiles(); return Task.CompletedTask; },
@@ -123,7 +123,7 @@ public class ReasonixHookProvider : HookProviderBase
 
     public override void Stop()
     {
-        Host?.Scheduler.Unregister(CleanupJobId);
+        Scheduler?.Unregister(CleanupJobId);
         base.Stop();
         if (_watcher != null)
         {

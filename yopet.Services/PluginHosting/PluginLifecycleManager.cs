@@ -1,5 +1,6 @@
 using System.Reflection;
 using System.Runtime.Loader;
+using Microsoft.Extensions.DependencyInjection;
 using yopet.Sdk;
 
 namespace yopet.Services.PluginHosting;
@@ -17,11 +18,16 @@ public sealed class PluginLifecycleManager
 {
     private readonly List<LoadedPlugin> _plugins = new();
     private readonly object _lock = new();
+    private readonly IServiceProvider _services;
+    private readonly IPluginScheduler _scheduler;
     private readonly IPluginLogger? _logger;
     private readonly ILocalizer? _localizer;
 
-    public PluginLifecycleManager(IPluginLogger? logger = null, ILocalizer? localizer = null)
+    public PluginLifecycleManager(IServiceProvider services, IPluginScheduler scheduler,
+        IPluginLogger? logger = null, ILocalizer? localizer = null)
     {
+        _services = services;
+        _scheduler = scheduler;
         _logger = logger;
         _localizer = localizer;
     }
@@ -72,16 +78,45 @@ public sealed class PluginLifecycleManager
                     if (!typeof(IPlugin).IsAssignableFrom(type) || type.IsAbstract || !type.IsClass)
                         continue;
 
-                    if (Activator.CreateInstance(type) is IPlugin plugin)
+                    PluginServiceProvider? pluginServices = null;
+                    try
                     {
+                        var pluginLogger = _logger ?? _services.GetService(typeof(IPluginLogger)) as IPluginLogger;
+                        var pluginLocalizer = _localizer ?? _services.GetService(typeof(ILocalizer)) as ILocalizer;
+                        if (pluginLogger == null || pluginLocalizer == null)
+                            throw new InvalidOperationException("插件服务未初始化：缺少 IPluginLogger 或 ILocalizer");
+
+                        // 每个插件拥有独立的上下文与调度器作用域，jobId 自动加插件前缀，卸载时自动清理
+                        pluginServices = new PluginServiceProvider(
+                            _services, pluginLogger, pluginLocalizer, _scheduler, type);
+                        var instance = ActivatorUtilities.CreateInstance(pluginServices, type);
+
+                        if (instance is not IPlugin plugin)
+                        {
+                            pluginServices.Dispose();
+                            pluginServices = null;
+                            continue;
+                        }
+
                         if (_localizer is { } localizer && plugin is IPluginLocalizerAware localizerAware)
                             localizerAware.SetLocalizer(localizer);
 
                         lock (_lock)
                         {
-                            _plugins.Add(new LoadedPlugin(plugin, dllPath, context));
+                            _plugins.Add(new LoadedPlugin(plugin, dllPath, context, pluginServices));
                         }
+
+                        // 所有权已转移给 LoadedPlugin，避免 finally 重复释放
+                        pluginServices = null;
                         _logger?.Info($"已加载插件 [{plugin.Name}] <- {Path.GetFileName(dllPath)}");
+                    }
+                    catch (Exception ex)
+                    {
+                        _logger?.Error($"创建插件失败 [{type.FullName}]: {ex.Message}");
+                    }
+                    finally
+                    {
+                        pluginServices?.Dispose();
                     }
                 }
             }

@@ -48,6 +48,7 @@ public partial class App : Application
             services.AddSingleton<ISchedulerService, SchedulerService>();
             services.AddSingleton<IPluginScheduler, PluginScheduler>();
             services.AddSingleton<PluginHostImpl>();
+            services.AddSingleton<IPluginHost>(sp => sp.GetRequiredService<PluginHostImpl>());
             services.AddSingleton<PluginLoader>();
 
             // ViewModels（Singleton）

@@ -8,6 +8,10 @@ namespace MailToMarkdownPlugin;
 [Plugin("邮件转 Markdown", Version = "1.0.0", Description = "将 EML / MSG 邮件转换为 Markdown 文档")]
 public class MailToMarkdownPlugin : PluginBase
 {
+    public MailToMarkdownPlugin(PluginContext context) : base(context)
+    {
+    }
+
     private static readonly string[] MailExtensions = { ".eml", ".msg" };
 
     public override string Name => T("Name");

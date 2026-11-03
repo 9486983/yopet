@@ -12,9 +12,11 @@ public class PluginLoader
     private readonly PluginLifecycleManager _manager;
     private string _directory = "";
 
-    public PluginLoader(IPluginLogger? logger = null, ILocalizer? localizer = null)
+    public PluginLoader(IServiceProvider services, IPluginScheduler scheduler,
+        IPluginLogger? logger = null, ILocalizer? localizer = null)
     {
-        _manager = new PluginLifecycleManager(logger?.For("PluginLoader"), localizer);
+        _manager = new PluginLifecycleManager(
+            services, scheduler, logger?.For("PluginLoader"), localizer);
     }
 
     /// <summary>已加载的插件列表（只读快照）</summary>

@@ -8,6 +8,10 @@ namespace FileUtilityPlugin;
 [Plugin("文件工具", Version = "2.1.0", Description = "文件/文件夹详情、哈希、压缩、打开等")]
 public class FileUtilityPlugin : PluginBase
 {
+    public FileUtilityPlugin(PluginContext context) : base(context)
+    {
+    }
+
     private static readonly HashSet<string> TextExtensions = new(StringComparer.OrdinalIgnoreCase)
     {
         ".txt", ".md", ".csv", ".json", ".xml", ".yaml", ".yml",

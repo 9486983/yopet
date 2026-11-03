@@ -11,6 +11,11 @@ namespace AgentHooksPlugin;
     Description = "统一管理所有 AI 助手的 Hooks 监测：响应内容、命令执行、文件更改等")]
 public class AgentHooksPlugin : PluginBase
 {
+    public AgentHooksPlugin(PluginContext context)
+        : base(context)
+    {
+    }
+
     private readonly List<HookProviderBase> _providers = new();
     private IPluginHost? _host;
 
@@ -57,7 +62,7 @@ public class AgentHooksPlugin : PluginBase
 
             // 启动该 Provider
             if (_host.GetConfig($"{provider.ConfigPrefix}_enabled") != "false")
-                provider.Start(_host);
+                provider.Start(_host, Scheduler);
 
             // 监听该 Provider 的配置启用/关闭
             _host.ConfigValueChanged += (_, key) =>
@@ -65,7 +70,7 @@ public class AgentHooksPlugin : PluginBase
                 if (key == $"{provider.ConfigPrefix}_enabled")
                 {
                     if (_host.GetConfig(key) != "false")
-                        provider.Start(_host);
+                        provider.Start(_host, Scheduler);
                     else
                         provider.Stop();
                 }
@@ -169,7 +174,7 @@ public class AgentHooksPlugin : PluginBase
         else
         {
             _host.SetConfig($"{provider.ConfigPrefix}_enabled", "true");
-            provider.Start(_host);
+            provider.Start(_host, Scheduler);
             _host.ShowThought($"▶️ {provider.Name}", T("MonitorStarted"));
         }
     }

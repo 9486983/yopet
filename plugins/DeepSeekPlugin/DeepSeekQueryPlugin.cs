@@ -11,6 +11,11 @@ namespace DeepSeekPlugin;
 [Plugin("DeepSeek 查询", Version = "2.0.0", Description = "查询 DeepSeek API 余额、用量和缓存命中率，支持定时自动查询")]
 public class DeepSeekQueryPlugin : PluginBase
 {
+    public DeepSeekQueryPlugin(PluginContext context)
+        : base(context)
+    {
+    }
+
     private const string KeyApiKey = "deepseek_api_key";
     private const string KeyInterval = "deepseek_interval";
     private const string KeyAutoQuery = "deepseek_auto_query";
@@ -114,11 +119,11 @@ public class DeepSeekQueryPlugin : PluginBase
     {
         if (_host == null) return;
 
-        _host.Scheduler.Unregister(AutoQueryJobId);
+        Scheduler.Unregister(AutoQueryJobId);
         if (!IsAutoQueryEnabled) return;
 
         var interval = TimeSpan.FromMinutes(GetQueryIntervalMinutes());
-        _host.Scheduler.RegisterInterval(
+        Scheduler.RegisterInterval(
             AutoQueryJobId,
             interval,
             async () =>
@@ -199,7 +204,7 @@ public class DeepSeekQueryPlugin : PluginBase
     {
         if (_host != null)
         {
-            _host.Scheduler.Unregister(AutoQueryJobId);
+            Scheduler.Unregister(AutoQueryJobId);
             _host.ConfigValueChanged -= OnConfigChanged;
         }
         return base.CleanupAsync();

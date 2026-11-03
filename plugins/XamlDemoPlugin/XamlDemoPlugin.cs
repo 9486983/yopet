@@ -16,6 +16,10 @@ namespace XamlDemoPlugin;
     Description = "演示插件 dll 内嵌编译型 XAML 自定义页面（Avalonia 12.0.3）")]
 public class XamlDemoPlugin : PluginBase
 {
+    public XamlDemoPlugin(PluginContext context) : base(context)
+    {
+    }
+
     /// <summary>取当前语言的插件词条；读取失败回退默认值</summary>
     private string T(string key, string fallback)
     {

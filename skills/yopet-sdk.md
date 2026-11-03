@@ -25,6 +25,7 @@ yopet.Sdk/              ← NuGet 引用：yopet.Core
 ├── PluginAttribute.cs   元数据特性
 ├── IPluginHost.cs       宿主交互接口（核心 API）
 ├── IPluginLogger.cs     日志接口
+├── PluginContext.cs     插件 DI 上下文（Logger / Localizer / Scheduler）
 ├── IPluginScheduler.cs  定时任务接口（全局 Quartz.NET 调度器）
 ├── ISession.cs          多步会话接口
 ├── PluginAction.cs      动作描述符
@@ -66,12 +67,18 @@ namespace MyPlugin;
 [Plugin("我的插件", Version = "1.0.0", Description = "一个示例插件")]
 public class MyPlugin : PluginBase
 {
+    // 宿主通过 DI 构造插件，PluginContext 聚合了 Logger / Localizer / Scheduler。
+    // 以后新增公共能力只需扩展 PluginContext，不需要修改所有插件构造函数。
+    public MyPlugin(PluginContext context) : base(context)
+    {
+    }
+
     // PluginBase 自动从 [Plugin] 特性读取 Description
     public override string Name => "我的插件";
 
     public override async Task InitializeAsync(IPluginHost host)
     {
-        await base.InitializeAsync(host);  // 保存 host 到 this.Host
+        await base.InitializeAsync(host);  // 保存 host 到 this.Host（DI 已注入的服务不会被覆盖）
 
         // 注册右键菜单动作
         host.RegisterAction(new PluginAction
@@ -86,7 +93,7 @@ public class MyPlugin : PluginBase
             },
         });
 
-        host.Log("我的插件已加载");
+        Logger.Info("我的插件已加载");
     }
 
     public override Task CleanupAsync()
@@ -96,6 +103,9 @@ public class MyPlugin : PluginBase
     }
 }
 ```
+
+> **插件依赖注入**：宿主使用 `ActivatorUtilities` 创建插件，`PluginContext` 已按插件自动绑定专属 `Logger`、`Localizer` 与隔离后的 `Scheduler`。
+> 插件也可在构造函数中追加宿主已注册的其他服务（如 `IConfigService`）；未声明 DI 构造函数的旧插件仍可通过 `base.InitializeAsync(host)` 兼容运行。
 
 ### 2.3 构建与部署
 
@@ -472,7 +482,8 @@ host.Log("简单消息");
 
 ### 3.9 定时任务
 
-> **强制约定**：主程序使用 **Quartz.NET 4.x** 提供全局唯一的调度器，并通过构造函数注入为单例（`ISchedulerService` → `SchedulerService`），插件只通过 `host.Scheduler` 访问。
+> **强制约定**：主程序使用 **Quartz.NET 4.x** 提供全局唯一的调度器，并通过构造函数注入为单例（`ISchedulerService` → `SchedulerService`），插件只通过 `host.Scheduler` 或基类注入的 `Scheduler` 访问。
+> 插件中的 `Scheduler` 已按插件自动隔离 jobId（如 `MyPlugin:my_job`），插件卸载时会自动清理其任务，因此任务 id 只需在当前插件内唯一。
 > 插件中**禁止**再自行创建 `Timer` / `PeriodicTimer` / `DispatcherTimer`，也禁止用 `Task.Delay` 循环实现周期任务；所有 cron、轮询、延时、超时恢复、后台清理都必须注册到 `host.Scheduler`。
 > （任务回调内部为 UI 节奏或重试而做的短暂 `await Task.Delay(...)` 不属于调度，允许保留。）
 
@@ -615,6 +626,7 @@ public class MyPlugin : PluginBase { }
 5. **会话 Context 线程安全** — `ISession.Context` 是 `ConcurrentDictionary`，可在异步回调中安全读写
 6. **检查 `token.ThrowIfCancellationRequested()`** — 在 `RunWithAnimation` 的循环中定期检查，支持用户取消
 7. **插件路径** — 插件 DLL 位于 `AppDomain.CurrentDomain.BaseDirectory/plugins/` 下
+8. **使用构造函数注入 `PluginContext`** — 直接使用 `Logger` / `Localizer` / `Scheduler` 基类属性，不要重复从 host 初始化；新增公共依赖只扩展 `PluginContext`
 
 ---
 
@@ -624,7 +636,7 @@ public class MyPlugin : PluginBase { }
 - 插件 DLL 使用 `AssemblyLoadContext(isCollectible: true)` 加载，理论上支持热重载
 - 插件项目需要引用 `yopet.Sdk`，后者已引用 `yopet.Core`（`ItemType` 等模型）
 - 每个插件的 `.csproj` 需以 `net10.0` 为目标框架
-- 定时任务一律使用 `host.Scheduler`（底层 Quartz.NET 全局单例），禁止插件自建 `Timer` / `PeriodicTimer` / `Task.Delay` 循环
+- 定时任务一律使用 `host.Scheduler` 或基类 `Scheduler`（底层 Quartz.NET 全局单例，已按插件隔离 jobId），禁止插件自建 `Timer` / `PeriodicTimer` / `Task.Delay` 循环
 
 ---
 

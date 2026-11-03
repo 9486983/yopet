@@ -48,9 +48,13 @@ public abstract class HookProviderBase : IDisposable
     protected virtual int WorkingIdleTimeoutMs => 0;
 
     private IPluginHost? _host;
+    private IPluginScheduler? _scheduler;
 
     /// <summary>当前注入的宿主（Provider 停止后为 null）。</summary>
     protected IPluginHost? Host => _host;
+
+    /// <summary>插件级调度器（jobId 已按插件隔离）。</summary>
+    protected IPluginScheduler? Scheduler => _scheduler;
 
     protected IPluginLogger? Logger { get; private set; }
     private readonly object _workingLock = new();
@@ -62,9 +66,10 @@ public abstract class HookProviderBase : IDisposable
     /// 启动监听。
     /// 基类设置 _isRunning = true，子类实现具体的监听逻辑。
     /// </summary>
-    public virtual void Start(IPluginHost host)
+    public virtual void Start(IPluginHost host, IPluginScheduler scheduler)
     {
         _host = host;
+        _scheduler = scheduler;
         Logger = host.Logger.For(GetType().Name);
         _localizer ??= host.Localizer.For("Localization.AgentHooksPlugin");
         _isRunning = true;
@@ -78,7 +83,8 @@ public abstract class HookProviderBase : IDisposable
     {
         _isRunning = false;
         StopWorking();
-        _host?.Scheduler.Unregister(WorkingIdleJobId);
+        _scheduler?.Unregister(WorkingIdleJobId);
+        _scheduler = null;
         _host = null;
         Logger = null;
     }
@@ -135,10 +141,10 @@ public abstract class HookProviderBase : IDisposable
             _isWorking = true;
             host.StartAnimation(PetAnimation.Running);
 
-            host.Scheduler.Unregister(WorkingIdleJobId);
+            Scheduler?.Unregister(WorkingIdleJobId);
             if (WorkingIdleTimeoutMs <= 0) return;
 
-            host.Scheduler.RegisterOnce(
+            Scheduler?.RegisterOnce(
                 WorkingIdleJobId,
                 TimeSpan.FromMilliseconds(WorkingIdleTimeoutMs),
                 () =>
@@ -161,7 +167,7 @@ public abstract class HookProviderBase : IDisposable
             _isWorking = false;
         }
 
-        host?.Scheduler.Unregister(WorkingIdleJobId);
+        Scheduler?.Unregister(WorkingIdleJobId);
         host?.StopAnimation();
     }
 

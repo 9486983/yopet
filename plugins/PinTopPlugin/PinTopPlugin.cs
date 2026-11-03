@@ -23,7 +23,7 @@ public class PinTopPlugin : PluginBase
 
     public override string Name => T("Name");
 
-    public PinTopPlugin()
+    public PinTopPlugin(PluginContext context) : base(context)
     {
         _overlayMgr = new OverlayManager(_pinned);
     }

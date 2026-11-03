@@ -16,6 +16,10 @@ namespace SessionDemoPlugin;
 [Plugin("图片整理器", Version = "1.0.0", Description = "会话工作流示例：拖入文件夹启动，再拖入图片自动整理")]
 public class SessionDemoPlugin : PluginBase
 {
+    public SessionDemoPlugin(PluginContext context) : base(context)
+    {
+    }
+
     public override string Name => T("Name");
 
     public override async Task InitializeAsync(IPluginHost host)

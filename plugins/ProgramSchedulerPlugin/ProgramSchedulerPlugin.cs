@@ -1,4 +1,4 @@
-﻿using System.Text.Json;
+using System.Text.Json;
 using System.Text.Json.Serialization;
 using yopet.Core.Models;
 using yopet.Sdk;
@@ -20,6 +20,11 @@ namespace ProgramSchedulerPlugin;
     Description = "按每天固定时间自动启动/关闭所配置的外部程序")]
 public class ProgramSchedulerPlugin : PluginBase
 {
+    public ProgramSchedulerPlugin(PluginContext context)
+        : base(context)
+    {
+    }
+
     private const string RulesKey = "psp_rules";
     private const string EditPrefix = "psp_edit_";
 
@@ -143,7 +148,7 @@ public class ProgramSchedulerPlugin : PluginBase
             if (string.IsNullOrEmpty(rule.StartCron)) continue;
 
             var startId = $"psp_{rule.Id}_start";
-            host.Scheduler.Register(startId, rule.StartCron,
+            Scheduler.Register(startId, rule.StartCron,
                 () => OnStartAsync(rule), $"🚀 {rule.Name}");
             _registeredJobs.Add(startId);
 
@@ -151,7 +156,7 @@ public class ProgramSchedulerPlugin : PluginBase
             if (hasStop)
             {
                 var stopId = $"psp_{rule.Id}_stop";
-                host.Scheduler.Register(stopId, rule.StopCron,
+                Scheduler.Register(stopId, rule.StopCron,
                     () => OnStopAsync(rule), $"🛑 {rule.Name}");
                 _registeredJobs.Add(stopId);
             }
@@ -164,7 +169,7 @@ public class ProgramSchedulerPlugin : PluginBase
     private void UnregisterSchedules(IPluginHost host)
     {
         foreach (var jobId in _registeredJobs)
-            host.Scheduler.Unregister(jobId);
+            Scheduler.Unregister(jobId);
         _registeredJobs.Clear();
     }
 

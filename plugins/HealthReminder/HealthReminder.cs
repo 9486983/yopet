@@ -6,6 +6,11 @@ namespace HealthReminder;
 [Plugin("健康提醒", Version = "1.0.0", Description = "久坐/用眼/喝水定时提醒，配置请在右键菜单中打开")]
 public class HealthReminderPlugin : PluginBase
 {
+    public HealthReminderPlugin(PluginContext context)
+        : base(context)
+    {
+    }
+
     private const string KeyEnabled = "hr_enabled";
     private const string KeySit = "hr_sit";
     private const string KeyEye = "hr_eye";
@@ -71,7 +76,7 @@ public class HealthReminderPlugin : PluginBase
         host.ConfigValueChanged += OnConfigChanged;
 
         // 通过全局调度器每分钟检查一次
-        host.Scheduler.RegisterInterval(
+        Scheduler.RegisterInterval(
             ReminderJobId,
             TimeSpan.FromMinutes(1),
             () => { CheckReminders(); return Task.CompletedTask; },
@@ -132,7 +137,7 @@ public class HealthReminderPlugin : PluginBase
     {
         if (_host != null)
         {
-            _host.Scheduler.Unregister(ReminderJobId);
+            Scheduler.Unregister(ReminderJobId);
             _host.ConfigValueChanged -= OnConfigChanged;
         }
         return base.CleanupAsync();

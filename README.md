@@ -59,6 +59,11 @@ Hot-loadable plugin system with a rich SDK. Plugins are loaded from `plugins/` d
 - Supports cron (5-field Unix and 6/7-field Quartz), fixed intervals, and one-shot delays, with pause/resume/remove.
 - Plugins must not create their own timers; auto-query, reminders, hover refresh, timeouts, and cleanup jobs all run through this global scheduler.
 
+### 🧩 Plugin Dependency Injection
+- Plugins are constructed through the host DI container (`ActivatorUtilities`) and receive a single **`PluginContext`** that aggregates `Logger`, `Localizer`, and an isolated `Scheduler`.
+- Adding a future shared service only requires extending `PluginContext`; plugin constructors stay unchanged.
+- Job IDs are automatically prefixed per plugin and cleaned up on unload, so hot reload no longer leaks scheduled tasks.
+
 ### ⚙️ Settings (SettingPlugin)
 The legacy settings window was removed — settings now live in the **SettingPlugin** (right-click pet → ⚙️ Settings):
 

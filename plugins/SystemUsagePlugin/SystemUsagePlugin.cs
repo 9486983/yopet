@@ -16,6 +16,11 @@ namespace SystemUsagePlugin;
     Description = "鼠标悬浮在宠物上时展示 CPU 与内存占用（跨平台，无需配置）")]
 public class SystemUsagePlugin : PluginBase
 {
+    public SystemUsagePlugin(PluginContext context)
+        : base(context)
+    {
+    }
+
     public override string Name => T("Name");
 
     private SystemUsageService? _service;
@@ -44,7 +49,7 @@ public class SystemUsagePlugin : PluginBase
         {
             host.Events.Unregister(Name, EventNames.PetHoverEntered);
             host.Events.Unregister(Name, EventNames.PetHoverExited);
-            host.Scheduler.Unregister(RefreshJobId);
+            Scheduler.Unregister(RefreshJobId);
         }
         _service?.Dispose();
         _service = null;
@@ -55,7 +60,7 @@ public class SystemUsagePlugin : PluginBase
     private void OnHoverEntered()
     {
         Refresh();
-        _host?.Scheduler.RegisterInterval(
+        Scheduler.RegisterInterval(
             RefreshJobId,
             RefreshInterval,
             () => { Refresh(); return Task.CompletedTask; },
@@ -66,7 +71,7 @@ public class SystemUsagePlugin : PluginBase
     /// <summary>鼠标离开宠物：停止刷新（气泡由气泡组件按既有规则自动隐藏）</summary>
     private void OnHoverExited()
     {
-        _host?.Scheduler.Unregister(RefreshJobId);
+        Scheduler.Unregister(RefreshJobId);
     }
 
     /// <summary>采集系统占用并通过气泡组件展示</summary>
