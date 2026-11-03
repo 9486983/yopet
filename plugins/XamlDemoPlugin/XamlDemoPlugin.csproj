@@ -1,22 +1,23 @@
-<Project Sdk="Microsoft.NET.Sdk">
+﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <ItemGroup>
     <ProjectReference Include="..\..\yopet.Sdk\yopet.Sdk.csproj" />
-    <!-- 关键：显式引用 Avalonia 12.1.1（Lang.Avalonia 传递的 Avalonia exclude 了 Build 目标，
+    <!-- 关键：显式引用 Avalonia 12.1.4（Lang.Avalonia 传递的 Avalonia exclude 了 Build 目标，
          .axaml 的 XamlIl 编译需要本包提供的 MSBuild 目标；版本必须与主程序一致） -->
-    <PackageReference Include="Avalonia" Version="12.1.1" />
+    <PackageReference Include="Avalonia" Version="12.1.4" />
+    <PackageReference Include="TKCode.Arc" Version="0.3.2-preview.2" />
   </ItemGroup>
 
   <PropertyGroup>
-    <TargetFramework>net9.0</TargetFramework>
+    <TargetFramework>net10.0</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
     <CopyLocalLockFileAssemblies>true</CopyLocalLockFileAssemblies>
   </PropertyGroup>
 
-  <Target Name="CopyToPlugins" AfterTargets="Build" Condition="'$(Configuration)'=='Debug'">
+  <Target Name="CopyToPlugins" AfterTargets="Build">
     <Copy SourceFiles="$(OutputPath)$(AssemblyName).dll"
-          DestinationFolder="..\..\yopet\bin\Debug\net9.0\plugins" />
+          DestinationFolder="..\..\yopet\bin\$(Configuration)\net10.0\plugins" />
   </Target>
 
 </Project>

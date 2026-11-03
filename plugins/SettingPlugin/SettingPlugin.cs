@@ -1,7 +1,8 @@
-using System.Diagnostics;
+﻿using System.Diagnostics;
 using Lang.Avalonia;
 using yopet.Core.Models;
 using yopet.Sdk;
+using yopet.UI.Views;
 
 namespace SettingPlugin;
 

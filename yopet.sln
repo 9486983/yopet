@@ -37,6 +37,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ProgramSchedulerPlugin", "p
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MailToMarkdownPlugin", "plugins\MailToMarkdownPlugin\MailToMarkdownPlugin.csproj", "{BCFEA877-02A7-4F3D-9475-9AB6937AA59C}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "yopet.UI", "yopet.UI\yopet.UI.csproj", "{376C40FB-1AF2-47DF-A830-6336097ABEFD}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -239,6 +241,18 @@ Global
 		{BCFEA877-02A7-4F3D-9475-9AB6937AA59C}.Release|x64.Build.0 = Release|Any CPU
 		{BCFEA877-02A7-4F3D-9475-9AB6937AA59C}.Release|x86.ActiveCfg = Release|Any CPU
 		{BCFEA877-02A7-4F3D-9475-9AB6937AA59C}.Release|x86.Build.0 = Release|Any CPU
+		{376C40FB-1AF2-47DF-A830-6336097ABEFD}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{376C40FB-1AF2-47DF-A830-6336097ABEFD}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{376C40FB-1AF2-47DF-A830-6336097ABEFD}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{376C40FB-1AF2-47DF-A830-6336097ABEFD}.Debug|x64.Build.0 = Debug|Any CPU
+		{376C40FB-1AF2-47DF-A830-6336097ABEFD}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{376C40FB-1AF2-47DF-A830-6336097ABEFD}.Debug|x86.Build.0 = Debug|Any CPU
+		{376C40FB-1AF2-47DF-A830-6336097ABEFD}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{376C40FB-1AF2-47DF-A830-6336097ABEFD}.Release|Any CPU.Build.0 = Release|Any CPU
+		{376C40FB-1AF2-47DF-A830-6336097ABEFD}.Release|x64.ActiveCfg = Release|Any CPU
+		{376C40FB-1AF2-47DF-A830-6336097ABEFD}.Release|x64.Build.0 = Release|Any CPU
+		{376C40FB-1AF2-47DF-A830-6336097ABEFD}.Release|x86.ActiveCfg = Release|Any CPU
+		{376C40FB-1AF2-47DF-A830-6336097ABEFD}.Release|x86.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

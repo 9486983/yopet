@@ -1,4 +1,4 @@
-{
+﻿{
   "language": "English",
   "description": "English resources",
   "cultureName": "en-US",
@@ -15,6 +15,7 @@
       "CancelTaskTip": "Click to cancel task",
       "ConfigLoadFailed": "❌ Failed to load config page",
       "ReloadPlugins": "🔄 Reload Plugins",
+      "MenuPlugins": "Plugins",
       "ReloadPluginsDone": "✅ Plugins Reloaded",
       "ReloadPluginsDoneMsg": "Reloaded {0} context actions and {1} file actions",
       "ReloadPluginsFailed": "❌ Plugin Reload Failed",
@@ -48,7 +49,9 @@
       "CronDaily9": "Every day at 9:00",
       "CronWeekly0": "Every Sunday at 0:00",
       "CronMonthly1": "On the 1st at 0:00",
-      "CronTemplate": "Template"
+      "CronTemplate": "Template",
+      "Required": "Required",
+      "RequiredField": "{0} is required."
     },
     "SettingPlugin": {
       "Name": "Settings",

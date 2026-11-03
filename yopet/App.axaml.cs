@@ -1,9 +1,8 @@
-using Avalonia;
+﻿using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Input.Platform;
 using Avalonia.Markup.Xaml;
-using Avalonia.Styling;
 using Lang.Avalonia;
 using Lang.Avalonia.Json;
 using Microsoft.Extensions.DependencyInjection;
@@ -12,6 +11,7 @@ using yopet.Core.Interfaces;
 using yopet.Sdk;
 using yopet.Services;
 using yopet.ViewModels;
+using yopet.UI;
 
 namespace yopet;
 
@@ -20,9 +20,6 @@ public partial class App : Application
     public static PetViewModel? PetViewModel { get; private set; }
 
     private ServiceProvider? _serviceProvider;
-
-    private static readonly Uri DarkThemeUri = new("avares://yopet/Styles/Themes/Dark.axaml");
-    private static readonly Uri LightThemeUri = new("avares://yopet/Styles/Themes/Light.axaml");
 
     public override void Initialize()
     {
@@ -73,11 +70,15 @@ public partial class App : Application
             }
 
             // ── 加载主题资源 ──
-            LoadThemeResources(config.IsDarkTheme);
+            ArcUi.ApplyAppearance(config.IsDarkTheme);
+            ArcUi.ApplyLanguage(config.Language);
 
             // ── 监听主题切换 ──
             Core.Models.PetEvents.ThemeChanged += isDark =>
-                Avalonia.Threading.Dispatcher.UIThread.Post(() => LoadThemeResources(isDark));
+                Avalonia.Threading.Dispatcher.UIThread.Post(() => ArcUi.ApplyAppearance(isDark));
+
+            pluginHost.LanguageChanged += (_, cultureName) =>
+                Avalonia.Threading.Dispatcher.UIThread.Post(() => ArcUi.ApplyLanguage(cultureName));
 
             // ── 加载并初始化插件 ──
             pluginLoader.LoadFromDirectory(Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "plugins"));
@@ -215,11 +216,14 @@ public partial class App : Application
             // ── 连接插件自定义页面弹窗（插件 dll 内嵌 XAML，点击弹窗外部关闭） ──
             pluginHost.OnShowCustomView = (view, _) =>
             {
-                Avalonia.Threading.Dispatcher.UIThread.Post(() => PetWindow.ShowDialogOn(petWindow, view));
+                PetWindow.ShowDialogOn(petWindow, view);
                 return Task.CompletedTask;
             };
 
             desktop.MainWindow = petWindow;
+            petWindow.Show();
+
+
         }
 
         base.OnFrameworkInitializationCompleted();
@@ -235,18 +239,9 @@ public partial class App : Application
         {
             petVm.RefreshPluginActions(pluginHost.PluginActions);
             petVm.RefreshFileActions(pluginHost.FileActions);
+
+
         });
     }
 
-    /// <summary>加载主题资源 + 设置 Fluent 主题</summary>
-    private void LoadThemeResources(bool isDark)
-    {
-        RequestedThemeVariant = isDark ? ThemeVariant.Dark : ThemeVariant.Light;
-
-        Resources.MergedDictionaries.Clear();
-
-        var uri = isDark ? DarkThemeUri : LightThemeUri;
-        Resources.MergedDictionaries.Add(
-            (ResourceDictionary)AvaloniaXamlLoader.Load(uri));
-    }
 }

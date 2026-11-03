@@ -1,4 +1,4 @@
-{
+﻿{
   "language": "简体中文",
   "description": "简体中文资源",
   "cultureName": "zh-CN",
@@ -15,6 +15,7 @@
       "CancelTaskTip": "点击取消任务",
       "ConfigLoadFailed": "❌ 配置页加载失败",
       "ReloadPlugins": "🔄 重新加载插件",
+      "MenuPlugins": "插件",
       "ReloadPluginsDone": "✅ 插件已重载",
       "ReloadPluginsDoneMsg": "已重新加载 {0} 个右键动作、{1} 个文件动作",
       "ReloadPluginsFailed": "❌ 插件重载失败",
@@ -48,7 +49,9 @@
       "CronDaily9": "每天9点",
       "CronWeekly0": "每周日0点",
       "CronMonthly1": "每月1号0点",
-      "CronTemplate": "模板"
+      "CronTemplate": "模板",
+      "Required": "必填",
+      "RequiredField": "{0} 为必填项。"
     },
     "SettingPlugin": {
       "Name": "设置",

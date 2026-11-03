@@ -1,26 +1,27 @@
-<UserControl xmlns="https://github.com/avaloniaui"
+﻿<UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:arc="https://github.com/AIDotNet/TKCode.Arc"
              x:Class="XamlDemoPlugin.Views.DemoPanel"
              x:CompileBindings="False"
-             Width="320">
-  <StackPanel Spacing="10" Margin="16">
-    <Border Background="#3319c8b9" CornerRadius="8" Padding="10">
-      <StackPanel Spacing="4">
-        <TextBlock Text="🧩 XAML 示例面板" FontSize="16" FontWeight="Bold"/>
-        <TextBlock Text="此页面由插件 dll 内嵌的编译型 .axaml 构建（Avalonia 12.0.3）"
-                   FontSize="11" Foreground="#99FFFFFF" TextWrapping="Wrap"/>
+             Width="360">
+  <arc:Card Title="XAML Demo"
+            Description="This panel is compiled from .axaml into the plugin DLL and hosted inside the pet bubble.">
+    <StackPanel Spacing="12">
+      <arc:Input x:Name="Input"
+                 Label="Message"
+                 Placeholder="Type something" />
+      <TextBlock Text="{Binding Message}"
+                 TextWrapping="Wrap"
+                 FontSize="{arc:ArcDesignTokenResource TypeSM}"
+                 Foreground="{arc:ArcDesignTokenResource TextSecondary}" />
+      <StackPanel Orientation="Horizontal" Spacing="8" HorizontalAlignment="Right">
+        <arc:Button Content="Send message" Click="OnButtonClick" />
       </StackPanel>
-    </Border>
-
-    <TextBox x:Name="Input" Watermark="输入点什么…"/>
-
-    <Border Background="#22FFFFFF" CornerRadius="6" Padding="8">
-      <TextBlock Text="{Binding Message}" TextWrapping="Wrap"/>
-    </Border>
-
-    <Button Content="点击反馈" Click="OnButtonClick"/>
-
-    <TextBlock Text="提示：点击宠物外部可关闭此弹窗"
-               FontSize="10" Foreground="#888888" HorizontalAlignment="Center"/>
-  </StackPanel>
+      <TextBlock Text="Use the close button at the top right when you are done."
+                 TextWrapping="Wrap"
+                 FontSize="{arc:ArcDesignTokenResource TypeXS}"
+                 Foreground="{arc:ArcDesignTokenResource TextMuted}"
+                 HorizontalAlignment="Center" />
+    </StackPanel>
+  </arc:Card>
 </UserControl>

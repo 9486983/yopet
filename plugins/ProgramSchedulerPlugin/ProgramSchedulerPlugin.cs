@@ -1,4 +1,4 @@
-using System.Text.Json;
+﻿using System.Text.Json;
 using System.Text.Json.Serialization;
 using Lang.Avalonia;
 using yopet.Core.Models;
@@ -397,11 +397,11 @@ public class ProgramSchedulerPlugin : PluginBase
             DataSource = () => Task.FromResult(BuildRows()),
             Columns = new()
             {
-                new() { Key = "name", Header = T("ColName"), Width = 110 },
+                new() { Key = "name", Header = T("ColName"), Width = 100 },
                 new() { Key = "program", Header = T("ColProgram"), Width = double.NaN },
-                new() { Key = "time", Header = T("ColTime"), Width = 110 },
-                new() { Key = "mode", Header = T("ColMode"), Width = 90 },
-                new() { Key = "status", Header = T("ColStatus"), Width = 80 },
+                new() { Key = "time", Header = T("ColTime"), Width = 105 },
+                new() { Key = "mode", Header = T("ColMode"), Width = 80 },
+                new() { Key = "status", Header = T("ColStatus"), Width = 110 },
                 new()
                 {
                     Key = "actions",

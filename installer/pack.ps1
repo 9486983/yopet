@@ -14,7 +14,7 @@ $ExeDesc      = "desktop pet companion"
 
 $ScriptDir     = Split-Path -Parent $PSCommandPath
 $ProjectRoot   = Split-Path -Parent $ScriptDir
-$PublishDir    = Join-Path $ProjectRoot "yopet\bin\$Configuration\net9.0\$Runtime\publish"
+$PublishDir    = Join-Path $ProjectRoot "yopet\bin\$Configuration\net10.0\$Runtime\publish"
 $PluginsDir    = Join-Path $PublishDir "plugins"
 $WxsFile       = Join-Path $env:TEMP "pet-yue-build.wxs"
 $OutputMsi     = Join-Path $ScriptDir "yopet-$Version.msi"
@@ -28,7 +28,7 @@ if (-not (Get-Command wix.exe -ErrorAction SilentlyContinue)) {
 # ── 2. Publish main project ──
 Write-Host "[2/5] Publishing main project..."
 dotnet publish (Join-Path $ProjectRoot "yopet\yopet.csproj") `
-    --configuration $Configuration --runtime $Runtime --self-contained false
+    --configuration $Configuration --runtime $Runtime --self-contained false -p:NuGetAudit=false
 if ($LASTEXITCODE -ne 0) { throw "Publish failed" }
 
 # ── 3. Build plugins and copy to publish/plugins/ ──
@@ -37,17 +37,26 @@ if (Test-Path $PluginsDir) { Remove-Item $PluginsDir -Recurse -Force }
 New-Item -ItemType Directory -Path $PluginsDir | Out-Null
 
 $skipDlls = @("yopet.Sdk.dll", "yopet.Core.dll",
-              "yopet.Services.dll", "yopet.ViewModels.dll")
+              "yopet.Services.dll", "yopet.ViewModels.dll", "yopet.UI.dll",
+              "TKCode.Arc.dll", "TKCode.Arc.Core.dll", "TKCode.Arc.Foundation.dll",
+              "TKCode.Arc.Fonts.dll", "Avalonia.dll", "Avalonia.Base.dll",
+              "Avalonia.Controls.dll", "Lang.Avalonia.dll", "Lang.Avalonia.Json.dll")
 
-$projFiles = Get-ChildItem -Path (Join-Path $ProjectRoot "Plugins") -Recurse -Filter "*.csproj"
+$projFiles = Get-ChildItem -Path (Join-Path $ProjectRoot "plugins") -Recurse -Filter "*.csproj"
 foreach ($proj in $projFiles) {
     Write-Host "  Building $($proj.BaseName)..."
     dotnet build $proj.FullName --configuration $Configuration 2>&1 | Out-Null
     if ($LASTEXITCODE -ne 0) { throw "Plugin $($proj.BaseName) build failed" }
-    $binDir = Join-Path $proj.Directory.FullName "bin\$Configuration\net9.0"
+    $binDir = Join-Path $proj.Directory.FullName "bin\$Configuration\net10.0"
     if (Test-Path $binDir) {
         foreach ($f in Get-ChildItem -File $binDir -Filter "*.dll") {
-            if ($f.Name -notin $skipDlls) { Copy-Item $f.FullName (Join-Path $PluginsDir $f.Name) -Force }
+            if ($f.Name -notin $skipDlls -and
+                $f.Name -notlike "TKCode.*" -and
+                $f.Name -notlike "Avalonia*" -and
+                $f.Name -notlike "Lang.Avalonia*" -and
+                $f.Name -notlike "SkiaSharp*") {
+                Copy-Item $f.FullName (Join-Path $PluginsDir $f.Name) -Force
+            }
         }
     }
 }

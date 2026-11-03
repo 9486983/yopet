@@ -1,4 +1,4 @@
-using Avalonia;
+﻿using Avalonia;
 using Avalonia.Animation;
 using Avalonia.Animation.Easings;
 using Avalonia.Controls;
@@ -7,6 +7,7 @@ using Avalonia.Layout;
 using Avalonia.Media;
 using Avalonia.Threading;
 using yopet.Core.Models;
+using TKCode.Arc.DesignTokens;
 
 namespace yopet.Views;
 
@@ -35,11 +36,11 @@ public class FileRadialMenu : Window
     private static double ArcStep => 2 * Math.PI / TotalParts;
     private static double ArcCenterAngle => -Math.PI / 2 + ArcPosition * ArcStep;
 
-    private static readonly Lazy<Color> BgOverlay = new(() => GetColor("BgOverlay", 0xCC2C2420));
-    private static readonly Lazy<Color> BorderColor = new(() => GetColor("BorderColor", 0xFF5D4F45));
-    private static readonly Lazy<Color> TextPrimary = new(() => GetColor("TextPrimary", 0xFFF0E6D3));
-    private static readonly Lazy<Color> AccentPrimary = new(() => GetColor("AccentPrimary", 0xFF19c8b9));
-    private static readonly Lazy<Color> BgHover = new(() => GetColor("BgHover", 0xFF4D3F37));
+    private static readonly Lazy<Color> BgOverlay = new(() => Token(ArcDesignTokenKind.SurfaceRaised));
+    private static readonly Lazy<Color> BorderColor = new(() => Token(ArcDesignTokenKind.Border));
+    private static readonly Lazy<Color> TextPrimary = new(() => Token(ArcDesignTokenKind.Foreground));
+    private static readonly Lazy<Color> AccentPrimary = new(() => Token(ArcDesignTokenKind.Accent));
+    private static readonly Lazy<Color> BgHover = new(() => Token(ArcDesignTokenKind.SurfaceMuted));
 
     private FileRadialMenu(List<FileActionConfig> actions, PixelPoint anchorCenter, Action<FileActionConfig>? onActivate)
     {
@@ -325,10 +326,8 @@ public class FileRadialMenu : Window
         menu.Open();
     }
 
-    private static Color GetColor(string key, uint fallback)
-    {
-        if (Application.Current?.TryFindResource(key, out var value) == true && value is Color c)
-            return c;
-        return Color.Parse($"#{fallback:X8}");
-    }
+    private static Color Token(ArcDesignTokenKind kind) =>
+        Application.Current?.TryFindResource(kind, out var value) == true && value is Color color
+            ? color
+            : Colors.Transparent;
 }

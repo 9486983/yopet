@@ -1,7 +1,9 @@
-<Window xmlns="https://github.com/avaloniaui"
+﻿<Window xmlns="https://github.com/avaloniaui"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:c="https://codewf.com"
         xmlns:controls="clr-namespace:yopet.Controls"
+        xmlns:ui="clr-namespace:yopet.UI.Components"
+        xmlns:arc="https://github.com/AIDotNet/TKCode.Arc"
         x:Class="yopet.PetWindow"
         x:CompileBindings="False"
         Title="{c:I18n Localization.App.Title}"
@@ -33,12 +35,8 @@
            HorizontalOffset="0"
            VerticalOffset="-8"
            WindowManagerAddShadowHint="False">
-      <Border Background="{DynamicResource BgOverlay}"
-              BorderBrush="{DynamicResource BorderColor}"
-              BorderThickness="1"
-              CornerRadius="12"
-              Padding="14,8"
-              MaxWidth="220">
+      <ui:ArcSurface Padding="14,8"
+                     MaxWidth="220">
         <StackPanel>
           <!-- Reaction 模式：大号 emoji -->
           <TextBlock Text="{Binding CurrentReaction}"
@@ -52,28 +50,18 @@
                 <TextBlock Text="💬" FontSize="12" VerticalAlignment="Center" />
                 <TextBlock Text="{Binding ThoughtAssistant}"
                            FontSize="10" FontWeight="Bold"
-                           Foreground="#AAAAAA" Margin="4,0,0,0"
+                           Foreground="{arc:ArcDesignTokenResource TextSecondary}" Margin="4,0,0,0"
                            VerticalAlignment="Center" />
               </Grid>
               <TextBlock Grid.Row="1" Text="{Binding ThoughtText}"
-                         FontSize="11" Foreground="{DynamicResource TextPrimary}"
+                         FontSize="11" Foreground="{arc:ArcDesignTokenResource Foreground}"
                          TextWrapping="Wrap" MaxHeight="160" Margin="0,4,0,0" />
             </Grid>
           </Grid>
         </StackPanel>
-      </Border>
+      </ui:ArcSurface>
     </Popup>
 
-    <!-- Dialog 弹窗层（确认框/输入框等交互） -->
-    <Popup x:Name="DialogPopup"
-           Placement="Top"
-           PlacementTarget="{Binding ElementName=PetBody}"
-           HorizontalOffset="0"
-           VerticalOffset="-8"
-           IsLightDismissEnabled="True"
-           WindowManagerAddShadowHint="False">
-      <ContentControl x:Name="DialogContent" />
-    </Popup>
 
     <!-- 右上角状态区：💡 / 📋 或 进度环 -->
     <!-- 💡：普通激活无任务 ｜ 📋：会话中无任务 -->
@@ -95,12 +83,12 @@
           Background="Transparent"
           PointerPressed="OnCancelTaskPointerPressed">
       <!-- 轨道背景圆圈（不拦截点击） -->
-      <Ellipse Stroke="#3319c8b9" StrokeThickness="1"
+      <Ellipse Stroke="{arc:ArcDesignTokenResource AccentSubtle}" StrokeThickness="1"
                Width="20" Height="20"
                HorizontalAlignment="Center" VerticalAlignment="Center"
                IsHitTestVisible="False" />
       <!-- 旋转圆点（不拦截点击） -->
-      <Ellipse x:Name="RingDot" Fill="#FF19c8b9"
+      <Ellipse x:Name="RingDot" Fill="{arc:ArcDesignTokenResource Accent}"
                Width="4" Height="4"
                HorizontalAlignment="Center" VerticalAlignment="Center"
                IsHitTestVisible="False" />
@@ -111,8 +99,6 @@
             Width="100" Height="100"
             CornerRadius="50"
             Background="Transparent"
-            HorizontalAlignment="Center"
-            VerticalAlignment="Center"
             PointerPressed="OnPetPointerPressed"
             ContextRequested="OnPetContextRequested">
       <controls:SpritesheetView x:Name="PetSprite"
@@ -125,5 +111,6 @@
                                 HorizontalAlignment="Center"
                                 VerticalAlignment="Center" />
     </Border>
+
   </Grid>
 </Window>

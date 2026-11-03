@@ -1,4 +1,4 @@
-using Avalonia;
+﻿using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Controls.Primitives;
 using Avalonia.Input;
@@ -12,6 +12,7 @@ using System.Runtime.CompilerServices;
 using yopet.Core.Models;
 using yopet.Sdk;
 using yopet.ViewModels;
+using yopet.UI.Components;
 using yopet.Views;
 
 namespace yopet;
@@ -24,6 +25,7 @@ public partial class PetWindow : Window
     private PixelPoint _dragStartWinPos; // 按下时的窗口 Position
     private PixelPoint _dragStartScreenMouse; // 按下时鼠标屏幕坐标
     private int _lastScreenX; // 上一帧鼠标屏幕 X 坐标
+    private Window? _actionsWindow;
 
     public PetWindow()
     {
@@ -36,57 +38,112 @@ public partial class PetWindow : Window
     /// <summary>气泡定位目标（供弹窗 Popup 定位用）</summary>
     public Control BubbleTarget => PetBody;
 
-    private readonly ConditionalWeakTable<ComboBox, object> _comboBoxDropDownHandlers = new();
+    /// <summary>在独立透明窗口中显示内容，避免 Popup 内无法创建 Arc 覆盖层。</summary>
+    public Window ShowDialog(Control content) =>
+        CreateDialogWindow(this, content);
 
-    /// <summary>在 DialogPopup 中显示内容，返回控制权</summary>
-    public Popup ShowDialog(Control content)
+    public static Window ShowDialogOn(Window owner, Control content) =>
+        CreateDialogWindow(owner, content);
+
+    private static Window CreateDialogWindow(Window owner, Control content, bool showClose = true)
     {
-        DialogPopup.IsLightDismissEnabled = true;
-        content.RemoveHandler(InputElement.PointerPressedEvent, OnDialogPointerPressed);
-        content.AddHandler(InputElement.PointerPressedEvent, OnDialogPointerPressed, RoutingStrategies.Tunnel);
+        var screen = owner.Screens.ScreenFromWindow(owner);
+        var workArea = screen?.WorkingArea;
+        var scaling = screen?.Scaling ?? 1.0;
+        var maxWidth = (workArea is { } areaW ? areaW.Width - 16 : 1200) / scaling;
+        var maxHeight = (workArea is { } areaH ? areaH.Height - 16 : 900) / scaling;
+        var width = double.IsNaN(content.Width) ? 420 : Math.Min(content.Width, maxWidth);
+        var estimatedHeight = double.IsNaN(content.Height) ? 600 : Math.Min(content.Height, maxHeight);
 
-        DialogContent.Content = content;
-        DialogPopup.IsOpen = true;
-        return DialogPopup;
-    }
-
-    private void OnDialogPointerPressed(object? sender, PointerPressedEventArgs e)
-    {
-        if (e.Source is not Visual source) return;
-
-        var combo = source.FindAncestorOfType<ComboBox>();
-        if (combo == null || combo.IsEditable || !combo.IsEnabled) return;
-
-        if (!_comboBoxDropDownHandlers.TryGetValue(combo, out _))
+        var window = new Window
         {
-            _comboBoxDropDownHandlers.Add(combo, new object());
-            combo.DropDownClosed += (_, _) => DialogPopup.IsLightDismissEnabled = true;
+            Width = width,
+            MaxWidth = maxWidth,
+            MaxHeight = maxHeight,
+            SizeToContent = SizeToContent.Height,
+            WindowStartupLocation = WindowStartupLocation.Manual,
+            WindowDecorations = WindowDecorations.None,
+            CanResize = false,
+            ShowInTaskbar = false,
+            Topmost = true,
+            Background = Brushes.Transparent,
+            TransparencyLevelHint = [WindowTransparencyLevel.Transparent],
+        };
+
+        var shell = new Grid { Width = width };
+        shell.Children.Add(content);
+
+        if (showClose)
+        {
+            var dragBar = new Border
+            {
+                Height = 34,
+                Background = Brushes.Transparent,
+                Cursor = new Cursor(StandardCursorType.SizeAll),
+                HorizontalAlignment = Avalonia.Layout.HorizontalAlignment.Stretch,
+                VerticalAlignment = Avalonia.Layout.VerticalAlignment.Top,
+            };
+            dragBar.PointerPressed += (_, e) =>
+            {
+                if (!e.GetCurrentPoint(dragBar).Properties.IsLeftButtonPressed) return;
+                window.BeginMoveDrag(e);
+                e.Handled = true;
+            };
+            shell.Children.Add(dragBar);
+
+            var closeText = new TextBlock
+            {
+                Text = "\u00d7",
+                FontSize = 18,
+                HorizontalAlignment = Avalonia.Layout.HorizontalAlignment.Center,
+                VerticalAlignment = Avalonia.Layout.VerticalAlignment.Center,
+            };
+            TKCode.Arc.ArcTokens.Bind(closeText, TextBlock.ForegroundProperty,
+                TKCode.Arc.DesignTokens.ArcDesignTokenKind.Foreground);
+
+            var close = ArcActions.Ghost("");
+            close.Content = closeText;
+            close.Width = 32;
+            close.Height = 32;
+            close.Padding = new Thickness(0);
+            close.HorizontalContentAlignment = Avalonia.Layout.HorizontalAlignment.Center;
+            close.VerticalContentAlignment = Avalonia.Layout.VerticalAlignment.Center;
+            close.HorizontalAlignment = Avalonia.Layout.HorizontalAlignment.Right;
+            close.VerticalAlignment = Avalonia.Layout.VerticalAlignment.Top;
+            close.Margin = new Thickness(0, 6, 6, 0);
+            close.Click += (_, _) => window.Close();
+            dragBar.ZIndex = 90;
+            close.ZIndex = 100;
+            shell.Children.Add(close);
         }
 
-        if (combo.IsDropDownOpen)
+        window.Content = shell;
+
+        window.KeyDown += (_, e) =>
         {
-            combo.IsDropDownOpen = false;
-            DialogPopup.IsLightDismissEnabled = true;
-            e.Handled = true;
-            return;
+            if (e.Key == Key.Escape)
+                window.Close();
+        };
+
+        void Fit()
+        {
+            if (workArea is not { } bounds) return;
+            var actualWidth = (int)Math.Ceiling((window.Bounds.Width <= 1 ? width : window.Bounds.Width) * scaling);
+            var actualHeight = (int)Math.Ceiling((window.Bounds.Height <= 1 ? estimatedHeight : window.Bounds.Height) * scaling);
+            var x = owner.Position.X + (int)(owner.Bounds.Width * scaling / 2 - actualWidth / 2.0);
+            var y = owner.Position.Y - (int)Math.Clamp(actualHeight + 24, 180, bounds.Height - 40);
+            x = Math.Clamp(x, bounds.X + 8, bounds.Right - actualWidth - 8);
+            y = Math.Clamp(y, bounds.Y + 8, bounds.Bottom - actualHeight - 8);
+            window.Position = new PixelPoint(x, y);
         }
 
-        DialogPopup.IsLightDismissEnabled = false;
-        combo.IsDropDownOpen = true;
-        e.Handled = true;
+        window.Opened += (_, _) =>
+            Dispatcher.UIThread.Post(Fit, DispatcherPriority.Loaded);
+        window.SizeChanged += (_, _) => Fit();
+        Fit();
 
-        _ = Task.Delay(600).ContinueWith(_ => Dispatcher.UIThread.Post(() =>
-        {
-            if (!combo.IsDropDownOpen)
-                DialogPopup.IsLightDismissEnabled = true;
-        }));
-    }
-
-    public static Popup ShowDialogOn(Window owner, Control content)
-    {
-        if (owner is PetWindow pw)
-            return pw.ShowDialog(content);
-        return null!; // 非 PetWindow 时不应调用
+        window.Show();
+        return window;
     }
 
     protected override void OnDataContextChanged(EventArgs e)
@@ -210,7 +267,17 @@ public partial class PetWindow : Window
     // ── 单击 / 双击 ──
     private void OnPetPointerPressed(object? sender, PointerPressedEventArgs e)
     {
-        try { if (!e.GetCurrentPoint(this).Properties.IsLeftButtonPressed) return; }
+        try
+        {
+            var properties = e.GetCurrentPoint(this).Properties;
+            if (properties.IsRightButtonPressed)
+            {
+                ShowPetActions();
+                e.Handled = true;
+                return;
+            }
+            if (!properties.IsLeftButtonPressed) return;
+        }
         catch { return; }
         var now = DateTime.Now;
         if ((now - _lastClick).TotalMilliseconds < 350)
@@ -242,100 +309,129 @@ public partial class PetWindow : Window
         => _vm?.OnPetHoverExited();
 
     // ── 右键菜单 ──
-    private static SolidColorBrush ThemeBrush(string key, uint fallback = 0xFFFFFFFF)
-    {
-        if (Application.Current?.TryFindResource(key, out var v) == true && v is Color c)
-            return new SolidColorBrush(c);
-        return new SolidColorBrush(Color.Parse($"#{fallback:X8}"));
-    }
-
     private void OnPetContextRequested(object? sender, ContextRequestedEventArgs e)
     {
-        if (_vm == null) return;
-        var menu = new ContextMenu();
+        ShowPetActions();
+        e.Handled = true;
+    }
 
-        // 会话中 → 显示结束会话（不论是否激活，因为会话可能来自右键菜单动作）
+    private void ShowPetActions()
+    {
+        if (_vm == null || _actionsWindow?.IsVisible == true) return;
+
+        var panel = new StackPanel { Spacing = 2, Width = 300 };
+        Window? actionWindow = null;
+
+        void AddRow(string header, Action invoke, bool danger = false)
+        {
+            var button = danger ? ArcActions.Danger(header) : ArcActions.Ghost(header);
+            button.HorizontalAlignment = Avalonia.Layout.HorizontalAlignment.Stretch;
+            button.HorizontalContentAlignment = Avalonia.Layout.HorizontalAlignment.Left;
+            button.MinHeight = 36;
+            button.Padding = new Thickness(12, 0);
+            button.Click += (_, _) =>
+            {
+                actionWindow?.Close();
+                invoke();
+            };
+            panel.Children.Add(button);
+        }
+
+        void AddHeading(string text)
+        {
+            var heading = new TextBlock
+            {
+                Text = text,
+                Margin = new Thickness(12, 8, 12, 4),
+                TextWrapping = TextWrapping.Wrap,
+            };
+            TKCode.Arc.ArcTokens.Bind(heading, TextBlock.ForegroundProperty,
+                TKCode.Arc.DesignTokens.ArcDesignTokenKind.TextMuted);
+            TKCode.Arc.ArcTokens.Bind(heading, TextBlock.FontSizeProperty,
+                TKCode.Arc.DesignTokens.ArcDesignTokenKind.TypeXS);
+            panel.Children.Add(heading);
+        }
+
+        void AddSeparator()
+        {
+            var line = new Border { Height = 1, Margin = new Thickness(8, 6) };
+            TKCode.Arc.ArcTokens.Bind(line, Border.BackgroundProperty,
+                TKCode.Arc.DesignTokens.ArcDesignTokenKind.BorderSubtle);
+            panel.Children.Add(line);
+        }
+
         if (_vm.IsSessionActive)
         {
             var session = _vm.CurrentSession;
             var title = session?.Title ?? I18nManager.Instance.GetResource("Localization.PetWindow.Session");
             var status = session?.Status ?? "";
             var statusSuffix = string.IsNullOrEmpty(status) ? "" : $"（{status}）";
-            var endItem = new MenuItem
-            {
-                Header = string.Format(I18nManager.Instance.GetResource("Localization.PetWindow.MenuEndSession"), title, statusSuffix),
-                FontSize = 13,
-                Foreground = ThemeBrush("TextPrimary"),
-            };
-            endItem.Click += (_, _) => _vm.EndSessionCallback?.Invoke();
-            menu.Items.Add(endItem);
-            menu.Items.Add(new Separator());
+            AddRow(string.Format(
+                    I18nManager.Instance.GetResource("Localization.PetWindow.MenuEndSession"), title, statusSuffix),
+                () => _vm.EndSessionCallback?.Invoke());
+            AddSeparator();
         }
-        // 普通激活（无会话）→ 显示解锁
         else if (_vm.IsActivated)
         {
-            var n = _vm.ActivatedFileAction?.Name ?? "";
-            var unlockItem = new MenuItem
-            {
-                Header = string.Format(I18nManager.Instance.GetResource("Localization.PetWindow.MenuUnlock"), n),
-                FontSize = 13, Foreground = ThemeBrush("TextPrimary"),
-            };
-            unlockItem.Click += (_, _) => _vm.DeactivateAction();
-            menu.Items.Add(unlockItem);
-            menu.Items.Add(new Separator());
+            var name = _vm.ActivatedFileAction?.Name ?? "";
+            AddRow(string.Format(
+                    I18nManager.Instance.GetResource("Localization.PetWindow.MenuUnlock"), name),
+                () => _vm.DeactivateAction());
+            AddSeparator();
         }
 
-        var dexItem = new MenuItem
-        {
-            Header = I18nManager.Instance.GetResource("Localization.PetWindow.MenuPetdex"),
-            FontSize = 13, Foreground = ThemeBrush("TextPrimary"),
-        };
-        dexItem.Click += (_, _) => OpenPetdex();
-        menu.Items.Add(dexItem);
-
-        var reloadItem = new MenuItem
-        {
-            Header = I18nManager.Instance.GetResource("Localization.PetWindow.ReloadPlugins"),
-            FontSize = 13, Foreground = ThemeBrush("TextPrimary"),
-        };
-        reloadItem.Click += (_, _) => _vm?.ReloadPluginsCallback?.Invoke();
-        menu.Items.Add(reloadItem);
-        menu.Items.Add(new Separator());
+        AddRow(I18nManager.Instance.GetResource("Localization.PetWindow.MenuPetdex"), OpenPetdex);
+        AddRow(I18nManager.Instance.GetResource("Localization.PetWindow.ReloadPlugins"),
+            () => _vm?.ReloadPluginsCallback?.Invoke());
+        AddSeparator();
 
         _vm.RefreshActionsCallback?.Invoke();
-        var groups = _vm.Actions.GroupBy(a =>
-            string.IsNullOrEmpty(a.Display?.Group?.Invoke() ?? a.Group) ? "" : (a.Display?.Group?.Invoke() ?? a.Group)).ToList();
-        foreach (var group in groups)
+        if (_vm.Actions.Count > 0)
         {
-            if (string.IsNullOrEmpty(group.Key))
-            {
-                foreach (var a in group) menu.Items.Add(BuildMenuItem(a));
-                continue;
-            }
+            AddHeading(I18nManager.Instance.GetResource("Localization.PetWindow.MenuPlugins"));
 
-            var items = group.ToList();
-            if (items.Count == 1)
-            {
-                menu.Items.Add(BuildMenuItem(items[0]));
-                continue;
-            }
+            var groups = _vm.Actions
+                .GroupBy(a => string.IsNullOrEmpty(a.Display?.Group?.Invoke() ?? a.Group)
+                    ? ""
+                    : (a.Display?.Group?.Invoke() ?? a.Group));
 
-            var sub = new MenuItem { Header = group.Key, FontSize = 13, Foreground = ThemeBrush("TextPrimary") };
-            foreach (var a in items) sub.Items.Add(BuildMenuItem(a));
-            menu.Items.Add(sub);
+            foreach (var group in groups)
+            {
+                if (!string.IsNullOrEmpty(group.Key))
+                    AddHeading(group.Key);
+
+                foreach (var action in group)
+                {
+                    var name = action.Display?.Name?.Invoke() ?? action.Name;
+                    AddRow($"{action.Emoji} {name}",
+                        () => _vm?.PerformActionCommand.Execute(action));
+                }
+            }
+            AddSeparator();
         }
-        menu.Items.Add(new Separator());
 
-        var closeItem = new MenuItem
+        AddRow(I18nManager.Instance.GetResource("Localization.PetWindow.MenuClose"), Close, danger: true);
+
+        var surface = new ArcSurface
         {
-            Header = I18nManager.Instance.GetResource("Localization.PetWindow.MenuClose"), FontSize = 13,
-            Foreground = new SolidColorBrush(Color.Parse("#E81123")),
+            Width = 320,
+            Padding = new Thickness(10, 8),
+            Child = new ScrollViewer
+            {
+                Content = panel,
+                MaxHeight = Math.Min(620, (Screens.ScreenFromWindow(this)?.WorkingArea.Height ?? 800) - 80),
+                HorizontalScrollBarVisibility = Avalonia.Controls.Primitives.ScrollBarVisibility.Disabled,
+            },
         };
-        closeItem.Click += (_, _) => Close();
-        menu.Items.Add(closeItem);
 
-        menu.Open(sender as Control);
-        e.Handled = true;
+        actionWindow = CreateDialogWindow(this, surface, showClose: false);
+        actionWindow.Deactivated += (_, _) => actionWindow.Close();
+        actionWindow.Closed += (_, _) =>
+        {
+            if (ReferenceEquals(_actionsWindow, actionWindow))
+                _actionsWindow = null;
+        };
+        _actionsWindow = actionWindow;
     }
 
     private async void OpenPetdex()
@@ -509,22 +605,6 @@ public partial class PetWindow : Window
         if (files.Length == 0) return;
         _vm.ShowReaction("\U0001f4cc");
         _ = _vm.ActivatedFileAction.ActionCallback(files);
-    }
-
-    private MenuItem BuildMenuItem(PetActionConfig a)
-    {
-        var item = new MenuItem
-        {
-            Header = $"{a.Emoji} {a.Display?.Name?.Invoke() ?? a.Name}",
-            FontSize = 13, Foreground = ThemeBrush("TextPrimary"),
-        };
-        // 仅在有描述内容时设置 tooltip，避免悬浮显示空白提示框
-        var desc = a.Display?.Description?.Invoke() ?? a.Description;
-        if (!string.IsNullOrWhiteSpace(desc))
-            ToolTip.SetTip(item, desc);
-        var cap = a;
-        item.Click += (_, _) => _vm?.PerformActionCommand.Execute(cap);
-        return item;
     }
 
     protected override void OnClosing(WindowClosingEventArgs e)

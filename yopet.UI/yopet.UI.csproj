@@ -1,0 +1,22 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <AvaloniaUseCompiledBindingsByDefault>true</AvaloniaUseCompiledBindingsByDefault>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Avalonia" Version="12.1.4" />
+    <PackageReference Include="Lang.Avalonia" Version="12.1.1.2" />
+    <PackageReference Include="SkiaSharp" Version="3.119.4" />
+    <PackageReference Include="TKCode.Arc" Version="0.3.2-preview.2" />
+    <PackageReference Include="TKCode.Arc.Fonts" Version="0.3.2-preview.2" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\yopet.Core\yopet.Core.csproj" />
+    <ProjectReference Include="..\yopet.Sdk\yopet.Sdk.csproj" />
+    <ProjectReference Include="..\yopet.ViewModels\yopet.ViewModels.csproj" />
+  </ItemGroup>
+</Project>
