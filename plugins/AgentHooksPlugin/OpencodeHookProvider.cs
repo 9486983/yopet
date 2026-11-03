@@ -471,74 +471,112 @@ public class OpencodeHookProvider : JsonlHookProviderBase
           return response
         }
 
-        async function replyPermission(client, serverUrl, directory, request) {
+        const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms))
+
+        function makeAttempt(attempts, resolved, id) {
+          return async (name, fn) => {
+            try {
+              await fn()
+              await delay(350)
+              if (resolved.has(id)) {
+                attempts.push([name, "ok"])
+                return true
+              }
+              attempts.push([name, "no-event"])
+            } catch (error) {
+              attempts.push([name, String(error?.message ?? error)])
+            }
+            return false
+          }
+        }
+
+        async function replyPermission(client, serverUrl, directory, request, resolved) {
           const reply = request?.reply === "always" ? "always" : request?.reply === "once" ? "once" : "reject"
+          const attempts = []
+          const tryStep = makeAttempt(attempts, resolved, request.id)
 
-          if (serverUrl) {
-            try {
-              await postJson(serverUrl, directory, `/permission/${encodeURIComponent(request.id)}/reply`, { reply })
-              return
-            } catch {}
-          }
+          if (await tryStep("client.v1", async () => {
+            if (typeof client.postSessionIdPermissionsPermissionId !== "function") throw new Error("missing")
+            await client.postSessionIdPermissionsPermissionId({
+              path: { id: request.sessionID, permissionID: request.id },
+              body: { response: reply },
+            })
+          })) return { ok: true, attempts }
 
-          try {
+          if (serverUrl && request.sessionID && await tryStep("http.v1", () =>
+            postJson(serverUrl, directory, `/session/${encodeURIComponent(request.sessionID)}/permissions/${encodeURIComponent(request.id)}`, { response: reply })
+          )) return { ok: true, attempts }
+
+          if (serverUrl && request.sessionID && await tryStep("http.v2", () =>
+            postJson(serverUrl, directory, `/api/session/${encodeURIComponent(request.sessionID)}/permission/${encodeURIComponent(request.id)}/reply`, { reply })
+          )) return { ok: true, attempts }
+
+          if (serverUrl && await tryStep("http.legacy", () =>
+            postJson(serverUrl, directory, `/permission/${encodeURIComponent(request.id)}/reply`, { reply })
+          )) return { ok: true, attempts }
+
+          if (await tryStep("client.v2", async () => {
+            if (typeof client.permission?.reply !== "function") throw new Error("missing")
             await client.permission.reply({ requestID: request.id, reply })
-            return
-          } catch {}
+          })) return { ok: true, attempts }
 
-          if (serverUrl && request.sessionID) {
-            try {
-              await postJson(serverUrl, directory, `/session/${encodeURIComponent(request.sessionID)}/permissions/${encodeURIComponent(request.id)}`, { response: reply })
-            } catch {}
-          }
+          return { ok: false, attempts }
         }
 
-        async function replyQuestion(client, serverUrl, directory, request) {
+        async function replyQuestion(client, serverUrl, directory, request, resolved) {
           const answers = request?.answers ?? []
+          const attempts = []
+          const tryStep = makeAttempt(attempts, resolved, request.id)
 
-          if (serverUrl) {
-            try {
-              await postJson(serverUrl, directory, `/question/${encodeURIComponent(request.id)}/reply`, { answers })
-              return
-            } catch {}
-          }
+          if (serverUrl && request.sessionID && await tryStep("http.v2", () =>
+            postJson(serverUrl, directory, `/api/session/${encodeURIComponent(request.sessionID)}/question/${encodeURIComponent(request.id)}/reply`, { answers })
+          )) return { ok: true, attempts }
 
-          try {
+          if (serverUrl && await tryStep("http.v1", () =>
+            postJson(serverUrl, directory, `/question/${encodeURIComponent(request.id)}/reply`, { answers })
+          )) return { ok: true, attempts }
+
+          if (await tryStep("client.v2", async () => {
+            if (typeof client.question?.reply !== "function") throw new Error("missing")
             await client.question.reply({ requestID: request.id, answers })
-            return
-          } catch {}
+          })) return { ok: true, attempts }
 
-          if (serverUrl && request.sessionID) {
-            try {
-              await postJson(serverUrl, directory, `/api/session/${encodeURIComponent(request.sessionID)}/question/${encodeURIComponent(request.id)}/reply`, { answers })
-            } catch {}
-          }
+          return { ok: false, attempts }
         }
 
-        async function rejectQuestion(client, serverUrl, directory, request) {
-          if (serverUrl) {
-            try {
-              await postJson(serverUrl, directory, `/question/${encodeURIComponent(request.id)}/reject`, {})
-              return
-            } catch {}
-          }
+        async function rejectQuestion(client, serverUrl, directory, request, resolved) {
+          const attempts = []
+          const tryStep = makeAttempt(attempts, resolved, request.id)
 
-          try {
+          if (serverUrl && request.sessionID && await tryStep("http.v2", () =>
+            postJson(serverUrl, directory, `/api/session/${encodeURIComponent(request.sessionID)}/question/${encodeURIComponent(request.id)}/reject`, {})
+          )) return { ok: true, attempts }
+
+          if (serverUrl && await tryStep("http.v1", () =>
+            postJson(serverUrl, directory, `/question/${encodeURIComponent(request.id)}/reject`, {})
+          )) return { ok: true, attempts }
+
+          if (await tryStep("client.v2", async () => {
+            if (typeof client.question?.reject !== "function") throw new Error("missing")
             await client.question.reject({ requestID: request.id })
-            return
-          } catch {}
+          })) return { ok: true, attempts }
 
-          if (serverUrl && request.sessionID) {
-            try {
-              await postJson(serverUrl, directory, `/api/session/${encodeURIComponent(request.sessionID)}/question/${encodeURIComponent(request.id)}/reject`, {})
-            } catch {}
-          }
+          return { ok: false, attempts }
         }
 
         export const YopetHooks = async ({ client, directory, serverUrl }) => {
           const project = clean(directory ?? "").split(/[\\/]/).filter(Boolean).pop() ?? ""
+          void emitJson("yopet_plugin_init", project, {
+            serverUrl: String(serverUrl ?? ""),
+            directory: clean(directory ?? ""),
+            client_v1_permission: typeof client.postSessionIdPermissionsPermissionId,
+            client_v2_permission: typeof client.permission?.reply,
+            client_v2_question: typeof client.question?.reply,
+          })
           const childSessions = new Set()
           const pending = new Set()
+          const resolvedPermissions = new Set()
+          const resolvedQuestions = new Set()
 
           async function handlePermission(permission) {
             if (!permission?.id || pending.has("p:" + permission.id)) return
@@ -546,11 +584,11 @@ public class OpencodeHookProvider : JsonlHookProviderBase
             try {
               const reply = await waitForReply(permission.id, 30 * 60 * 1000)
               if (!reply) return
-              if (reply.action === "reject" || reply.reply === "reject") {
-                await replyPermission(client, serverUrl, directory, { ...permission, reply: "reject" })
-              } else {
-                await replyPermission(client, serverUrl, directory, { ...permission, reply: reply.reply })
-              }
+              const value = reply.action === "reject" || reply.reply === "reject"
+                ? "reject"
+                : reply.reply
+              const result = await replyPermission(client, serverUrl, directory, { ...permission, reply: value }, resolvedPermissions)
+              await emitJson("permission_reply_debug", project, { id: permission.id, reply: value, ...result })
             } finally {
               pending.delete("p:" + permission.id)
             }
@@ -562,11 +600,10 @@ public class OpencodeHookProvider : JsonlHookProviderBase
             try {
               const reply = await waitForReply(question.id, 30 * 60 * 1000)
               if (!reply) return
-              if (reply.action === "reject") {
-                await rejectQuestion(client, serverUrl, directory, question)
-              } else {
-                await replyQuestion(client, serverUrl, directory, { ...question, answers: reply.answers ?? [] })
-              }
+              const result = reply.action === "reject"
+                ? await rejectQuestion(client, serverUrl, directory, question, resolvedQuestions)
+                : await replyQuestion(client, serverUrl, directory, { ...question, answers: reply.answers ?? [] }, resolvedQuestions)
+              await emitJson("question_reply_debug", project, { id: question.id, action: reply.action, ...result })
             } finally {
               pending.delete("q:" + question.id)
             }
@@ -603,6 +640,19 @@ public class OpencodeHookProvider : JsonlHookProviderBase
                   void handlePermission(permission)
                   break
                 }
+                case "permission.v2.asked": {
+                  const permission = event.properties
+                  if (!permission?.id || childSessions.has(permission.sessionID)) break
+                  const normalized = {
+                    ...permission,
+                    permission: permission.action,
+                    patterns: permission.resources ?? [],
+                    always: permission.save ?? [],
+                  }
+                  await emitJson("permission_asked", project, normalized)
+                  void handlePermission(normalized)
+                  break
+                }
                 case "question.asked": {
                   const question = event.properties
                   if (!question?.id || childSessions.has(question.sessionID)) break
@@ -610,15 +660,34 @@ public class OpencodeHookProvider : JsonlHookProviderBase
                   void handleQuestion(question)
                   break
                 }
+                case "question.v2.asked": {
+                  const question = event.properties
+                  if (!question?.id || childSessions.has(question.sessionID)) break
+                  await emitJson("question_asked", project, question)
+                  void handleQuestion(question)
+                  break
+                }
                 case "permission.replied":
+                case "permission.v2.replied": {
+                  const requestID = event.properties?.requestID
+                  if (requestID) resolvedPermissions.add(requestID)
                   await emit("permission_replied", project)
                   break
+                }
                 case "question.replied":
+                case "question.v2.replied": {
+                  const requestID = event.properties?.requestID
+                  if (requestID) resolvedQuestions.add(requestID)
                   await emit("question_replied", project)
                   break
+                }
                 case "question.rejected":
+                case "question.v2.rejected": {
+                  const requestID = event.properties?.requestID
+                  if (requestID) resolvedQuestions.add(requestID)
                   await emit("question_rejected", project)
                   break
+                }
               }
             },
 
