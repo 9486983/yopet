@@ -631,10 +631,25 @@ The main app integrates **Lang.Avalonia** (12.0.3.3, MIT). Plugins can use its A
 
 ### Usage in C#
 
+Prefer the built-in `T()` from `PluginBase`: it automatically prefixes keys with `Localization.<PluginName>.` based on the plugin assembly name.
+
 ```csharp
-using Lang.Avalonia;
-var text = I18nManager.Instance.GetResource("Localization.Dialogs.Ok");
+var text = T("SettingsAction"); // => Localization.SettingPlugin.SettingsAction
 ```
+
+For non-`PluginBase` code (such as custom providers), use the localizer injected by the host:
+
+```csharp
+var text = host.Localizer.Get("Localization.Dialogs.Ok");
+```
+
+UI or static classes that cannot use constructor injection can use the process-level entry point:
+
+```csharp
+var text = Localization.T("Localization.Dialogs.Ok");
+```
+
+Do not access the static `I18nManager` directly; the host provides `ILocalizer` via dependency injection.
 
 ### Switching Language
 

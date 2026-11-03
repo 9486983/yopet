@@ -631,10 +631,25 @@ public class MyPlugin : PluginBase { }
 
 ### C# 中使用
 
+优先使用 `PluginBase` 内置的 `T()`：它会按插件程序集名自动补全 `Localization.<PluginName>.` 前缀。
+
 ```csharp
-using Lang.Avalonia;
-var text = I18nManager.Instance.GetResource("Localization.Dialogs.Ok");
+var text = T("SettingsAction"); // => Localization.SettingPlugin.SettingsAction
 ```
+
+非 `PluginBase` 场景（如自定义 Provider）使用宿主注入的本地化器：
+
+```csharp
+var text = host.Localizer.Get("Localization.Dialogs.Ok");
+```
+
+无法使用构造函数注入的 UI / 静态类可使用进程级入口：
+
+```csharp
+var text = Localization.T("Localization.Dialogs.Ok");
+```
+
+不要直接访问静态 `I18nManager`，由宿主通过依赖注入提供 `ILocalizer`。
 
 ### 切换语言
 

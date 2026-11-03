@@ -1,6 +1,5 @@
 using System.Collections.Concurrent;
 using Avalonia.Controls;
-using Lang.Avalonia;
 using System.Globalization;
 using yopet.Core.Interfaces;
 using yopet.Core.Models;
@@ -17,6 +16,9 @@ public class PluginHostImpl : IPluginHost, IPluginStateResetter
 
     /// <summary>插件日志对象（所有日志方法放这里）</summary>
     public IPluginLogger Logger { get; }
+
+    /// <summary>插件本地化对象（所有文本读取放这里）</summary>
+    public ILocalizer Localizer { get; }
 
     /// <summary>插件定时任务对象（所有调度方法放这里）</summary>
     public IPluginScheduler Scheduler { get; }
@@ -93,13 +95,14 @@ public class PluginHostImpl : IPluginHost, IPluginStateResetter
     /// <summary>插件事件池 —— 悬浮提示等常用事件统一注册与管理（含冲突检测、优先级）</summary>
     public PluginEventPool Events { get; } = new();
 
-    public PluginHostImpl(IConfigService config, IPluginLogger? logger = null, CronSchedulerService? scheduler = null, PluginLoader? pluginLoader = null)
+    public PluginHostImpl(IConfigService config, IPluginLogger? logger = null, ILocalizer? localizer = null, CronSchedulerService? scheduler = null, PluginLoader? pluginLoader = null)
     {
         _config = config;
         _pluginLoader = pluginLoader;
         Logger = logger ?? new PluginLogger(
             new LoggerService(Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "plugins", "logs")),
             "Host");
+        Localizer = localizer ?? new Localizer();
         _schedulerService = scheduler ?? new CronSchedulerService();
         Scheduler = new PluginScheduler(_schedulerService, Logger.For("PluginScheduler"));
     }
@@ -376,7 +379,7 @@ public class PluginHostImpl : IPluginHost, IPluginStateResetter
         _config.Save();
         try
         {
-            I18nManager.Instance.Culture = new CultureInfo(cultureName);
+            Localizer.SetCulture(cultureName);
             LanguageChanged?.Invoke(this, cultureName);
         }
         catch (CultureNotFoundException)

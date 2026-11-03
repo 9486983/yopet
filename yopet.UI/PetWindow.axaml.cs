@@ -7,7 +7,6 @@ using Avalonia.Media;
 using Avalonia.Platform.Storage;
 using Avalonia.Threading;
 using Avalonia.VisualTree;
-using Lang.Avalonia;
 using System.Runtime.CompilerServices;
 using yopet.Core.Models;
 using yopet.Sdk;
@@ -34,6 +33,8 @@ public partial class PetWindow : Window
         t.Tick += (_, _) => { if (IsVisible) Topmost = true; };
         t.Start();
     }
+
+    private static string T(string key) => Localization.T(key);
 
     /// <summary>气泡定位目标（供弹窗 Popup 定位用）</summary>
     public Control BubbleTarget => PetBody;
@@ -368,11 +369,11 @@ public partial class PetWindow : Window
         if (_vm.IsSessionActive)
         {
             var session = _vm.CurrentSession;
-            var title = session?.Title ?? I18nManager.Instance.GetResource("Localization.PetWindow.Session");
+            var title = session?.Title ?? T("Localization.PetWindow.Session");
             var status = session?.Status ?? "";
             var statusSuffix = string.IsNullOrEmpty(status) ? "" : $"（{status}）";
             AddRow(string.Format(
-                    I18nManager.Instance.GetResource("Localization.PetWindow.MenuEndSession"), title, statusSuffix),
+                    T("Localization.PetWindow.MenuEndSession"), title, statusSuffix),
                 () => _vm.EndSessionCallback?.Invoke());
             AddSeparator();
         }
@@ -380,20 +381,20 @@ public partial class PetWindow : Window
         {
             var name = _vm.ActivatedFileAction?.Name ?? "";
             AddRow(string.Format(
-                    I18nManager.Instance.GetResource("Localization.PetWindow.MenuUnlock"), name),
+                    T("Localization.PetWindow.MenuUnlock"), name),
                 () => _vm.DeactivateAction());
             AddSeparator();
         }
 
-        AddRow(I18nManager.Instance.GetResource("Localization.PetWindow.MenuPetdex"), OpenPetdex);
-        AddRow(I18nManager.Instance.GetResource("Localization.PetWindow.ReloadPlugins"),
+        AddRow(T("Localization.PetWindow.MenuPetdex"), OpenPetdex);
+        AddRow(T("Localization.PetWindow.ReloadPlugins"),
             () => _vm?.ReloadPluginsCallback?.Invoke());
         AddSeparator();
 
         _vm.RefreshActionsCallback?.Invoke();
         if (_vm.Actions.Count > 0)
         {
-            AddHeading(I18nManager.Instance.GetResource("Localization.PetWindow.MenuPlugins"));
+            AddHeading(T("Localization.PetWindow.MenuPlugins"));
 
             var groups = _vm.Actions
                 .GroupBy(a => string.IsNullOrEmpty(a.Display?.Group?.Invoke() ?? a.Group)
@@ -415,7 +416,7 @@ public partial class PetWindow : Window
             AddSeparator();
         }
 
-        AddRow(I18nManager.Instance.GetResource("Localization.PetWindow.MenuClose"), Close, danger: true);
+        AddRow(T("Localization.PetWindow.MenuClose"), Close, danger: true);
 
         var surface = new ArcSurface
         {
@@ -459,7 +460,7 @@ public partial class PetWindow : Window
         var config = new ListDialogConfig
         {
             LayoutMode = ListDialogLayoutMode.CardGrid,
-            Title = I18nManager.Instance.GetResource("Localization.Petdex.Title"),
+            Title = T("Localization.Petdex.Title"),
             Emoji = "🎮",
             CardTextKey = "name",
             CardFallbackEmoji = "🎮",
@@ -470,13 +471,13 @@ public partial class PetWindow : Window
         config.ToolbarActions.Add(new ListToolbarAction
         {
             Emoji = "⏬",
-            Label = I18nManager.Instance.GetResource("Localization.Petdex.Install"),
+            Label = T("Localization.Petdex.Install"),
             IsPrimary = true,
             Callback = async () =>
             {
                 var petName = await InputDialog.ShowAsync(this,
-                    I18nManager.Instance.GetResource("Localization.Petdex.InstallPetTitle"),
-                    I18nManager.Instance.GetResource("Localization.Petdex.InstallPetPlaceholder"));
+                    T("Localization.Petdex.InstallPetTitle"),
+                    T("Localization.Petdex.InstallPetPlaceholder"));
                 if (string.IsNullOrEmpty(petName)) return;
                 await InstallPet(petName, config);
             },
@@ -520,23 +521,23 @@ public partial class PetWindow : Window
         proc.BeginOutputReadLine();
         proc.BeginErrorReadLine();
 
-        _vm?.ShowFileDropInfo(I18nManager.Instance.GetResource("Localization.PetWindow.InstallingTitle"),
-            string.Format(I18nManager.Instance.GetResource("Localization.PetWindow.Installing"), petName));
+        _vm?.ShowFileDropInfo(T("Localization.PetWindow.InstallingTitle"),
+            string.Format(T("Localization.PetWindow.Installing"), petName));
 
         var exitTask = proc.WaitForExitAsync();
         var completed = await Task.WhenAny(exitTask, Task.Delay(120_000));
         if (completed != exitTask)
         {
             proc.Kill();
-            _vm?.ShowFileDropInfo(I18nManager.Instance.GetResource("Localization.PetWindow.TimeoutTitle"),
-                string.Format(I18nManager.Instance.GetResource("Localization.PetWindow.InstallTimeout"), petName));
+            _vm?.ShowFileDropInfo(T("Localization.PetWindow.TimeoutTitle"),
+                string.Format(T("Localization.PetWindow.InstallTimeout"), petName));
             return;
         }
 
         if (proc.ExitCode == 0)
         {
-            _vm?.ShowFileDropInfo(I18nManager.Instance.GetResource("Localization.PetWindow.InstalledTitle"),
-                string.Format(I18nManager.Instance.GetResource("Localization.PetWindow.Installed"), petName));
+            _vm?.ShowFileDropInfo(T("Localization.PetWindow.InstalledTitle"),
+                string.Format(T("Localization.PetWindow.Installed"), petName));
             _vm?.ReloadPetdexPets();
             config.NotifyDataChanged();
         }
@@ -544,7 +545,7 @@ public partial class PetWindow : Window
         {
             var err = output.ToString().Trim();
             if (err.Length > 100) err = err[..100] + "...";
-            _vm?.ShowFileDropInfo(I18nManager.Instance.GetResource("Localization.PetWindow.InstallFailedTitle"), err);
+            _vm?.ShowFileDropInfo(T("Localization.PetWindow.InstallFailedTitle"), err);
         }
     }
 

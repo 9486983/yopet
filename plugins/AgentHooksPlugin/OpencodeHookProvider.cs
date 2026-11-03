@@ -1,5 +1,4 @@
 ﻿using System.Text;
-using Lang.Avalonia;
 using yopet.Sdk;
 
 namespace AgentHooksPlugin;
@@ -11,10 +10,6 @@ namespace AgentHooksPlugin;
 /// </summary>
 public class OpencodeHookProvider : JsonlHookProviderBase
 {
-    /// <summary>取当前语言的 Agent Hooks 词条</summary>
-    private static string T(string key) =>
-        I18nManager.Instance.GetResource($"Localization.AgentHooksPlugin.{key}");
-
     public override string Id => "opencode";
     public override string Name => "Opencode";
     public override string Emoji => "🌀";

@@ -44,6 +44,7 @@ public partial class App : Application
             services.AddSingleton<IPluginLogger>(_ => new PluginLogger(
                 new LoggerService(Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "plugins", "logs")),
                 "Host"));
+            services.AddSingleton<ILocalizer>(_ => new Localizer());
             services.AddSingleton<PluginHostImpl>();
             services.AddSingleton<PluginLoader>();
 
@@ -54,6 +55,8 @@ public partial class App : Application
             var configService = _serviceProvider.GetRequiredService<IConfigService>();
             var dispatcher = _serviceProvider.GetRequiredService<IDispatcherService>();
             var petdexService = _serviceProvider.GetRequiredService<IPetdexService>();
+            var localizer = _serviceProvider.GetRequiredService<ILocalizer>();
+            Localization.Current = localizer;
             var pluginHost = _serviceProvider.GetRequiredService<PluginHostImpl>();
             var pluginLoader = _serviceProvider.GetRequiredService<PluginLoader>();
             var config = configService.Config;
@@ -145,14 +148,14 @@ public partial class App : Application
                     petVm.RefreshPluginActions(pluginHost.PluginActions);
                     petVm.RefreshFileActions(pluginHost.FileActions);
                     petVm.ShowFileDropInfo(
-                        I18nManager.Instance.GetResource("Localization.PetWindow.ReloadPluginsDone"),
-                        string.Format(I18nManager.Instance.GetResource("Localization.PetWindow.ReloadPluginsDoneMsg"),
+                        localizer.Get("Localization.PetWindow.ReloadPluginsDone"),
+                        string.Format(localizer.Get("Localization.PetWindow.ReloadPluginsDoneMsg"),
                             pluginHost.PluginActions.Count, pluginHost.FileActions.Count));
                 }
                 catch (Exception ex)
                 {
                     petVm.ShowFileDropInfo(
-                        I18nManager.Instance.GetResource("Localization.PetWindow.ReloadPluginsFailed"),
+                        localizer.Get("Localization.PetWindow.ReloadPluginsFailed"),
                         ex.Message);
                 }
             };
@@ -187,7 +190,7 @@ public partial class App : Application
                 {
                     System.Diagnostics.Debug.WriteLine($"[ConfigDialog] Error: {ex}");
                     // 出错时尝试用简单方式显示
-                    pluginHost.ShowThought(I18nManager.Instance.GetResource("Localization.PetWindow.ConfigLoadFailed"), ex.Message);
+                    pluginHost.ShowThought(localizer.Get("Localization.PetWindow.ConfigLoadFailed"), ex.Message);
                 }
             };
 

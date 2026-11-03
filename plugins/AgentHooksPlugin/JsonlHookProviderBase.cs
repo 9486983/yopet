@@ -1,5 +1,4 @@
 using System.Text;
-using Lang.Avalonia;
 using yopet.Sdk;
 
 namespace AgentHooksPlugin;
@@ -11,10 +10,6 @@ namespace AgentHooksPlugin;
 /// </summary>
 public abstract class JsonlHookProviderBase : HookProviderBase
 {
-    /// <summary>取当前语言的 Agent Hooks 词条</summary>
-    private static string T(string key) =>
-        I18nManager.Instance.GetResource($"Localization.AgentHooksPlugin.{key}");
-
     private const string KeyEnabled = "_enabled";
     private const string KeyMaxLength = "_max_length";
     private const int CommandEventThrottle = 5;

@@ -1,4 +1,3 @@
-using Lang.Avalonia;
 using yopet.Core.Models;
 using yopet.Sdk;
 
@@ -12,10 +11,6 @@ namespace AgentHooksPlugin;
     Description = "统一管理所有 AI 助手的 Hooks 监测：响应内容、命令执行、文件更改等")]
 public class AgentHooksPlugin : PluginBase
 {
-    /// <summary>取当前语言的 Agent Hooks 词条</summary>
-    private static string T(string key) =>
-        I18nManager.Instance.GetResource($"Localization.AgentHooksPlugin.{key}");
-
     private readonly List<HookProviderBase> _providers = new();
     private IPluginHost? _host;
 
@@ -52,6 +47,7 @@ public class AgentHooksPlugin : PluginBase
     /// <summary>注册一个 Provider，自动配置并启动</summary>
     private void RegisterProvider(HookProviderBase provider)
     {
+        provider.SetLocalizer(Localizer);
         _providers.Add(provider);
 
         // 注册配置定义

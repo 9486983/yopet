@@ -5,7 +5,6 @@ using Avalonia.Controls;
 using Avalonia.Layout;
 using Avalonia.Media;
 using Avalonia.Platform.Storage;
-using Lang.Avalonia;
 using TKCode.Arc;
 using yopet.Sdk;
 using yopet.UI.Components;
@@ -56,8 +55,8 @@ public static class PluginConfigDialog
 
         body.Children.Add(status);
 
-        var closeButton = ArcActions.Secondary(I18nManager.Instance.GetResource("Localization.Dialogs.Cancel"));
-        var saveButton = ArcActions.Primary(I18nManager.Instance.GetResource("Localization.Dialogs.Confirm"));
+        var closeButton = ArcActions.Secondary(Localization.T("Localization.Dialogs.Cancel"));
+        var saveButton = ArcActions.Primary(Localization.T("Localization.Dialogs.Confirm"));
 
         var card = new ArcDialogCard
         {
@@ -92,7 +91,7 @@ public static class PluginConfigDialog
             {
                 if (field.IsRequired && string.IsNullOrWhiteSpace(values.GetValueOrDefault(field.Key)))
                     errors.Add(string.Format(
-                        I18nManager.Instance.GetResource("Localization.Dialogs.RequiredField"),
+                        Localization.T("Localization.Dialogs.RequiredField"),
                         field.Label));
             }
 
@@ -130,7 +129,7 @@ public static class PluginConfigDialog
     {
         var description = field.Description;
         if (string.IsNullOrWhiteSpace(description) && field.IsRequired)
-            description = I18nManager.Instance.GetResource("Localization.Dialogs.Required");
+            description = Localization.T("Localization.Dialogs.Required");
 
         switch (field.Type)
         {

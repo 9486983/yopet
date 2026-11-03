@@ -1,5 +1,4 @@
 using System.Text;
-using Lang.Avalonia;
 using MailToMarkdownPlugin.Mail;
 using yopet.Core.Models;
 using yopet.Sdk;
@@ -10,9 +9,6 @@ namespace MailToMarkdownPlugin;
 public class MailToMarkdownPlugin : PluginBase
 {
     private static readonly string[] MailExtensions = { ".eml", ".msg" };
-
-    private static string T(string key) =>
-        I18nManager.Instance.GetResource($"Localization.MailToMarkdownPlugin.{key}");
 
     public override string Name => T("Name");
 
@@ -59,7 +55,7 @@ public class MailToMarkdownPlugin : PluginBase
         });
     }
 
-    private static async Task ConvertAsync(string[] paths, IPluginHost host)
+    private async Task ConvertAsync(string[] paths, IPluginHost host)
     {
         var files = paths
             .Where(path => !string.IsNullOrWhiteSpace(path) && File.Exists(path) && IsMailFile(path))
@@ -118,7 +114,7 @@ public class MailToMarkdownPlugin : PluginBase
         }
     }
 
-    private static MarkdownLabels CreateLabels() => new()
+    private MarkdownLabels CreateLabels() => new()
     {
         From = T("MetaFrom"),
         To = T("MetaTo"),
@@ -160,7 +156,7 @@ public class MailToMarkdownPlugin : PluginBase
         return Path.GetDirectoryName(sourcePath) ?? Directory.GetCurrentDirectory();
     }
 
-    private static string BuildSummary(IReadOnlyList<string> outputs, IReadOnlyList<string> errors)
+    private string BuildSummary(IReadOnlyList<string> outputs, IReadOnlyList<string> errors)
     {
         var builder = new StringBuilder();
 

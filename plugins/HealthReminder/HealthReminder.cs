@@ -1,4 +1,3 @@
-using Lang.Avalonia;
 using yopet.Core.Models;
 using yopet.Sdk;
 
@@ -14,10 +13,6 @@ public class HealthReminderPlugin : PluginBase
 
     private IPluginHost? _host;
     private CancellationTokenSource? _cts;
-
-    /// <summary>取当前语言的健康提醒词条</summary>
-    private static string T(string key) =>
-        I18nManager.Instance.GetResource($"Localization.HealthReminder.{key}");
 
     private static readonly string[] SitMessageKeys = ["SitMsg1", "SitMsg2", "SitMsg3", "SitMsg4"];
     private static readonly string[] EyeMessageKeys = ["EyeMsg1", "EyeMsg2", "EyeMsg3", "EyeMsg4"];

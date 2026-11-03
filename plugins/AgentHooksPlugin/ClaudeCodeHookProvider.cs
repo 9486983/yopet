@@ -1,5 +1,3 @@
-using Lang.Avalonia;
-
 namespace AgentHooksPlugin;
 
 /// <summary>
@@ -9,10 +7,6 @@ namespace AgentHooksPlugin;
 /// </summary>
 public class ClaudeCodeHookProvider : JsonlHookProviderBase
 {
-    /// <summary>取当前语言的 Agent Hooks 词条</summary>
-    private static string T(string key) =>
-        I18nManager.Instance.GetResource($"Localization.AgentHooksPlugin.{key}");
-
     public override string Id => "claude";
     public override string Name => "Claude Code";
     public override string Emoji => "🦾";

@@ -1,4 +1,3 @@
-using Lang.Avalonia;
 using yopet.Sdk;
 using XamlDemoPlugin.Views;
 
@@ -18,12 +17,12 @@ namespace XamlDemoPlugin;
 public class XamlDemoPlugin : PluginBase
 {
     /// <summary>取当前语言的插件词条；读取失败回退默认值</summary>
-    private static string T(string key, string fallback)
+    private string T(string key, string fallback)
     {
         try
         {
-            var value = I18nManager.Instance.GetResource($"Localization.XamlDemoPlugin.{key}");
-            return string.IsNullOrWhiteSpace(value) ? fallback : value;
+            var value = Localizer.Get(key);
+            return string.IsNullOrWhiteSpace(value) || value == key ? fallback : value;
         }
         catch
         {

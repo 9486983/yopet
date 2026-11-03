@@ -1,6 +1,5 @@
 using System.Diagnostics;
 using System.Text;
-using Lang.Avalonia;
 using yopet.Core.Models;
 using yopet.Sdk;
 
@@ -21,9 +20,6 @@ namespace PythonScriptPlugin;
     Description = "挂载、管理和运行 Python 脚本，支持拖入自动挂载与执行")]
 public class PythonScriptPlugin : PluginBase
 {
-    /// <summary>取当前语言的插件词条</summary>
-    private static string T(string key) => I18nManager.Instance.GetResource($"Localization.PythonScriptPlugin.{key}");
-
     public override string Name => T("Name");
 
     private string _scriptsDir = "";
@@ -524,7 +520,7 @@ public class PythonScriptPlugin : PluginBase
     /// 检测脚本是否需要参数，如需则弹出输入框。
     /// 返回参数串（文本）；null 表示用户取消。
     /// </summary>
-    private static async Task<string?> DetectAndPromptArgs(
+    private async Task<string?> DetectAndPromptArgs(
         string scriptPath, IPluginHost host)
     {
         try
@@ -928,7 +924,7 @@ public class PythonScriptPlugin : PluginBase
     }
 
     /// <summary>截断文本（添加省略提示）</summary>
-    private static string Truncate(string text, int maxLen)
+    private string Truncate(string text, int maxLen)
     {
         if (text.Length <= maxLen) return text;
         return text[..maxLen] +

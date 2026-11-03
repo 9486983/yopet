@@ -1,7 +1,7 @@
 ﻿using Avalonia.Controls;
 using Avalonia.Input;
 using Avalonia.Layout;
-using Lang.Avalonia;
+using yopet.Sdk;
 using yopet.UI.Components;
 
 namespace yopet.Views;
@@ -22,8 +22,8 @@ public static class InputDialog
             Width = 300,
         };
 
-        var okBtn = ArcActions.Primary(I18nManager.Instance.GetResource("Localization.Dialogs.Confirm"));
-        var cancelBtn = ArcActions.Secondary(I18nManager.Instance.GetResource("Localization.Dialogs.Cancel"));
+        var okBtn = ArcActions.Primary(Localization.T("Localization.Dialogs.Confirm"));
+        var cancelBtn = ArcActions.Secondary(Localization.T("Localization.Dialogs.Cancel"));
 
         okBtn.Click += (_, _) => tcs.TrySetResult(input.Text);
         cancelBtn.Click += (_, _) => tcs.TrySetResult(null);

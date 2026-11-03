@@ -2,7 +2,6 @@ using System.Text;
 using System.Text.Encodings.Web;
 using System.Text.Json;
 using System.Text.Json.Nodes;
-using Lang.Avalonia;
 using yopet.Sdk;
 
 namespace AgentHooksPlugin;
@@ -15,10 +14,6 @@ namespace AgentHooksPlugin;
 /// </summary>
 public class ReasonixHookProvider : HookProviderBase
 {
-    /// <summary>取当前语言的 Agent Hooks 词条</summary>
-    private static string T(string key) =>
-        I18nManager.Instance.GetResource($"Localization.AgentHooksPlugin.{key}");
-
     public override string Id => "reasonix";
     public override string Name => "Reasonix Code";
     public override string Emoji => "🧠";
@@ -366,7 +361,7 @@ $json = $event | ConvertTo-Json -Compress
 [System.IO.File]::WriteAllText($filepath, $json)
 ";
 
-    private static readonly string HookScriptContent = HookScriptTemplate
+    private string HookScriptContent => HookScriptTemplate
         .Replace("{{StartWork}}", T("StartWork"))
         .Replace("{{WorkDone}}", T("WorkDone"));
 
@@ -396,7 +391,7 @@ $json = $event | ConvertTo-Json -Compress
     }
 
     /// <summary>写入包装脚本到 ~/.reasonix/hooks/reasonix-event.ps1</summary>
-    private static void WriteHookScript()
+    private void WriteHookScript()
     {
         // 如果文件已存在且内容一致则跳过
         if (File.Exists(ReasonixHookScript))

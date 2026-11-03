@@ -4,9 +4,9 @@ using Avalonia.Controls.Primitives;
 using Avalonia.Input;
 using Avalonia.Layout;
 using Avalonia.Media;
-using Lang.Avalonia;
 using TKCode.Arc;
 using TKCode.Arc.DesignTokens;
+using yopet.Sdk;
 
 namespace yopet.UI.Components;
 
@@ -151,8 +151,8 @@ public sealed class ThemePicker : UserControl
     {
         try
         {
-            var text = I18nManager.Instance.GetResource(key);
-            return string.IsNullOrWhiteSpace(text) ? fallback : text;
+            var text = Localization.T(key);
+            return string.IsNullOrWhiteSpace(text) || text == key ? fallback : text;
         }
         catch
         {

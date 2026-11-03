@@ -1,4 +1,3 @@
-using Lang.Avalonia;
 using yopet.Sdk;
 
 namespace AgentHooksPlugin;
@@ -9,9 +8,13 @@ namespace AgentHooksPlugin;
 /// </summary>
 public abstract class HookProviderBase : IDisposable
 {
+    private ILocalizer? _localizer;
+
+    /// <summary>由插件在注册 Provider 时注入已绑定前缀的本地化器。</summary>
+    internal void SetLocalizer(ILocalizer localizer) => _localizer = localizer;
+
     /// <summary>取当前语言的 Agent Hooks 词条</summary>
-    private static string T(string key) =>
-        I18nManager.Instance.GetResource($"Localization.AgentHooksPlugin.{key}");
+    protected string T(string key) => _localizer?.Get(key) ?? key;
 
     /// <summary>唯一标识（如 "reasonix"、"claude"）</summary>
     public abstract string Id { get; }
@@ -58,6 +61,7 @@ public abstract class HookProviderBase : IDisposable
     {
         _host = host;
         Logger = host.Logger.For(GetType().Name);
+        _localizer ??= host.Localizer.For("Localization.AgentHooksPlugin");
         _isRunning = true;
     }
 

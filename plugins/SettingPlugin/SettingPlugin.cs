@@ -1,5 +1,4 @@
 ﻿using System.Diagnostics;
-using Lang.Avalonia;
 using yopet.Core.Models;
 using yopet.Sdk;
 using yopet.UI.Views;
@@ -17,10 +16,6 @@ public class SettingPlugin : PluginBase
 
     private IPluginHost? _host;
     private PluginConfigSection? _section;
-
-    /// <summary>取当前语言的插件词条</summary>
-    private static string T(string key) =>
-        I18nManager.Instance.GetResource($"Localization.SettingPlugin.{key}");
 
     public override string Name => T("Name");
 
@@ -115,7 +110,7 @@ public class SettingPlugin : PluginBase
         Logger.Info("设置插件已加载");
     }
 
-    private static async Task ShowUnifiedSettingsAsync(IPluginHost host)
+    private async Task ShowUnifiedSettingsAsync(IPluginHost host)
     {
         await host.ShowCustomViewAsync(new UnifiedSettingsView(host), T("SettingsCenter"));
     }

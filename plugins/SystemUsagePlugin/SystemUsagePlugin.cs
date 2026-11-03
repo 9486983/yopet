@@ -1,4 +1,3 @@
-using Lang.Avalonia;
 using yopet.Sdk;
 
 namespace SystemUsagePlugin;
@@ -17,10 +16,6 @@ namespace SystemUsagePlugin;
     Description = "鼠标悬浮在宠物上时展示 CPU 与内存占用（跨平台，无需配置）")]
 public class SystemUsagePlugin : PluginBase
 {
-    /// <summary>取当前语言的插件词条</summary>
-    private static string T(string key) =>
-        I18nManager.Instance.GetResource($"Localization.SystemUsagePlugin.{key}");
-
     public override string Name => T("Name");
 
     private SystemUsageService? _service;

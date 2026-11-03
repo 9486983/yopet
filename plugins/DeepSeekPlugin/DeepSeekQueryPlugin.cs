@@ -1,6 +1,5 @@
 using yopet.Sdk;
 using System.Text.Json;
-using Lang.Avalonia;
 using yopet.Core.Models;
 
 namespace DeepSeekPlugin;
@@ -22,10 +21,6 @@ public class DeepSeekQueryPlugin : PluginBase
     private IPluginHost? _host;
     private PeriodicTimer? _timer;
     private CancellationTokenSource? _timerCts;
-
-    /// <summary>取当前语言的 DeepSeek 词条</summary>
-    private static string T(string key) =>
-        I18nManager.Instance.GetResource($"Localization.DeepSeekPlugin.{key}");
 
     public override string Name => T("Name");
     public override string Description => T("Description");

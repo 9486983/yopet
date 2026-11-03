@@ -1,6 +1,5 @@
 using System.Runtime.InteropServices;
 using System.Text;
-using Lang.Avalonia;
 using yopet.Core.Models;
 using yopet.Sdk;
 using static PinTopPlugin.Win32Native;
@@ -21,10 +20,6 @@ public class PinTopPlugin : PluginBase
     private ListDialogConfig? _activeListConfig;
     private WndProcDelegate? _wndProc;
     private WndProcDelegate? _overlayWndProc;
-
-    /// <summary>取当前语言的插件词条</summary>
-    private static string T(string key) =>
-        I18nManager.Instance.GetResource($"Localization.PinTopPlugin.{key}");
 
     public override string Name => T("Name");
 

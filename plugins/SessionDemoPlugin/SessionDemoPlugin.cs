@@ -1,5 +1,4 @@
 using System.Diagnostics;
-using Lang.Avalonia;
 using yopet.Core.Models;
 using yopet.Sdk;
 
@@ -17,10 +16,6 @@ namespace SessionDemoPlugin;
 [Plugin("图片整理器", Version = "1.0.0", Description = "会话工作流示例：拖入文件夹启动，再拖入图片自动整理")]
 public class SessionDemoPlugin : PluginBase
 {
-    /// <summary>取当前语言的插件词条</summary>
-    private static string T(string key) =>
-        I18nManager.Instance.GetResource($"Localization.SessionDemoPlugin.{key}");
-
     public override string Name => T("Name");
 
     public override async Task InitializeAsync(IPluginHost host)
@@ -49,7 +44,7 @@ public class SessionDemoPlugin : PluginBase
     }
 
     /// <summary>核心处理逻辑 —— 区分首次拖入（启动会话）和后续拖入</summary>
-    private static async Task OnFilesDropped(string[] paths, IPluginHost host)
+    private async Task OnFilesDropped(string[] paths, IPluginHost host)
     {
         var session = host.CurrentSession;
 
@@ -87,7 +82,7 @@ public class SessionDemoPlugin : PluginBase
     }
 
     /// <summary>处理图片文件：复制到输出目录并序列化命名</summary>
-    private static async Task HandleImages(string[] paths, IPluginHost host, ISession session)
+    private async Task HandleImages(string[] paths, IPluginHost host, ISession session)
     {
         var outputDir = (string)session.Context["outputDir"]!;
         var imagePaths = paths.Where(IsImage).ToArray();

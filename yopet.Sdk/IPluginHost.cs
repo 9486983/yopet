@@ -8,6 +8,9 @@ public interface IPluginHost
 {    // ── 日志（独立对象，所有日志方法放这里） ──
     IPluginLogger Logger { get; }
 
+    // ── 本地化（独立对象，所有文本读取放这里） ──
+    ILocalizer Localizer { get; }
+
     // ── 定时任务（独立对象，所有调度方法放这里） ──
     IPluginScheduler Scheduler { get; }
 

@@ -1,6 +1,6 @@
 ﻿using Avalonia.Controls;
 using Avalonia.Layout;
-using Lang.Avalonia;
+using yopet.Sdk;
 using yopet.UI.Components;
 
 namespace yopet.Views;
@@ -12,8 +12,8 @@ public static class ConfirmDialog
     {
         var tcs = new TaskCompletionSource<bool>();
 
-        var yesBtn = ArcActions.Primary(I18nManager.Instance.GetResource("Localization.Dialogs.Confirm"));
-        var noBtn = ArcActions.Secondary(I18nManager.Instance.GetResource("Localization.Dialogs.Cancel"));
+        var yesBtn = ArcActions.Primary(Localization.T("Localization.Dialogs.Confirm"));
+        var noBtn = ArcActions.Secondary(Localization.T("Localization.Dialogs.Cancel"));
 
         yesBtn.Click += (_, _) => tcs.TrySetResult(true);
         noBtn.Click += (_, _) => tcs.TrySetResult(false);

@@ -1,6 +1,5 @@
 ﻿using System.Text.Json;
 using System.Text.Json.Serialization;
-using Lang.Avalonia;
 using yopet.Core.Models;
 using yopet.Sdk;
 
@@ -36,10 +35,6 @@ public class ProgramSchedulerPlugin : PluginBase
     private IPluginHost? _host;
     private ListDialogConfig? _listConfig;
     private DateTime _lastApply = DateTime.MinValue;
-
-    /// <summary>取当前语言的插件词条</summary>
-    private static string T(string key) =>
-        I18nManager.Instance.GetResource($"Localization.ProgramSchedulerPlugin.{key}");
 
     private void Log(string message) =>
         Logger.Info(message);

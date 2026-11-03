@@ -18,10 +18,12 @@ public sealed class PluginLifecycleManager
     private readonly List<LoadedPlugin> _plugins = new();
     private readonly object _lock = new();
     private readonly IPluginLogger? _logger;
+    private readonly ILocalizer? _localizer;
 
-    public PluginLifecycleManager(IPluginLogger? logger = null)
+    public PluginLifecycleManager(IPluginLogger? logger = null, ILocalizer? localizer = null)
     {
         _logger = logger;
+        _localizer = localizer;
     }
 
     /// <summary>当前已加载的插件对象（只读快照，线程安全）</summary>
@@ -72,6 +74,9 @@ public sealed class PluginLifecycleManager
 
                     if (Activator.CreateInstance(type) is IPlugin plugin)
                     {
+                        if (_localizer is { } localizer && plugin is IPluginLocalizerAware localizerAware)
+                            localizerAware.SetLocalizer(localizer);
+
                         lock (_lock)
                         {
                             _plugins.Add(new LoadedPlugin(plugin, dllPath, context));

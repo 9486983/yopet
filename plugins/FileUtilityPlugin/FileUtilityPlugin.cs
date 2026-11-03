@@ -2,7 +2,6 @@ using System.IO.Compression;
 using System.Security.Cryptography;
 using yopet.Core.Models;
 using yopet.Sdk;
-using Lang.Avalonia;
 
 namespace FileUtilityPlugin;
 
@@ -17,8 +16,6 @@ public class FileUtilityPlugin : PluginBase
         ".cs", ".cpp", ".c", ".h", ".hpp", ".java", ".rs", ".go",
         ".rb", ".php", ".sql", ".r", ".swift", ".kt", ".dart",
     };
-
-    private static string T(string key) => I18nManager.Instance.GetResource($"Localization.FileUtilityPlugin.{key}");
 
     public override string Name => T("Name");
 
@@ -35,7 +32,7 @@ public class FileUtilityPlugin : PluginBase
     }
 
     // ── 查看详情 ──
-    private static void RegisterViewDetails(IPluginHost host)
+    private void RegisterViewDetails(IPluginHost host)
     {
         host.RegisterAction(new PluginAction
         {
@@ -82,7 +79,7 @@ public class FileUtilityPlugin : PluginBase
     }
 
     // ── 打开位置 ──
-    private static void RegisterOpenLocation(IPluginHost host)
+    private void RegisterOpenLocation(IPluginHost host)
     {
         host.RegisterAction(new PluginAction
         {
@@ -103,7 +100,7 @@ public class FileUtilityPlugin : PluginBase
     }
 
     // ── 复制路径 ──
-    private static void RegisterCopyPath(IPluginHost host)
+    private void RegisterCopyPath(IPluginHost host)
     {
         host.RegisterAction(new PluginAction
         {
@@ -130,7 +127,7 @@ public class FileUtilityPlugin : PluginBase
     }
 
     // ── MD5 ──
-    private static void RegisterMd5(IPluginHost host)
+    private void RegisterMd5(IPluginHost host)
     {
         host.RegisterAction(new PluginAction
         {
@@ -156,7 +153,7 @@ public class FileUtilityPlugin : PluginBase
     }
 
     // ── ZIP ──
-    private static void RegisterZip(IPluginHost host)
+    private void RegisterZip(IPluginHost host)
     {
         host.RegisterAction(new PluginAction
         {
@@ -201,7 +198,7 @@ public class FileUtilityPlugin : PluginBase
     }
 
     // ── 记事本 ──
-    private static void RegisterNotepad(IPluginHost host)
+    private void RegisterNotepad(IPluginHost host)
     {
         host.RegisterAction(new PluginAction
         {
@@ -224,7 +221,7 @@ public class FileUtilityPlugin : PluginBase
     }
 
     // ── 睡眠测试（演示持续动画） ──
-    private static void RegisterSleepTest(IPluginHost host)
+    private void RegisterSleepTest(IPluginHost host)
     {
         host.RegisterAction(new PluginAction
         {

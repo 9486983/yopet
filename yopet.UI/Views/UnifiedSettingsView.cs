@@ -6,7 +6,6 @@ using Avalonia.Layout;
 using Avalonia.Media;
 using Avalonia.Platform.Storage;
 using Avalonia.Threading;
-using Lang.Avalonia;
 using TKCode.Arc;
 using yopet.Sdk;
 using yopet.UI.Components;
@@ -16,8 +15,8 @@ namespace yopet.UI.Views;
 /// <summary>统一设置中心，交互控件全部使用 Arc。</summary>
 public sealed class UnifiedSettingsView : UserControl
 {
-    private static string T(string key) =>
-        I18nManager.Instance.GetResource($"Localization.SettingPlugin.{key}");
+    private string T(string key) =>
+        _host.Localizer.Get($"Localization.SettingPlugin.{key}");
 
     private readonly IPluginHost _host;
     private readonly ArcDialogCard _card;
@@ -255,7 +254,7 @@ public sealed class UnifiedSettingsView : UserControl
     private (Control Control, Func<string?> Read) CreateInput(PluginConfigField field, string currentValue)
     {
         var description = string.IsNullOrWhiteSpace(field.Description) && field.IsRequired
-            ? I18nManager.Instance.GetResource("Localization.Dialogs.Required")
+            ? _host.Localizer.Get("Localization.Dialogs.Required")
             : field.Description;
 
         switch (field.Type)
@@ -394,7 +393,7 @@ public sealed class UnifiedSettingsView : UserControl
                 var presets = field.CronPresets ?? DefaultCronPresets();
                 var select = new TKCode.Arc.Select
                 {
-                    Label = I18nManager.Instance.GetResource("Localization.Dialogs.CronTemplate"),
+                    Label = _host.Localizer.Get("Localization.Dialogs.CronTemplate"),
                     ItemsSource = presets
                         .Select(option => new TKCode.Arc.SelectOption(option.Value, option.Label))
                         .ToArray(),
@@ -459,7 +458,7 @@ public sealed class UnifiedSettingsView : UserControl
         {
             if (field.IsRequired && string.IsNullOrWhiteSpace(values.GetValueOrDefault(field.Key)))
                 errors.Add(string.Format(
-                    I18nManager.Instance.GetResource("Localization.Dialogs.RequiredField"),
+                    _host.Localizer.Get("Localization.Dialogs.RequiredField"),
                     field.Label));
         }
 
