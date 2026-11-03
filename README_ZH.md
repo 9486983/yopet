@@ -60,9 +60,10 @@
 - 插件禁止自建定时器；自动查询、健康提醒、悬浮刷新、超时恢复、后台清理等全部走该全局调度器。
 
 ### 🧩 插件依赖注入
-- 插件通过宿主 DI 容器（`ActivatorUtilities`）构造，构造函数只接收一个 **`PluginContext`**，其中聚合了 `Logger`、`Localizer` 与按插件隔离的 `Scheduler`。
+- 插件通过宿主 DI 容器（`ActivatorUtilities`）构造，构造函数只接收一个 **`PluginContext`**，其中聚合了 `Logger`、`Localizer`、按插件隔离的 `Scheduler`、`Config`、`Dispatcher`、插件级 `Events` 与 `Host`。
 - 后续新增公共能力只需扩展 `PluginContext`，所有插件构造函数无需改动。
 - 任务 id 自动按插件加前缀，插件卸载时自动清理，热重载不再泄漏定时任务。
+- 插件级事件自动绑定插件名并在清理时反注册；配置键名保持原样，兼容已有插件数据。
 
 ### ⚙️ 设置功能（SettingPlugin）
 原设置窗口已移除，设置功能现由 **SettingPlugin** 提供（右键宠物 → ⚙️ 设置）：
@@ -97,7 +98,15 @@ yopet.sln
 ├── yopet.Core/           纯领域模型 + 接口（无 UI 依赖）
 │   ├── Models/           PetDefinition、AppConfig、事件模型
 │   └── Interfaces/       IConfigService、IPetdexService 等
-├── yopet.Sdk/            插件 SDK（IPlugin、PluginBase、宿主接口）
+├── yopet.Sdk/            插件 SDK（命名空间统一为 `yopet.Sdk`）
+│   ├── Interfaces/       IPlugin、IPluginHost、日志/本地化/调度/配置/事件接口
+│   ├── Hosting/          PluginBase、PluginContext、PluginAttribute
+│   ├── Configuration/    PluginConfig* 配置模型与回退实现
+│   ├── Events/           事件池与插件级事件作用域
+│   ├── Scheduling/       调度器回退实现
+│   ├── Logging/          日志回退实现
+│   ├── Localization/     本地化与回退实现
+│   └── UI/               动作、气泡/列表模型、动画、UI 调度回退
 ├── yopet.Services/       服务实现层
 │   ├── ConfigService.cs          JSON 配置持久化
 │   ├── PetdexService.cs          Petdex 宠物扫描/加载

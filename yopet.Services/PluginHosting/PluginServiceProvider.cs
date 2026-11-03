@@ -1,4 +1,5 @@
 using System.Collections.Concurrent;
+using yopet.Core.Interfaces;
 using yopet.Sdk;
 
 namespace yopet.Services.PluginHosting;
@@ -75,6 +76,7 @@ internal sealed class PluginServiceProvider : IServiceProvider, IDisposable
 {
     private readonly IServiceProvider _root;
     private readonly ScopedPluginScheduler _scheduler;
+    private readonly PluginEventScope _events;
     private readonly PluginContext _context;
 
     public PluginServiceProvider(
@@ -90,10 +92,24 @@ internal sealed class PluginServiceProvider : IServiceProvider, IDisposable
         var pluginName = pluginType.Name;
         var localizationPrefix = pluginType.Assembly.GetName().Name ?? pluginName;
 
+        var host = root.GetService(typeof(IPluginHost)) as IPluginHost;
+        var configService = root.GetService(typeof(IConfigService)) as IConfigService;
+        IPluginConfig config = configService != null
+            ? new PluginConfigAdapter(configService)
+            : NullPluginConfig.Instance;
+        IDispatcherService dispatcher = root.GetService(typeof(IDispatcherService)) as IDispatcherService
+                                        ?? NullDispatcherService.Instance;
+
+        _events = new PluginEventScope(host?.Events ?? new PluginEventPool(), pluginName);
+
         _context = new PluginContext(
             logger.For(pluginName),
             localizer.For($"Localization.{localizationPrefix}"),
-            _scheduler);
+            _scheduler,
+            config,
+            dispatcher,
+            _events,
+            host);
     }
 
     public object? GetService(Type serviceType)
@@ -102,8 +118,16 @@ internal sealed class PluginServiceProvider : IServiceProvider, IDisposable
         if (serviceType == typeof(IPluginLogger)) return _context.Logger;
         if (serviceType == typeof(ILocalizer)) return _context.Localizer;
         if (serviceType == typeof(IPluginScheduler)) return _scheduler;
+        if (serviceType == typeof(IPluginConfig)) return _context.Config;
+        if (serviceType == typeof(IDispatcherService)) return _context.Dispatcher;
+        if (serviceType == typeof(IPluginEvents)) return _context.Events;
+        if (serviceType == typeof(IPluginHost)) return _context.Host;
         return _root.GetService(serviceType);
     }
 
-    public void Dispose() => _scheduler.Dispose();
+    public void Dispose()
+    {
+        _scheduler.Dispose();
+        _events.Dispose();
+    }
 }

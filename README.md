@@ -60,9 +60,10 @@ Hot-loadable plugin system with a rich SDK. Plugins are loaded from `plugins/` d
 - Plugins must not create their own timers; auto-query, reminders, hover refresh, timeouts, and cleanup jobs all run through this global scheduler.
 
 ### 🧩 Plugin Dependency Injection
-- Plugins are constructed through the host DI container (`ActivatorUtilities`) and receive a single **`PluginContext`** that aggregates `Logger`, `Localizer`, and an isolated `Scheduler`.
+- Plugins are constructed through the host DI container (`ActivatorUtilities`) and receive a single **`PluginContext`** that aggregates `Logger`, `Localizer`, an isolated `Scheduler`, `Config`, `Dispatcher`, plugin-scoped `Events`, and `Host`.
 - Adding a future shared service only requires extending `PluginContext`; plugin constructors stay unchanged.
 - Job IDs are automatically prefixed per plugin and cleaned up on unload, so hot reload no longer leaks scheduled tasks.
+- Plugin-scoped events are bound to the plugin name and unregistered automatically on cleanup; config keys keep their existing names for backward compatibility.
 
 ### ⚙️ Settings (SettingPlugin)
 The legacy settings window was removed — settings now live in the **SettingPlugin** (right-click pet → ⚙️ Settings):
@@ -97,7 +98,15 @@ yopet.sln
 ├── yopet.Core/           Domain models + interfaces (zero UI dependency)
 │   ├── Models/           PetDefinition, AppConfig, events
 │   └── Interfaces/       IConfigService, IPetdexService, etc.
-├── yopet.Sdk/            Plugin SDK (IPlugin, PluginBase, host interfaces)
+├── yopet.Sdk/            Plugin SDK (namespace stays `yopet.Sdk`)
+│   ├── Interfaces/       IPlugin, IPluginHost, logger/localizer/scheduler/config/events
+│   ├── Hosting/          PluginBase, PluginContext, PluginAttribute
+│   ├── Configuration/    PluginConfig* models + config fallbacks
+│   ├── Events/           Event pool, plugin-scoped events
+│   ├── Scheduling/       Scheduler fallbacks
+│   ├── Logging/          Logger fallbacks
+│   ├── Localization/     Localizer + fallbacks
+│   └── UI/               Actions, bubble/list models, animation, dispatcher fallback
 ├── yopet.Services/       Service implementations
 │   ├── ConfigService.cs          JSON config persistence
 │   ├── PetdexService.cs          Petdex scanning/loading

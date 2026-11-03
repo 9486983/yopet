@@ -19,21 +19,18 @@
 ## 1. 项目结构速览
 
 ```
-yopet.Sdk/              ← NuGet 引用：yopet.Core
-├── IPlugin.cs           插件入口接口
-├── PluginBase.cs        插件基类（推荐继承）
-├── PluginAttribute.cs   元数据特性
-├── IPluginHost.cs       宿主交互接口（核心 API）
-├── IPluginLogger.cs     日志接口
-├── PluginContext.cs     插件 DI 上下文（Logger / Localizer / Scheduler）
-├── IPluginScheduler.cs  定时任务接口（全局 Quartz.NET 调度器）
-├── ISession.cs          多步会话接口
-├── PluginAction.cs      动作描述符
-├── PluginConfig*.cs     配置系统
-├── PetAnimation.cs      动画枚举
-├── ThoughtMessage.cs    气泡消息
-├── ListDialog*.cs       列表弹窗
-└── ListColumn.cs / ListRowAction.cs / ListToolbarAction.cs
+yopet.Sdk/              ← NuGet 引用：yopet.Core（命名空间统一为 yopet.Sdk）
+├── Interfaces/           IPlugin、IPluginHost、IPluginLogger、ILocalizer、IPluginScheduler
+│                         IPluginConfig、IPluginEvents、ISession 等接口
+├── Hosting/              PluginBase、PluginContext、PluginAttribute
+├── Configuration/        PluginConfig* 配置模型、HostPluginConfig、NullPluginConfig
+├── Events/               PluginEventPool、PluginEventScope、NullPluginEvents
+├── Scheduling/           NullPluginScheduler
+├── Logging/              NullPluginLogger
+├── Localization/         Localization、NullLocalizer
+├── UI/                   PluginAction、ThoughtMessage、PetAnimation、List* 弹窗模型
+│                         NullDispatcherService
+└── yopet.Sdk.csproj
 ```
 
 **依赖链**: 插件项目引用 `yopet.Sdk` → `yopet.Sdk` 内部引用 `yopet.Core`（仅使用 `ItemType`、`PetDefinition` 等模型）。
@@ -104,8 +101,31 @@ public class MyPlugin : PluginBase
 }
 ```
 
-> **插件依赖注入**：宿主使用 `ActivatorUtilities` 创建插件，`PluginContext` 已按插件自动绑定专属 `Logger`、`Localizer` 与隔离后的 `Scheduler`。
-> 插件也可在构造函数中追加宿主已注册的其他服务（如 `IConfigService`）；未声明 DI 构造函数的旧插件仍可通过 `base.InitializeAsync(host)` 兼容运行。
+> **插件依赖注入**：宿主使用 `ActivatorUtilities` 创建插件，`PluginContext` 已按插件自动绑定专属 `Logger`、`Localizer`、隔离后的 `Scheduler`、`Config`、`Dispatcher`、插件级 `Events` 与 `Host`。
+> 插件也可在构造函数中追加宿主已注册的其他服务（如 `IPetdexService`）；未声明 DI 构造函数的旧插件仍可通过 `base.InitializeAsync(host)` 兼容运行。
+
+### 2.2.1 PluginContext 常用能力
+
+| 成员 | 说明 |
+|------|------|
+| `Logger` | 插件专属日志，自动带插件类型名 |
+| `Localizer` / `T(key)` | 插件专属本地化，自动绑定 `Localization.<程序集>` 前缀 |
+| `Scheduler` | 插件隔离的定时任务，jobId 自动加插件前缀，卸载时自动清理 |
+| `Config` | `Get` / `Set` / `SetMany`；键名保持原样（不加前缀），`PluginBase` 另提供 `GetConfig`、`SetConfig`、`SaveConfigValues` |
+| `Dispatcher` / `Post(action)` | 将回调投递到 UI 线程 |
+| `Events` | 插件级事件，自动绑定插件名，卸载时自动反注册 |
+| `Host` | 宿主接口；DI 插件在构造后即可使用，旧插件在 `InitializeAsync` 后可用 |
+
+```csharp
+public override async Task InitializeAsync(IPluginHost host)
+{
+    await base.InitializeAsync(host);
+
+    var apiKey = GetConfig("api_key");
+    Events.Register(EventNames.PetClicked, new Action(() =>
+        Post(() => Host?.ShowThought("Hello", apiKey ?? "未配置"))));
+}
+```
 
 ### 2.3 构建与部署
 
@@ -626,7 +646,7 @@ public class MyPlugin : PluginBase { }
 5. **会话 Context 线程安全** — `ISession.Context` 是 `ConcurrentDictionary`，可在异步回调中安全读写
 6. **检查 `token.ThrowIfCancellationRequested()`** — 在 `RunWithAnimation` 的循环中定期检查，支持用户取消
 7. **插件路径** — 插件 DLL 位于 `AppDomain.CurrentDomain.BaseDirectory/plugins/` 下
-8. **使用构造函数注入 `PluginContext`** — 直接使用 `Logger` / `Localizer` / `Scheduler` 基类属性，不要重复从 host 初始化；新增公共依赖只扩展 `PluginContext`
+8. **使用构造函数注入 `PluginContext`** — 直接使用 `Logger` / `Localizer` / `Scheduler` / `Config` / `Dispatcher` / `Events` 基类属性，不要重复从 host 初始化；新增公共依赖只扩展 `PluginContext`
 
 ---
 

@@ -19,21 +19,18 @@ Use this guide when developing, modifying, or understanding plugins for the yope
 ## 1. Project Structure Overview
 
 ```
-yopet.Sdk/              ← NuGet reference: yopet.Core
-├── IPlugin.cs           Plugin entry interface
-├── PluginBase.cs        Plugin base class (recommended to inherit)
-├── PluginAttribute.cs   Metadata attribute
-├── IPluginHost.cs       Host interaction interface (core API)
-├── IPluginLogger.cs     Logging interface
-├── PluginContext.cs     Plugin DI context (Logger / Localizer / Scheduler)
-├── IPluginScheduler.cs  Scheduled task interface (global Quartz.NET scheduler)
-├── ISession.cs          Multi-step session interface
-├── PluginAction.cs      Action descriptor
-├── PluginConfig*.cs     Configuration system
-├── PetAnimation.cs      Animation enum
-├── ThoughtMessage.cs    Bubble message
-├── ListDialog*.cs       List dialog
-└── ListColumn.cs / ListRowAction.cs / ListToolbarAction.cs
+yopet.Sdk/              ← NuGet reference: yopet.Core (namespace stays yopet.Sdk)
+├── Interfaces/           IPlugin, IPluginHost, IPluginLogger, ILocalizer, IPluginScheduler
+│                         IPluginConfig, IPluginEvents, ISession, etc.
+├── Hosting/              PluginBase, PluginContext, PluginAttribute
+├── Configuration/        PluginConfig* models, HostPluginConfig, NullPluginConfig
+├── Events/               PluginEventPool, PluginEventScope, NullPluginEvents
+├── Scheduling/           NullPluginScheduler
+├── Logging/              NullPluginLogger
+├── Localization/         Localization, NullLocalizer
+├── UI/                   PluginAction, ThoughtMessage, PetAnimation, List* dialog models
+│                         NullDispatcherService
+└── yopet.Sdk.csproj
 ```
 
 **Dependency chain**: Plugin project references `yopet.Sdk` → `yopet.Sdk` internally references `yopet.Core` (only uses `ItemType`, `PetDefinition`, etc.).
@@ -104,8 +101,31 @@ public class MyPlugin : PluginBase
 }
 ```
 
-> **Plugin dependency injection**: the host creates plugins with `ActivatorUtilities`. `PluginContext` already binds a plugin-specific `Logger`, `Localizer`, and an isolated `Scheduler`.
-> Plugins may append other host-registered services to their constructor (e.g. `IConfigService`). Legacy plugins without a DI constructor still work through `base.InitializeAsync(host)`.
+> **Plugin dependency injection**: the host creates plugins with `ActivatorUtilities`. `PluginContext` already binds a plugin-specific `Logger`, `Localizer`, isolated `Scheduler`, `Config`, `Dispatcher`, plugin-scoped `Events`, and `Host`.
+> Plugins may append other host-registered services to their constructor (e.g. `IPetdexService`). Legacy plugins without a DI constructor still work through `base.InitializeAsync(host)`.
+
+### 2.2.1 Common PluginContext Members
+
+| Member | Purpose |
+|--------|---------|
+| `Logger` | Plugin-specific logger with the plugin type name |
+| `Localizer` / `T(key)` | Plugin-specific localization bound to `Localization.<assembly>` |
+| `Scheduler` | Plugin-isolated scheduler; job IDs are prefixed and cleaned up on unload |
+| `Config` | `Get` / `Set` / `SetMany`; keys keep their original names (no prefix). `PluginBase` also exposes `GetConfig`, `SetConfig`, `SaveConfigValues` |
+| `Dispatcher` / `Post(action)` | Marshal callbacks onto the UI thread |
+| `Events` | Plugin-scoped events; plugin name is bound automatically and unregistered on cleanup |
+| `Host` | Host API; available after construction for DI plugins, after `InitializeAsync` for legacy plugins |
+
+```csharp
+public override async Task InitializeAsync(IPluginHost host)
+{
+    await base.InitializeAsync(host);
+
+    var apiKey = GetConfig("api_key");
+    Events.Register(EventNames.PetClicked, new Action(() =>
+        Post(() => Host?.ShowThought("Hello", apiKey ?? "not configured"))));
+}
+```
 
 ### 2.3 Build & Deploy
 
@@ -626,7 +646,7 @@ The project includes several plugins for reference:
 5. **Session Context is thread-safe** — `ISession.Context` is a `ConcurrentDictionary`, safe to read/write from async callbacks
 6. **Check `token.ThrowIfCancellationRequested()`** — periodically in `RunWithAnimation` loops to support user cancellation
 7. **Plugin path** — plugin DLLs are located at `AppDomain.CurrentDomain.BaseDirectory/plugins/`
-8. **Inject `PluginContext` through the constructor** — use the base `Logger` / `Localizer` / `Scheduler` properties directly instead of re-initializing them from the host; extend `PluginContext` for future shared services
+8. **Inject `PluginContext` through the constructor** — use the base `Logger` / `Localizer` / `Scheduler` / `Config` / `Dispatcher` / `Events` properties directly instead of re-initializing them from the host; extend `PluginContext` for future shared services
 
 ---
 

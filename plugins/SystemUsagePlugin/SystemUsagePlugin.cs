@@ -24,36 +24,28 @@ public class SystemUsagePlugin : PluginBase
     public override string Name => T("Name");
 
     private SystemUsageService? _service;
-    private IPluginHost? _host;
 
     private const string RefreshJobId = "system_usage_refresh";
 
     /// <summary>悬浮期间气泡刷新间隔</summary>
     private static readonly TimeSpan RefreshInterval = TimeSpan.FromSeconds(1.5);
 
-    public override Task InitializeAsync(IPluginHost host)
+    public override async Task InitializeAsync(IPluginHost host)
     {
-        _host = host;
+        await base.InitializeAsync(host);
         _service = new SystemUsageService();
 
-        // 订阅悬浮进入/离开事件（事件池统一注册，主程序只负责触发）
-        host.Events.Register(Name, EventNames.PetHoverEntered, new Action(OnHoverEntered));
-        host.Events.Register(Name, EventNames.PetHoverExited, new Action(OnHoverExited));
-
-        return Task.CompletedTask;
+        // 插件级事件池会自动绑定插件名，并在卸载时自动反注册
+        Events.Register(EventNames.PetHoverEntered, new Action(OnHoverEntered));
+        Events.Register(EventNames.PetHoverExited, new Action(OnHoverExited));
     }
 
     public override Task CleanupAsync()
     {
-        if (Host is { } host)
-        {
-            host.Events.Unregister(Name, EventNames.PetHoverEntered);
-            host.Events.Unregister(Name, EventNames.PetHoverExited);
-            Scheduler.Unregister(RefreshJobId);
-        }
+        Scheduler.Unregister(RefreshJobId);
         _service?.Dispose();
         _service = null;
-        return Task.CompletedTask;
+        return base.CleanupAsync();
     }
 
     /// <summary>鼠标进入宠物：立即展示一次并启动周期刷新</summary>
@@ -77,12 +69,12 @@ public class SystemUsagePlugin : PluginBase
     /// <summary>采集系统占用并通过气泡组件展示</summary>
     private void Refresh()
     {
-        if (_service == null || _host == null) return;
+        if (_service == null || Host == null) return;
 
         try
         {
             var (cpu, memPercent, memTotal, memUsed) = _service.Read();
-            _host.ShowThought(Name, string.Format(T("Format"),
+            Host.ShowThought(Name, string.Format(T("Format"),
                 cpu.ToString("F1"),
                 memPercent.ToString("F1"),
                 FormatBytes(memUsed),

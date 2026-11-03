@@ -37,7 +37,7 @@
 
 ## 三、SDK 需要修改的清单
 
-### 1. `yopet.Sdk/IPluginHost.cs` — 新增一个方法
+### 1. `yopet.Sdk/Interfaces/IPluginHost.cs` — 新增一个方法
 
 ```csharp
 // ── 插件自定义页面 ──
