@@ -389,6 +389,27 @@ var confirmed = await host.ShowConfirmDialog("Confirm Delete", "Are you sure?");
 if (confirmed) { /* perform delete */ }
 ```
 
+**Choice / input dialog**:
+```csharp
+var selected = await host.ShowPromptDialog(new PromptDialogConfig
+{
+    Title = "Choose an action",
+    Description = "Select options or type a custom answer.",
+    Options =
+    [
+        new PromptOption { Label = "Allow once", Kind = PromptOptionKind.Primary },
+        new PromptOption { Label = "Reject", Kind = PromptOptionKind.Danger },
+    ],
+    AllowMultiple = false,
+    AllowCustom = true,
+    CustomLabel = "Custom answer",
+    ConfirmLabel = "Submit",
+    CancelLabel = "Cancel",
+});
+if (selected == null) return;  // user cancelled
+// selected contains the chosen option or custom input
+```
+
 ### 3.7 List Dialog
 
 A powerful data list component supporting both table and card grid layouts.

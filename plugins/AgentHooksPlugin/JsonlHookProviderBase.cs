@@ -128,6 +128,9 @@ public abstract class JsonlHookProviderBase : HookProviderBase
     /// <summary>日志文件与监听器就绪后调用，子类可在此安装写入端</summary>
     protected virtual void OnStarted(IPluginHost host) { }
 
+    protected virtual bool HandleInteractiveEvent(IPluginHost host, string eventId, string project, string extra)
+        => false;
+
     private void OnLogChanged(IPluginHost host)
     {
         if (host.GetConfig($"{ConfigPrefix}{KeyEnabled}") == "false") return;
@@ -162,6 +165,9 @@ public abstract class JsonlHookProviderBase : HookProviderBase
         var project = parts.Length > 2 ? parts[2] : "";
         var extra = parts.Length > 3 ? parts[3] : "";
         var maxLen = int.TryParse(host.GetConfig($"{ConfigPrefix}{KeyMaxLength}"), out var m) ? m : 150;
+
+        if (HandleInteractiveEvent(host, eventId, project, extra))
+            return;
 
         switch (eventId)
         {

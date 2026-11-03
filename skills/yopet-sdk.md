@@ -389,6 +389,27 @@ var confirmed = await host.ShowConfirmDialog("确认删除", "确定要删除吗
 if (confirmed) { /* 执行删除 */ }
 ```
 
+**选项/输入框**:
+```csharp
+var selected = await host.ShowPromptDialog(new PromptDialogConfig
+{
+    Title = "选择一个操作",
+    Description = "可多选，或输入自定义回答。",
+    Options =
+    [
+        new PromptOption { Label = "允许一次", Kind = PromptOptionKind.Primary },
+        new PromptOption { Label = "拒绝", Kind = PromptOptionKind.Danger },
+    ],
+    AllowMultiple = false,
+    AllowCustom = true,
+    CustomLabel = "自定义回答",
+    ConfirmLabel = "提交",
+    CancelLabel = "取消",
+});
+if (selected == null) return;  // 用户取消
+// selected 为选中的选项或自定义输入
+```
+
 ### 3.7 列表弹窗
 
 强大的数据列表组件，支持表格和卡片网格两种布局。

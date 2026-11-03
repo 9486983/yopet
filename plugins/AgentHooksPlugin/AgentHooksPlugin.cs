@@ -7,8 +7,8 @@ namespace AgentHooksPlugin;
 /// Agent Hooks 监测插件 —— 统一管理所有 AI 助手（Reasonix、Claude Code 等）的 Hooks 监测。
 /// 每种助手由独立的 HookProvider 实现，可在设置列表中查看和编辑配置。
 /// </summary>
-[Plugin("Agent 钩子", Version = "1.0.0",
-    Description = "统一管理所有 AI 助手的 Hooks 监测：响应内容、命令执行、文件更改等")]
+[Plugin("Agent 钩子", Version = "1.1.0",
+    Description = "统一管理所有 AI 助手的 Hooks 监测：响应内容、命令执行、文件更改，以及 opencode 权限/提问确认")]
 public class AgentHooksPlugin : PluginBase
 {
     public AgentHooksPlugin(PluginContext context)

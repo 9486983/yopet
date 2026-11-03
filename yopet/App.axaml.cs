@@ -228,6 +228,11 @@ public partial class App : Application
             pluginHost.OnShowConfirmDialog = async (title, text) =>
                 await Views.ConfirmDialog.ShowAsync(petWindow, title, text);
 
+            // ── 连接插件选项/输入对话框回调 ──
+            pluginHost.OnShowPromptDialog = config =>
+                Avalonia.Threading.Dispatcher.UIThread.InvokeAsync(
+                    () => Views.PromptDialog.ShowAsync(petWindow, config));
+
             // ── 连接插件列表弹窗回调 ──
             pluginHost.OnShowListDialog = async config =>
                 await Views.ListDialog.ShowAsync(petWindow, config);

@@ -82,6 +82,9 @@ public class PluginHostImpl : IPluginHost, IPluginStateResetter
     /// <summary>确认框回调</summary>
     public Func<string, string, Task<bool>>? OnShowConfirmDialog { get; set; }
 
+    /// <summary>选项/输入对话框回调</summary>
+    public Func<PromptDialogConfig, Task<IReadOnlyList<string>?>>? OnShowPromptDialog { get; set; }
+
     /// <summary>列表弹窗回调</summary>
     public Func<ListDialogConfig, Task>? OnShowListDialog { get; set; }
 
@@ -322,6 +325,13 @@ public class PluginHostImpl : IPluginHost, IPluginStateResetter
         if (OnShowConfirmDialog != null)
             return OnShowConfirmDialog(title, text);
         return Task.FromResult(false);
+    }
+
+    public Task<IReadOnlyList<string>?> ShowPromptDialog(PromptDialogConfig config)
+    {
+        if (OnShowPromptDialog != null)
+            return OnShowPromptDialog(config);
+        return Task.FromResult<IReadOnlyList<string>?>(null);
     }
 
     public Task ShowListDialog(ListDialogConfig config)

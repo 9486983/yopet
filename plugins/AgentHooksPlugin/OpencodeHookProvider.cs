@@ -1,13 +1,11 @@
-﻿using System.Text;
+﻿using System.Collections.Concurrent;
+using System.Text;
+using System.Text.Json;
+using Avalonia.Threading;
 using yopet.Sdk;
 
 namespace AgentHooksPlugin;
 
-/// <summary>
-/// opencode Hook Provider —— 自动安装 ~/.config/opencode/plugin/yopet-hooks.js，
-/// 监听该插件写入的 ~/.config/opencode/yopet-hooks.jsonl。
-/// 使用 FileSystemWatcher 即时响应，无需轮询。
-/// </summary>
 public class OpencodeHookProvider : JsonlHookProviderBase
 {
     public override string Id => "opencode";
@@ -25,10 +23,22 @@ public class OpencodeHookProvider : JsonlHookProviderBase
 
     private static string PluginDir => Path.Combine(ConfigRoot, "plugin");
     private static string PluginFile => Path.Combine(PluginDir, "yopet-hooks.js");
+    private static string ReplyFile => Path.Combine(ConfigRoot, "yopet-hooks-replies.jsonl");
 
     protected override string LogFilePath => Path.Combine(ConfigRoot, "yopet-hooks.jsonl");
 
-    /// <summary>写入 opencode 插件，使其将事件追加到 yopet-hooks.jsonl</summary>
+    private readonly ConcurrentDictionary<string, string> _pending = new(StringComparer.Ordinal);
+    private readonly object _replyLock = new();
+
+    private sealed record OpencodeQuestion(
+        string Header,
+        string Text,
+        IReadOnlyList<OpencodeOption> Options,
+        bool Multiple,
+        bool Custom);
+
+    private sealed record OpencodeOption(string Label, string Description);
+
     protected override void OnStarted(IPluginHost host)
     {
         try
@@ -38,7 +48,8 @@ public class OpencodeHookProvider : JsonlHookProviderBase
             if (File.Exists(PluginFile))
             {
                 var existing = File.ReadAllText(PluginFile, Encoding.UTF8);
-                if (existing == PluginScriptContent) return;
+                if (existing == PluginScriptContent)
+                    return;
             }
 
             File.WriteAllText(PluginFile, PluginScriptContent, new UTF8Encoding(false));
@@ -50,15 +61,337 @@ public class OpencodeHookProvider : JsonlHookProviderBase
         }
     }
 
-    /// <summary>
-    /// 嵌入的 opencode 插件脚本。
-    /// 订阅会话、空闲与工具事件，追加到 yopet-hooks.jsonl：
-    /// timestamp \t event \t project \t extra
-    /// </summary>
+    public override void Stop()
+    {
+        foreach (var pair in _pending)
+            WriteReply(pair.Key, pair.Value, "reject");
+
+        _pending.Clear();
+        base.Stop();
+    }
+
+    protected override bool HandleInteractiveEvent(
+        IPluginHost host,
+        string eventId,
+        string project,
+        string extra)
+    {
+        if (eventId is not ("permission_asked" or "question_asked"))
+            return false;
+
+        if (!_isRunning)
+            return true;
+
+        switch (eventId)
+        {
+            case "permission_asked":
+                _ = HandlePermissionAsync(host, project, extra);
+                break;
+            case "question_asked":
+                _ = HandleQuestionAsync(host, project, extra);
+                break;
+        }
+
+        return true;
+    }
+
+    private async Task HandlePermissionAsync(IPluginHost host, string project, string extra)
+    {
+        string? requestId = null;
+
+        try
+        {
+            using var document = JsonDocument.Parse(extra);
+            var root = document.RootElement;
+            requestId = GetString(root, "id");
+            if (string.IsNullOrWhiteSpace(requestId))
+                return;
+
+            _pending[requestId] = "permission";
+
+            var allowOnce = T("OpencodeAllowOnce");
+            var allowAlways = T("OpencodeAllowAlways");
+            var reject = T("OpencodeReject");
+
+            var prompt = new PromptDialogConfig
+            {
+                Title = T("OpencodePermissionTitle"),
+                Description = BuildPermissionDetail(root),
+                ConfirmLabel = T("OpencodeConfirm"),
+                CancelLabel = reject,
+                ValidationMessage = T("OpencodeRequired"),
+                Options =
+                [
+                    new PromptOption
+                    {
+                        Label = allowOnce,
+                        Description = T("OpencodeAllowOnceDesc"),
+                        Kind = PromptOptionKind.Primary,
+                    },
+                    new PromptOption
+                    {
+                        Label = allowAlways,
+                        Description = T("OpencodeAllowAlwaysDesc"),
+                    },
+                    new PromptOption
+                    {
+                        Label = reject,
+                        Description = T("OpencodeRejectDesc"),
+                        Kind = PromptOptionKind.Danger,
+                    },
+                ],
+            };
+
+            Logger?.Info($"[OpencodeHook] permission prompt {project} {requestId}");
+            var selected = await ShowOnUiThreadAsync(host, prompt);
+            if (!_isRunning)
+                return;
+
+            var reply = selected is { Count: > 0 } && selected[0] == allowAlways
+                ? "always"
+                : selected is { Count: > 0 } && selected[0] == allowOnce
+                    ? "once"
+                    : "reject";
+
+            WriteReply(requestId, "permission", reply == "reject" ? "reject" : "reply", reply);
+        }
+        catch (Exception ex)
+        {
+            Logger?.Warn($"[OpencodeHook] permission prompt failed: {ex.Message}");
+            if (requestId != null)
+                WriteReply(requestId, "permission", "reject");
+        }
+        finally
+        {
+            if (requestId != null)
+                _pending.TryRemove(requestId, out _);
+        }
+    }
+
+    private async Task HandleQuestionAsync(IPluginHost host, string project, string extra)
+    {
+        string? requestId = null;
+
+        try
+        {
+            using var document = JsonDocument.Parse(extra);
+            var root = document.RootElement;
+            requestId = GetString(root, "id");
+            if (string.IsNullOrWhiteSpace(requestId))
+                return;
+
+            var questions = ParseQuestions(root);
+            if (questions.Count == 0)
+            {
+                WriteReply(requestId, "question", "reject");
+                return;
+            }
+
+            _pending[requestId] = "question";
+            var answers = new List<List<string>>();
+
+            Logger?.Info($"[OpencodeHook] question prompt {project} {requestId} ({questions.Count})");
+
+            foreach (var question in questions)
+            {
+                var prompt = new PromptDialogConfig
+                {
+                    Title = string.IsNullOrWhiteSpace(question.Header)
+                        ? T("OpencodeQuestionTitle")
+                        : question.Header,
+                    Description = question.Text,
+                    Options = question.Options
+                        .Select(option => new PromptOption
+                        {
+                            Label = option.Label,
+                            Description = option.Description,
+                        })
+                        .ToList(),
+                    AllowMultiple = question.Multiple,
+                    AllowCustom = question.Custom,
+                    CustomLabel = T("OpencodeCustomLabel"),
+                    CustomPlaceholder = T("OpencodeCustomPlaceholder"),
+                    ConfirmLabel = T("OpencodeConfirm"),
+                    CancelLabel = T("OpencodeReject"),
+                    ValidationMessage = T("OpencodeRequired"),
+                };
+
+                var selected = await ShowOnUiThreadAsync(host, prompt);
+                if (!_isRunning)
+                    return;
+
+                if (selected is not { Count: > 0 })
+                {
+                    WriteReply(requestId, "question", "reject");
+                    return;
+                }
+
+                answers.Add(selected.ToList());
+            }
+
+            WriteReply(requestId, "question", "reply", answers: answers);
+        }
+        catch (Exception ex)
+        {
+            Logger?.Warn($"[OpencodeHook] question prompt failed: {ex.Message}");
+            if (requestId != null)
+                WriteReply(requestId, "question", "reject");
+        }
+        finally
+        {
+            if (requestId != null)
+                _pending.TryRemove(requestId, out _);
+        }
+    }
+
+    private static async Task<IReadOnlyList<string>?> ShowOnUiThreadAsync(
+        IPluginHost host,
+        PromptDialogConfig prompt)
+    {
+        IReadOnlyList<string>? result = null;
+        await Dispatcher.UIThread.InvokeAsync(async () =>
+        {
+            result = await host.ShowPromptDialog(prompt);
+        });
+        return result;
+    }
+
+    private void WriteReply(
+        string requestId,
+        string kind,
+        string action,
+        string? reply = null,
+        IReadOnlyList<IReadOnlyList<string>>? answers = null)
+    {
+        var payload = new Dictionary<string, object?>
+        {
+            ["id"] = requestId,
+            ["kind"] = kind,
+            ["action"] = action,
+        };
+
+        if (!string.IsNullOrEmpty(reply))
+            payload["reply"] = reply;
+        if (answers != null)
+            payload["answers"] = answers;
+
+        var line = JsonSerializer.Serialize(payload);
+
+        lock (_replyLock)
+        {
+            try
+            {
+                Directory.CreateDirectory(ConfigRoot);
+                File.AppendAllText(ReplyFile, line + "\n", new UTF8Encoding(false));
+            }
+            catch (Exception ex)
+            {
+                Logger?.Warn($"[OpencodeHook] write reply failed: {ex.Message}");
+            }
+        }
+    }
+
+    private static List<OpencodeQuestion> ParseQuestions(JsonElement root)
+    {
+        var questions = new List<OpencodeQuestion>();
+
+        if (!root.TryGetProperty("questions", out var items) || items.ValueKind != JsonValueKind.Array)
+            return questions;
+
+        foreach (var item in items.EnumerateArray())
+        {
+            var options = new List<OpencodeOption>();
+            if (item.TryGetProperty("options", out var optionItems) && optionItems.ValueKind == JsonValueKind.Array)
+            {
+                foreach (var option in optionItems.EnumerateArray())
+                {
+                    options.Add(new OpencodeOption(
+                        GetString(option, "label"),
+                        GetString(option, "description")));
+                }
+            }
+
+            var multiple = item.TryGetProperty("multiple", out var multipleValue)
+                && multipleValue.ValueKind == JsonValueKind.True;
+            var custom = !item.TryGetProperty("custom", out var customValue)
+                || customValue.ValueKind != JsonValueKind.False;
+
+            questions.Add(new OpencodeQuestion(
+                GetString(item, "header"),
+                GetString(item, "question"),
+                options,
+                multiple,
+                custom || options.Count == 0));
+        }
+
+        return questions;
+    }
+
+    private static string BuildPermissionDetail(JsonElement root)
+    {
+        var parts = new List<string>();
+        var permission = GetString(root, "permission");
+        if (!string.IsNullOrWhiteSpace(permission))
+            parts.Add(permission);
+
+        var patterns = GetStringArray(root, "patterns");
+        if (patterns.Count > 0)
+            parts.Add(string.Join("\n", patterns));
+
+        var metadataKeys = new[] { "command", "filePath", "path", "url", "description", "title" };
+        var metadataShown = false;
+
+        if (root.TryGetProperty("metadata", out var metadata) && metadata.ValueKind == JsonValueKind.Object)
+        {
+            foreach (var key in metadataKeys)
+            {
+                if (!metadata.TryGetProperty(key, out var value) || value.ValueKind != JsonValueKind.String)
+                    continue;
+
+                var text = value.GetString();
+                if (string.IsNullOrWhiteSpace(text))
+                    continue;
+
+                parts.Add(text);
+                metadataShown = true;
+            }
+
+            if (!metadataShown)
+                parts.Add(metadata.GetRawText());
+        }
+
+        var detail = string.Join("\n", parts);
+        return detail.Length > 1200 ? detail[..1200] + "…" : detail;
+    }
+
+    private static string GetString(JsonElement element, string name)
+        => element.TryGetProperty(name, out var value) && value.ValueKind == JsonValueKind.String
+            ? value.GetString() ?? ""
+            : "";
+
+    private static List<string> GetStringArray(JsonElement element, string name)
+    {
+        var values = new List<string>();
+        if (!element.TryGetProperty(name, out var array) || array.ValueKind != JsonValueKind.Array)
+            return values;
+
+        foreach (var item in array.EnumerateArray())
+        {
+            if (item.ValueKind == JsonValueKind.String)
+            {
+                var value = item.GetString();
+                if (!string.IsNullOrWhiteSpace(value))
+                    values.Add(value);
+            }
+        }
+
+        return values;
+    }
+
     private const string PluginScriptContent = """
-        // yopet-opencode-hook v2
-        // Installed by the yopet AgentHooksPlugin. Writes agent events to yopet-hooks.jsonl.
-        import { appendFile, mkdir } from "node:fs/promises"
+        // yopet-opencode-hook v3
+        // Installed by the yopet AgentHooksPlugin. Writes agent events and reads yopet prompt replies.
+        import { appendFile, mkdir, readFile } from "node:fs/promises"
         import { homedir } from "node:os"
         import { join } from "node:path"
 
@@ -66,6 +399,7 @@ public class OpencodeHookProvider : JsonlHookProviderBase
           ? join(process.env.XDG_CONFIG_HOME, "opencode")
           : join(homedir(), ".config", "opencode")
         const logFile = join(configRoot, "yopet-hooks.jsonl")
+        const replyFile = join(configRoot, "yopet-hooks-replies.jsonl")
 
         const clean = (value) => String(value ?? "").replace(/[\t\r\n]+/g, " ").trim()
 
@@ -75,6 +409,10 @@ public class OpencodeHookProvider : JsonlHookProviderBase
             const line = [Date.now(), event, clean(project), clean(extra)].join("\t") + "\n"
             await appendFile(logFile, line, "utf8")
           } catch {}
+        }
+
+        async function emitJson(event, project, payload) {
+          await emit(event, project, JSON.stringify(payload ?? {}))
         }
 
         async function lastAssistantText(client, sessionID) {
@@ -97,9 +435,142 @@ public class OpencodeHookProvider : JsonlHookProviderBase
           return ""
         }
 
-        export const YopetHooks = async ({ client, directory }) => {
+        async function readReply(id) {
+          try {
+            const text = await readFile(replyFile, "utf8")
+            for (const line of text.split("\n")) {
+              if (!line.trim()) continue
+              try {
+                const value = JSON.parse(line)
+                if (value?.id === id) return value
+              } catch {}
+            }
+          } catch {}
+          return null
+        }
+
+        async function waitForReply(id, timeoutMs) {
+          const started = Date.now()
+          while (Date.now() - started < timeoutMs) {
+            const reply = await readReply(id)
+            if (reply) return reply
+            await new Promise((resolve) => setTimeout(resolve, 250))
+          }
+          return null
+        }
+
+        async function postJson(serverUrl, directory, path, body) {
+          const headers = { "content-type": "application/json" }
+          if (directory) headers["x-opencode-directory"] = encodeURIComponent(directory)
+          const response = await fetch(new URL(path, serverUrl), {
+            method: "POST",
+            headers,
+            body: JSON.stringify(body),
+          })
+          if (!response.ok) throw new Error("HTTP " + response.status)
+          return response
+        }
+
+        async function replyPermission(client, serverUrl, directory, request) {
+          const reply = request?.reply === "always" ? "always" : request?.reply === "once" ? "once" : "reject"
+
+          if (serverUrl) {
+            try {
+              await postJson(serverUrl, directory, `/permission/${encodeURIComponent(request.id)}/reply`, { reply })
+              return
+            } catch {}
+          }
+
+          try {
+            await client.permission.reply({ requestID: request.id, reply })
+            return
+          } catch {}
+
+          if (serverUrl && request.sessionID) {
+            try {
+              await postJson(serverUrl, directory, `/session/${encodeURIComponent(request.sessionID)}/permissions/${encodeURIComponent(request.id)}`, { response: reply })
+            } catch {}
+          }
+        }
+
+        async function replyQuestion(client, serverUrl, directory, request) {
+          const answers = request?.answers ?? []
+
+          if (serverUrl) {
+            try {
+              await postJson(serverUrl, directory, `/question/${encodeURIComponent(request.id)}/reply`, { answers })
+              return
+            } catch {}
+          }
+
+          try {
+            await client.question.reply({ requestID: request.id, answers })
+            return
+          } catch {}
+
+          if (serverUrl && request.sessionID) {
+            try {
+              await postJson(serverUrl, directory, `/api/session/${encodeURIComponent(request.sessionID)}/question/${encodeURIComponent(request.id)}/reply`, { answers })
+            } catch {}
+          }
+        }
+
+        async function rejectQuestion(client, serverUrl, directory, request) {
+          if (serverUrl) {
+            try {
+              await postJson(serverUrl, directory, `/question/${encodeURIComponent(request.id)}/reject`, {})
+              return
+            } catch {}
+          }
+
+          try {
+            await client.question.reject({ requestID: request.id })
+            return
+          } catch {}
+
+          if (serverUrl && request.sessionID) {
+            try {
+              await postJson(serverUrl, directory, `/api/session/${encodeURIComponent(request.sessionID)}/question/${encodeURIComponent(request.id)}/reject`, {})
+            } catch {}
+          }
+        }
+
+        export const YopetHooks = async ({ client, directory, serverUrl }) => {
           const project = clean(directory ?? "").split(/[\\/]/).filter(Boolean).pop() ?? ""
           const childSessions = new Set()
+          const pending = new Set()
+
+          async function handlePermission(permission) {
+            if (!permission?.id || pending.has("p:" + permission.id)) return
+            pending.add("p:" + permission.id)
+            try {
+              const reply = await waitForReply(permission.id, 30 * 60 * 1000)
+              if (!reply) return
+              if (reply.action === "reject" || reply.reply === "reject") {
+                await replyPermission(client, serverUrl, directory, { ...permission, reply: "reject" })
+              } else {
+                await replyPermission(client, serverUrl, directory, { ...permission, reply: reply.reply })
+              }
+            } finally {
+              pending.delete("p:" + permission.id)
+            }
+          }
+
+          async function handleQuestion(question) {
+            if (!question?.id || pending.has("q:" + question.id)) return
+            pending.add("q:" + question.id)
+            try {
+              const reply = await waitForReply(question.id, 30 * 60 * 1000)
+              if (!reply) return
+              if (reply.action === "reject") {
+                await rejectQuestion(client, serverUrl, directory, question)
+              } else {
+                await replyQuestion(client, serverUrl, directory, { ...question, answers: reply.answers ?? [] })
+              }
+            } finally {
+              pending.delete("q:" + question.id)
+            }
+          }
 
           return {
             event: async ({ event }) => {
@@ -124,13 +595,30 @@ public class OpencodeHookProvider : JsonlHookProviderBase
                   if (status === "busy" || status === "retry") await emit("working", project)
                   break
                 }
-                case "permission.updated":
-                case "permission.asked": {
+                case "permission.asked":
+                case "permission.updated": {
                   const permission = event.properties
-                  if (!permission?.sessionID || childSessions.has(permission.sessionID)) break
-                  await emit("notification", project, permission.title ?? "")
+                  if (!permission?.id || childSessions.has(permission.sessionID)) break
+                  await emitJson("permission_asked", project, permission)
+                  void handlePermission(permission)
                   break
                 }
+                case "question.asked": {
+                  const question = event.properties
+                  if (!question?.id || childSessions.has(question.sessionID)) break
+                  await emitJson("question_asked", project, question)
+                  void handleQuestion(question)
+                  break
+                }
+                case "permission.replied":
+                  await emit("permission_replied", project)
+                  break
+                case "question.replied":
+                  await emit("question_replied", project)
+                  break
+                case "question.rejected":
+                  await emit("question_rejected", project)
+                  break
               }
             },
 
