@@ -12,7 +12,7 @@ public class SettingPlugin : PluginBase
 {
     private const string KeyAutoStart = "st_auto_start";
     private const string KeyAnimSpeed = "st_anim_speed";
-    private const string KeyDarkTheme = "st_dark_theme";
+    private const string KeyTheme = "st_theme";
     private const string KeyLanguage = "st_language";
 
     private IPluginHost? _host;
@@ -58,14 +58,6 @@ public class SettingPlugin : PluginBase
                 },
                 new()
                 {
-                    Key = KeyDarkTheme,
-                    Label = T("DarkThemeLabel"),
-                    Type = PluginConfigFieldType.Boolean,
-                    DefaultValue = host.GetDarkTheme() ? "true" : "false",
-                    Description = T("DarkThemeDesc"),
-                },
-                new()
-                {
                     Key = KeyLanguage,
                     Label = T("LanguageLabel"),
                     Type = PluginConfigFieldType.Dropdown,
@@ -86,8 +78,8 @@ public class SettingPlugin : PluginBase
             host.SetConfig(KeyAutoStart, AutoStartHelper.IsEnabled() ? "true" : "false");
         if (host.GetConfig(KeyAnimSpeed) == null)
             host.SetConfig(KeyAnimSpeed, host.GetAnimationSpeedMs().ToString("0"));
-        if (host.GetConfig(KeyDarkTheme) == null)
-            host.SetConfig(KeyDarkTheme, host.GetDarkTheme() ? "true" : "false");
+        if (host.GetConfig(KeyTheme) == null)
+            host.SetConfig(KeyTheme, host.GetDarkTheme() ? "dark" : "light");
         if (host.GetConfig(KeyLanguage) == null)
             host.SetConfig(KeyLanguage, host.GetLanguage());
 
@@ -175,10 +167,6 @@ public class SettingPlugin : PluginBase
                     field.Label = T("AnimSpeedLabel");
                     field.Description = T("AnimSpeedDesc");
                     break;
-                case KeyDarkTheme:
-                    field.Label = T("DarkThemeLabel");
-                    field.Description = T("DarkThemeDesc");
-                    break;
                 case KeyLanguage:
                     field.Label = T("LanguageLabel");
                     field.Description = T("LanguageDesc");
@@ -206,13 +194,10 @@ public class SettingPlugin : PluginBase
                     host.SetAnimationSpeedMs(ms);
                 break;
 
-            case KeyDarkTheme:
-                host.SetDarkTheme(host.GetConfig(KeyDarkTheme) == "true");
-                break;
-
             case KeyLanguage:
                 var lang = host.GetConfig(KeyLanguage);
-                if (!string.IsNullOrWhiteSpace(lang))
+                if (!string.IsNullOrWhiteSpace(lang)
+                    && !string.Equals(lang, host.GetLanguage(), StringComparison.OrdinalIgnoreCase))
                     host.SetLanguage(lang);
                 break;
         }

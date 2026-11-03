@@ -1,4 +1,4 @@
-using System.Text;
+﻿using System.Text;
 using Lang.Avalonia;
 using yopet.Sdk;
 
@@ -16,7 +16,7 @@ public class OpencodeHookProvider : JsonlHookProviderBase
         I18nManager.Instance.GetResource($"Localization.AgentHooksPlugin.{key}");
 
     public override string Id => "opencode";
-    public override string Name => "opencode";
+    public override string Name => "Opencode";
     public override string Emoji => "🌀";
     public override string Description => T("OpencodeDesc");
     public override string ConfigPrefix => "opencode_";

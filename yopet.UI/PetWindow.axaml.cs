@@ -319,7 +319,7 @@ public partial class PetWindow : Window
     {
         if (_vm == null || _actionsWindow?.IsVisible == true) return;
 
-        var panel = new StackPanel { Spacing = 2, Width = 300 };
+        var panel = new StackPanel { Spacing = 0, Width = 220 };
         Window? actionWindow = null;
 
         void AddRow(string header, Action invoke, bool danger = false)
@@ -327,8 +327,9 @@ public partial class PetWindow : Window
             var button = danger ? ArcActions.Danger(header) : ArcActions.Ghost(header);
             button.HorizontalAlignment = Avalonia.Layout.HorizontalAlignment.Stretch;
             button.HorizontalContentAlignment = Avalonia.Layout.HorizontalAlignment.Left;
-            button.MinHeight = 36;
-            button.Padding = new Thickness(12, 0);
+            button.MinHeight = 28;
+            button.FontSize = 11.5;
+            button.Padding = new Thickness(7, 0);
             button.Click += (_, _) =>
             {
                 actionWindow?.Close();
@@ -342,8 +343,12 @@ public partial class PetWindow : Window
             var heading = new TextBlock
             {
                 Text = text,
-                Margin = new Thickness(12, 8, 12, 4),
+                Margin = new Thickness(8, 7, 8, 3),
                 TextWrapping = TextWrapping.Wrap,
+                FontSize = 9.5,
+                FontWeight = Avalonia.Media.FontWeight.SemiBold,
+                Opacity = 0.72,
+                IsHitTestVisible = false,
             };
             TKCode.Arc.ArcTokens.Bind(heading, TextBlock.ForegroundProperty,
                 TKCode.Arc.DesignTokens.ArcDesignTokenKind.TextMuted);
@@ -354,7 +359,7 @@ public partial class PetWindow : Window
 
         void AddSeparator()
         {
-            var line = new Border { Height = 1, Margin = new Thickness(8, 6) };
+            var line = new Border { Height = 1, Margin = new Thickness(5, 3) };
             TKCode.Arc.ArcTokens.Bind(line, Border.BackgroundProperty,
                 TKCode.Arc.DesignTokens.ArcDesignTokenKind.BorderSubtle);
             panel.Children.Add(line);
@@ -414,12 +419,12 @@ public partial class PetWindow : Window
 
         var surface = new ArcSurface
         {
-            Width = 320,
-            Padding = new Thickness(10, 8),
+            Width = 240,
+            Padding = new Thickness(6, 4, 2, 4),
             Child = new ScrollViewer
             {
                 Content = panel,
-                MaxHeight = Math.Min(620, (Screens.ScreenFromWindow(this)?.WorkingArea.Height ?? 800) - 80),
+                MaxHeight = Math.Min(440, (Screens.ScreenFromWindow(this)?.WorkingArea.Height ?? 800) - 48),
                 HorizontalScrollBarVisibility = Avalonia.Controls.Primitives.ScrollBarVisibility.Disabled,
             },
         };
@@ -466,6 +471,7 @@ public partial class PetWindow : Window
         {
             Emoji = "⏬",
             Label = I18nManager.Instance.GetResource("Localization.Petdex.Install"),
+            IsPrimary = true,
             Callback = async () =>
             {
                 var petName = await InputDialog.ShowAsync(this,

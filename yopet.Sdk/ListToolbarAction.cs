@@ -1,4 +1,4 @@
-namespace yopet.Sdk;
+﻿namespace yopet.Sdk;
 
 /// <summary>工具栏按钮类型</summary>
 public enum ListToolbarActionType
@@ -20,6 +20,9 @@ public class ListToolbarAction
 
     /// <summary>按钮类型</summary>
     public ListToolbarActionType Type { get; set; } = ListToolbarActionType.Button;
+
+    /// <summary>是否使用主按钮样式（Button 类型使用）</summary>
+    public bool IsPrimary { get; set; }
 
     /// <summary>点击回调（Button 类型使用）</summary>
     public Func<Task>? Callback { get; set; }

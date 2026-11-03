@@ -459,6 +459,7 @@ public class ProgramSchedulerPlugin : PluginBase
                 {
                     Label = T("ToolbarAdd"),
                     Emoji = "➕",
+                    IsPrimary = true,
                     Callback = () => NewRuleAsync(host),
                 },
                 new()

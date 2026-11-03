@@ -1,4 +1,4 @@
-using CommunityToolkit.Mvvm.ComponentModel;
+﻿using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using yopet.Core.Interfaces;
 using yopet.Core.Models;
@@ -63,7 +63,15 @@ public partial class PetViewModel : ObservableObject
     private string _thoughtText = "";
 
     [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(ThoughtTitleIcon))]
+    [NotifyPropertyChangedFor(nameof(ThoughtTitleText))]
     private string _thoughtAssistant = "";
+
+    /// <summary>气泡标题的插件图标；没有专属图标时为空，使用气泡自带图标。</summary>
+    public string ThoughtTitleIcon => SplitBubbleTitle(ThoughtAssistant).Icon;
+
+    /// <summary>去掉插件图标后的气泡标题文字。</summary>
+    public string ThoughtTitleText => SplitBubbleTitle(ThoughtAssistant).Text;
 
     /// <summary>任一气泡可见（统一外部 Popup 绑定）</summary>
     public bool IsAnyBubbleVisible => IsReacting || IsShowingThought;
@@ -377,6 +385,61 @@ public partial class PetViewModel : ObservableObject
             _dispatcher.Post(() => AnimCurrentRow = 0));
     }
 
+    private static readonly IReadOnlyDictionary<string, string> BubbleTitleIcons =
+        new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+        {
+            ["Settings"] = "⚙️",
+            ["Health Reminder"] = "💚",
+            ["DeepSeek Query"] = "🤖",
+            ["Agent Hooks"] = "🧩",
+            ["File Tools"] = "🗂️",
+            ["Mail to Markdown"] = "✉️",
+            ["Pin Top"] = "📌",
+            ["Python Script Manager"] = "🐍",
+            ["Image Organizer"] = "🖼️",
+            ["Program Scheduler"] = "⏰",
+            ["Xaml Demo"] = "🧪",
+            ["Opencode"] = "🌀",
+            ["Claude Code"] = "🦾",
+            ["Reasonix Code"] = "🧠",
+            ["设置"] = "⚙️",
+            ["健康提醒"] = "💚",
+            ["DeepSeek 查询"] = "🤖",
+            ["Agent 钩子"] = "🧩",
+            ["文件工具"] = "🗂️",
+            ["邮件转 Markdown"] = "✉️",
+            ["窗口置顶器"] = "📌",
+            ["Python 脚本管理器"] = "🐍",
+            ["图片整理器"] = "🖼️",
+            ["程序定时启停"] = "⏰",
+        };
+
+    /// <summary>给纯文字气泡标题补一个合适的图标；已有图标则保持原样。</summary>
+    public static string FormatBubbleTitle(string? title)
+    {
+        if (string.IsNullOrWhiteSpace(title)) return "💬";
+        var text = title.Trim();
+        if (HasLeadingIcon(text)) return text;
+        return BubbleTitleIcons.TryGetValue(text, out var icon)
+            ? $"{icon} {text}"
+            : text;
+    }
+
+    private static (string Icon, string Text) SplitBubbleTitle(string? title)
+    {
+        var text = title?.Trim() ?? "";
+        if (string.IsNullOrEmpty(text)) return ("", "");
+        var icon = System.Globalization.StringInfo.GetNextTextElement(text);
+        if (!HasLeadingIcon(icon)) return ("", text);
+        return (icon, text[icon.Length..].TrimStart());
+    }
+
+    private static bool HasLeadingIcon(string text)
+    {
+        var first = text[0];
+        return char.IsSurrogate(first) || (first >= 0x2000 && first <= 0x2BFF);
+    }
+
     /// <summary>在对话气泡中显示信息，多行内容自动分页轮播（每批最多 3 行，2 秒切换）</summary>
     public void ShowFileDropInfo(string title, string info)
     {
@@ -385,7 +448,7 @@ public partial class PetViewModel : ObservableObject
 
         _dispatcher.Post(() =>
         {
-            ThoughtAssistant = title;
+            ThoughtAssistant = FormatBubbleTitle(title);
             IsShowingThought = true;
         });
 

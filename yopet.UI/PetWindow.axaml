@@ -35,31 +35,59 @@
            HorizontalOffset="0"
            VerticalOffset="-8"
            WindowManagerAddShadowHint="False">
-      <ui:ArcSurface Padding="14,8"
-                     MaxWidth="220">
-        <StackPanel>
-          <!-- Reaction 模式：大号 emoji -->
-          <TextBlock Text="{Binding CurrentReaction}"
-                     FontSize="22"
-                     HorizontalAlignment="Center"
-                     IsVisible="{Binding IsReacting}" />
-          <!-- Thought 模式：助理名 + 文字 -->
-          <Grid IsVisible="{Binding IsShowingThought}">
-            <Grid RowDefinitions="Auto,Auto">
-              <Grid ColumnDefinitions="Auto,*">
-                <TextBlock Text="💬" FontSize="12" VerticalAlignment="Center" />
-                <TextBlock Text="{Binding ThoughtAssistant}"
-                           FontSize="10" FontWeight="Bold"
-                           Foreground="{arc:ArcDesignTokenResource TextSecondary}" Margin="4,0,0,0"
-                           VerticalAlignment="Center" />
+      <Grid RowDefinitions="Auto,18">
+        <ui:ArcSurface Grid.Row="0"
+                       Padding="14,8"
+                       MaxWidth="220">
+          <StackPanel>
+            <!-- Reaction 模式：大号 emoji -->
+            <TextBlock Text="{Binding CurrentReaction}"
+                       FontSize="22"
+                       HorizontalAlignment="Center"
+                       IsVisible="{Binding IsReacting}" />
+            <!-- Thought 模式：助理名 + 文字 -->
+            <Grid IsVisible="{Binding IsShowingThought}">
+              <Grid RowDefinitions="Auto,Auto">
+                <Grid ColumnDefinitions="Auto,*">
+                  <Grid Width="18" Height="18" Margin="0,0,5,0" VerticalAlignment="Center">
+                    <TextBlock Text="💬" FontSize="12" VerticalAlignment="Center"
+                               HorizontalAlignment="Left" />
+                    <TextBlock Text="{Binding ThoughtTitleIcon}"
+                               FontSize="9"
+                               Foreground="{arc:ArcDesignTokenResource Accent}"
+                               HorizontalAlignment="Right" VerticalAlignment="Bottom"
+                               Margin="0,0,-1,-1" />
+                  </Grid>
+                  <TextBlock Grid.Column="1"
+                             Text="{Binding ThoughtTitleText}"
+                             FontSize="10" FontWeight="Bold"
+                             Foreground="{arc:ArcDesignTokenResource Accent}"
+                             VerticalAlignment="Center" />
+                </Grid>
+                <TextBlock Grid.Row="1" Text="{Binding ThoughtText}"
+                           FontSize="11" Foreground="{arc:ArcDesignTokenResource Foreground}"
+                           TextWrapping="Wrap" MaxHeight="160" Margin="0,4,0,0" />
               </Grid>
-              <TextBlock Grid.Row="1" Text="{Binding ThoughtText}"
-                         FontSize="11" Foreground="{arc:ArcDesignTokenResource Foreground}"
-                         TextWrapping="Wrap" MaxHeight="160" Margin="0,4,0,0" />
             </Grid>
-          </Grid>
-        </StackPanel>
-      </ui:ArcSurface>
+          </StackPanel>
+        </ui:ArcSurface>
+
+        <!-- 漫画气泡的小尾巴：向右移动，尖端反向左弯 -->
+        <Grid Grid.Row="1" Width="20" Height="17"
+              HorizontalAlignment="Center" VerticalAlignment="Top"
+              Margin="0,-2,0,0" IsHitTestVisible="False">
+          <Grid.RenderTransform>
+            <TranslateTransform X="18" />
+          </Grid.RenderTransform>
+          <Path Data="M 20,0 C 17,3 10,8 4,17 C 4,10 2,5 0,0 Z"
+                Fill="{arc:ArcDesignTokenResource SurfaceRaised}"
+                Stretch="None" />
+          <Path Data="M 20,0 C 17,3 10,8 4,17 C 4,10 2,5 0,0"
+                Stroke="{arc:ArcDesignTokenResource Border}"
+                StrokeThickness="1"
+                Stretch="None" />
+        </Grid>
+      </Grid>
     </Popup>
 
 

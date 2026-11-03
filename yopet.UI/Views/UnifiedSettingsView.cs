@@ -21,6 +21,7 @@ public sealed class UnifiedSettingsView : UserControl
 
     private readonly IPluginHost _host;
     private readonly ArcDialogCard _card;
+    private readonly ThemePicker _themePicker;
     private readonly TKCode.Arc.Select _selector;
     private readonly ScrollViewer _contentScroll;
     private readonly StackPanel _content;
@@ -38,7 +39,10 @@ public sealed class UnifiedSettingsView : UserControl
     {
         _host = host;
         Width = 460;
-        MaxHeight = 620;
+        MaxHeight = 720;
+
+        var themeId = _host.GetConfig("st_theme") ?? (_host.GetDarkTheme() ? "dark" : "light");
+        _themePicker = new ThemePicker(ArcUi.ThemeChoices, themeId, OnThemeSelected);
 
         _selector = new TKCode.Arc.Select
         {
@@ -60,7 +64,11 @@ public sealed class UnifiedSettingsView : UserControl
             HorizontalScrollBarVisibility = Avalonia.Controls.Primitives.ScrollBarVisibility.Disabled,
         };
 
-        _status = new TextBlock { IsVisible = false, TextWrapping = TextWrapping.Wrap };
+        _status = new TextBlock
+        {
+            TextWrapping = TextWrapping.Wrap,
+            MinHeight = 20,
+        };
         TKCode.Arc.ArcTokens.Bind(_status, TextBlock.ForegroundProperty,
             TKCode.Arc.DesignTokens.ArcDesignTokenKind.Danger);
         TKCode.Arc.ArcTokens.Bind(_status, TextBlock.FontSizeProperty,
@@ -136,7 +144,7 @@ public sealed class UnifiedSettingsView : UserControl
             {
                 Title = T("NoSettings"),
             });
-            _status.IsVisible = false;
+            _status.Text = "";
             return;
         }
 
@@ -150,10 +158,18 @@ public sealed class UnifiedSettingsView : UserControl
         {
             if (VisualRoot == null) return;
             _card.Title = T("SettingsCenter");
+            _themePicker.RefreshLabels();
             _selector.Label = T("SelectPlugin");
             _saveButton.Content = T("Save");
             ReloadSections(preserveSelection: true);
         });
+    }
+
+    private void OnThemeSelected(ArcUi.ThemeChoice choice)
+    {
+        _host.SetConfig("st_theme", choice.Id);
+        ArcUi.ApplyTheme(choice.Id);
+        ArcActions.ApplyPrimary(_saveButton);
     }
 
     private void OnSectionChanged()
@@ -184,7 +200,7 @@ public sealed class UnifiedSettingsView : UserControl
         _inputs.Clear();
         _readers.Clear();
         _content.Children.Clear();
-        _status.IsVisible = false;
+        _status.Text = "";
 
         var fields = section.Fields
             .GroupBy(field => field.Key, StringComparer.OrdinalIgnoreCase)
@@ -208,11 +224,23 @@ public sealed class UnifiedSettingsView : UserControl
             }
         }
 
+        var themeInserted = false;
         foreach (var field in section.Fields)
         {
             if (!rendered.Contains(field.Key))
                 AddField(field);
+
+            if (!themeInserted
+                && string.Equals(section.Key, "setting", StringComparison.OrdinalIgnoreCase)
+                && string.Equals(field.Key, "st_anim_speed", StringComparison.OrdinalIgnoreCase))
+            {
+                _content.Children.Add(_themePicker);
+                themeInserted = true;
+            }
         }
+
+        if (!themeInserted && string.Equals(section.Key, "setting", StringComparison.OrdinalIgnoreCase))
+            _content.Children.Add(_themePicker);
     }
 
     private void AddField(PluginConfigField field)
@@ -330,8 +358,9 @@ public sealed class UnifiedSettingsView : UserControl
                     Placeholder = field.Placeholder,
                     Text = currentValue,
                 };
-                var browse = ArcActions.Secondary("Browse", ControlSize.Medium);
-                browse.VerticalAlignment = VerticalAlignment.Bottom;
+                var browse = ArcActions.Secondary("Browse", ControlSize.Small);
+                browse.VerticalAlignment = VerticalAlignment.Center;
+                browse.Margin = new Thickness(0, 4, 4, 4);
                 browse.Click += async (_, _) =>
                 {
                     if (TopLevel.GetTopLevel(this) is not { } topLevel) return;
@@ -349,14 +378,8 @@ public sealed class UnifiedSettingsView : UserControl
                     }
                 };
 
-                var row = new Grid
-                {
-                    ColumnDefinitions = new ColumnDefinitions("*,Auto"),
-                    ColumnSpacing = 8,
-                    Children = { input, browse },
-                };
-                Grid.SetColumn(browse, 1);
-                return (row, () => input.Text);
+                input.Suffix = browse;
+                return (input, () => input.Text);
             }
 
             case PluginConfigFieldType.CronExpression:
@@ -445,18 +468,12 @@ public sealed class UnifiedSettingsView : UserControl
 
         if (errors.Count > 0)
         {
-            _status.Text = string.Join(Environment.NewLine, errors);
-            _status.IsVisible = showStatus;
+            _status.Text = showStatus ? string.Join(Environment.NewLine, errors) : "";
             return false;
         }
 
         _host.SaveConfigValues(values);
-
-        if (showStatus)
-        {
-            _status.Text = T("Saved");
-            _status.IsVisible = true;
-        }
+        _status.Text = showStatus ? T("Saved") : "";
         return true;
     }
 

@@ -1,12 +1,81 @@
 ﻿<Application xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:arc="https://github.com/AIDotNet/TKCode.Arc"
+             xmlns:prims="clr-namespace:Avalonia.Controls.Primitives;assembly=Avalonia.Controls"
+             xmlns:conv="clr-namespace:yopet.UI.Converters;assembly=yopet.UI"
              xmlns:arcp="clr-namespace:TKCode.Arc.Primitives;assembly=TKCode.Arc.Core"
              x:Class="yopet.App">
+  <Application.Resources>
+    <conv:ScaleConverter x:Key="ScrollBarSizeConverter" Ratio="0.9" />
+  </Application.Resources>
   <Application.Styles>
     <FluentTheme />
     <Style Selector="arcp|ArcPopup">
       <Setter Property="PopupRootShadow" Value="none" />
       <Setter Property="OverlayHostShadow" Value="none" />
+    </Style>
+
+    <!-- 列表/下拉中的滚动条：悬停滚动时显示、贴边、细条，滑块使用当前主题的 Primary Color。 -->
+    <Style Selector="ScrollViewer">
+      <Setter Property="AllowAutoHide" Value="True" />
+    </Style>
+    <Style Selector="ScrollBar">
+      <Setter Property="Margin" Value="0" />
+      <Setter Property="Padding" Value="0" />
+      <Setter Property="Background" Value="Transparent" />
+    </Style>
+    <Style Selector="ScrollBar:vertical">
+      <Setter Property="Width" Value="3" />
+      <Setter Property="MinWidth" Value="3" />
+      <Setter Property="VerticalAlignment" Value="Center" />
+      <Setter Property="Height" Value="{Binding $parent[ScrollViewer].Bounds.Height, Converter={StaticResource ScrollBarSizeConverter}}" />
+    </Style>
+    <Style Selector="ScrollBar:horizontal">
+      <Setter Property="Height" Value="3" />
+      <Setter Property="MinHeight" Value="3" />
+      <Setter Property="HorizontalAlignment" Value="Center" />
+      <Setter Property="Width" Value="{Binding $parent[ScrollViewer].Bounds.Width, Converter={StaticResource ScrollBarSizeConverter}}" />
+    </Style>
+    <Style Selector="ScrollBar /template/ RepeatButton">
+      <Setter Property="MinWidth" Value="0" />
+      <Setter Property="MinHeight" Value="0" />
+    </Style>
+    <Style Selector="ScrollBar:vertical /template/ Thumb">
+      <Setter Property="Width" Value="3" />
+      <Setter Property="MinWidth" Value="0" />
+      <Setter Property="RenderTransform" Value="none" />
+    </Style>
+    <Style Selector="ScrollBar:horizontal /template/ Thumb">
+      <Setter Property="Height" Value="3" />
+      <Setter Property="MinHeight" Value="0" />
+      <Setter Property="RenderTransform" Value="none" />
+    </Style>
+    <Style Selector="ScrollBar /template/ RepeatButton#PART_LineUpButton">
+      <Setter Property="IsVisible" Value="False" />
+    </Style>
+    <Style Selector="ScrollBar /template/ RepeatButton#PART_LineDownButton">
+      <Setter Property="IsVisible" Value="False" />
+    </Style>
+    <Style Selector="ScrollBar /template/ Thumb">
+      <Setter Property="Background" Value="{arc:ArcDesignTokenResource Accent}" />
+      <Setter Property="BorderThickness" Value="0" />
+      <Setter Property="CornerRadius" Value="2" />
+      <Setter Property="Margin" Value="0" />
+      <Setter Property="Padding" Value="0" />
+      <Setter Property="RenderTransform" Value="none" />
+    </Style>
+    <Style Selector="ScrollBar /template/ Track /template/ Thumb">
+      <Setter Property="Background" Value="{arc:ArcDesignTokenResource Accent}" />
+      <Setter Property="Margin" Value="0" />
+    </Style>
+    <Style Selector="ScrollBar[IsExpanded=True] /template/ Thumb">
+      <Setter Property="Background" Value="{arc:ArcDesignTokenResource Accent}" />
+    </Style>
+    <Style Selector="ScrollBar /template/ Thumb:pointerover">
+      <Setter Property="Background" Value="{arc:ArcDesignTokenResource Accent}" />
+    </Style>
+    <Style Selector="ScrollBar /template/ Thumb:pressed">
+      <Setter Property="Background" Value="{arc:ArcDesignTokenResource Accent}" />
     </Style>
   </Application.Styles>
 </Application>

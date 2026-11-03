@@ -35,7 +35,7 @@ public static class ListDialog
 
         var card = new ArcDialogCard
         {
-            Title = $"{config.Emoji} {config.Title}".Trim(),
+            Title = BuildTitle(config),
             Width = config.LayoutMode == ListDialogLayoutMode.CardGrid
                 ? 520
                 : ResolveTableWidth(config.Columns),
@@ -85,6 +85,23 @@ public static class ListDialog
         return await result.Task;
     }
 
+    private static string BuildTitle(ListDialogConfig config)
+    {
+        var title = config.Title?.Trim() ?? "";
+        if (string.IsNullOrWhiteSpace(title))
+            return config.Emoji?.Trim() ?? "";
+        if (HasLeadingIcon(title))
+            return title;
+        var emoji = config.Emoji?.Trim();
+        return string.IsNullOrWhiteSpace(emoji) ? title : $"{emoji} {title}";
+    }
+
+    private static bool HasLeadingIcon(string text)
+    {
+        var first = text[0];
+        return char.IsSurrogate(first) || (first >= 0x2000 && first <= 0x2BFF);
+    }
+
     private static Control BuildToolbar(ListDialogConfig config)
     {
         var toolbar = new WrapPanel { ItemSpacing = 8, LineSpacing = 8 };
@@ -110,7 +127,9 @@ public static class ListDialog
             return menu;
         }
 
-        var button = ArcActions.Secondary($"{action.Emoji} {action.Label}".Trim());
+        var button = action.IsPrimary
+            ? ArcActions.Primary($"{action.Emoji} {action.Label}".Trim())
+            : ArcActions.Secondary($"{action.Emoji} {action.Label}".Trim());
         button.Click += async (_, _) =>
         {
             if (action.Callback is not null) await action.Callback();

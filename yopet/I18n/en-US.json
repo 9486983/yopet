@@ -1,4 +1,4 @@
-﻿{
+{
   "language": "English",
   "description": "English resources",
   "cultureName": "en-US",
@@ -55,7 +55,7 @@
     },
     "SettingPlugin": {
       "Name": "Settings",
-      "Description": "Auto-start, animation speed, dark mode and unified plugin settings",
+      "Description": "Theme, auto-start, animation speed and unified plugin settings",
       "Group": "⚙️ Settings",
       "PluginList": "Plugin List",
       "ColPlugin": "Plugin",
@@ -438,6 +438,15 @@
       "Name": "XAML Demo",
       "OpenAction": "Open XAML Panel",
       "OpenActionDesc": "Show a compiled XAML page embedded in the plugin DLL"
+    },
+    "Theme": {
+      "Label": "Theme",
+      "Dark": "Black",
+      "Light": "White",
+      "Blue": "Blue",
+      "Pink": "Pink",
+      "Yellow": "Yellow",
+      "Green": "Green"
     }
   }
 }

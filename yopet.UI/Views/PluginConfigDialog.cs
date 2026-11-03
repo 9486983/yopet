@@ -212,8 +212,9 @@ public static class PluginConfigDialog
                     Placeholder = field.Placeholder,
                     Text = currentValue,
                 };
-                var browse = ArcActions.Secondary("Browse", ControlSize.Medium);
-                browse.VerticalAlignment = VerticalAlignment.Bottom;
+                var browse = ArcActions.Secondary("Browse", ControlSize.Small);
+                browse.VerticalAlignment = VerticalAlignment.Center;
+                browse.Margin = new Thickness(0, 4, 4, 4);
                 browse.Click += async (_, _) =>
                 {
                     if (field.Type == PluginConfigFieldType.FolderPath)
@@ -232,14 +233,8 @@ public static class PluginConfigDialog
                     }
                 };
 
-                var row = new Grid
-                {
-                    ColumnDefinitions = new ColumnDefinitions("*,Auto"),
-                    ColumnSpacing = 8,
-                    Children = { input, browse },
-                };
-                Grid.SetColumn(browse, 1);
-                return (row, () => input.Text);
+                input.Suffix = browse;
+                return (input, () => input.Text);
             }
 
             case PluginConfigFieldType.CronExpression when field.CronPresets is { Count: > 0 }:

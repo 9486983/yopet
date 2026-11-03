@@ -3,10 +3,12 @@ using Avalonia.Controls;
 using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Input.Platform;
 using Avalonia.Markup.Xaml;
+using Avalonia.VisualTree;
 using Lang.Avalonia;
 using Lang.Avalonia.Json;
 using Microsoft.Extensions.DependencyInjection;
 using System.Globalization;
+using System.Runtime.CompilerServices;
 using yopet.Core.Interfaces;
 using yopet.Sdk;
 using yopet.Services;
@@ -28,6 +30,8 @@ public partial class App : Application
 
     public override void OnFrameworkInitializationCompleted()
     {
+        ScrollViewer.LoadedEvent.AddClassHandler<ScrollViewer>((scroll, _) => AttachScrollBehavior(scroll));
+
         if (ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop)
         {
             // ── 构建 DI 容器 ──
@@ -70,7 +74,10 @@ public partial class App : Application
             }
 
             // ── 加载主题资源 ──
-            ArcUi.ApplyAppearance(config.IsDarkTheme);
+            var savedTheme = config.PluginValues.TryGetValue("st_theme", out var themeId)
+                ? themeId
+                : null;
+            ArcUi.ApplyTheme(savedTheme ?? (config.IsDarkTheme ? "dark" : "light"));
             ArcUi.ApplyLanguage(config.Language);
 
             // ── 监听主题切换 ──
@@ -111,7 +118,7 @@ public partial class App : Application
             pluginHost.OnShowQueuedThought = (title, text) =>
                 Avalonia.Threading.Dispatcher.UIThread.Post(() =>
                 {
-                    petVm.ThoughtAssistant = title;
+                    petVm.ThoughtAssistant = PetViewModel.FormatBubbleTitle(title);
                     petVm.ThoughtText = text;
                     petVm.IsShowingThought = true;
                 });
@@ -223,10 +230,55 @@ public partial class App : Application
             desktop.MainWindow = petWindow;
             petWindow.Show();
 
-
         }
 
         base.OnFrameworkInitializationCompleted();
+    }
+
+    private static readonly ConditionalWeakTable<ScrollViewer, object> ScrollBehaviors = new();
+
+    private static void AttachScrollBehavior(ScrollViewer scroll)
+    {
+        if (ScrollBehaviors.TryGetValue(scroll, out _)) return;
+        ScrollBehaviors.Add(scroll, new object());
+
+        var timer = new Avalonia.Threading.DispatcherTimer
+        {
+            Interval = TimeSpan.FromMilliseconds(700),
+        };
+
+        void SetBars(double opacity, bool hitTest)
+        {
+            foreach (var bar in scroll.GetVisualDescendants().OfType<Avalonia.Controls.Primitives.ScrollBar>())
+            {
+                bar.Opacity = opacity;
+                bar.IsHitTestVisible = hitTest;
+            }
+        }
+
+        void Hide()
+        {
+            timer.Stop();
+            SetBars(0, false);
+        }
+
+        void Show()
+        {
+            SetBars(1, true);
+            timer.Stop();
+            timer.Start();
+        }
+
+        timer.Tick += (_, _) => Hide();
+        scroll.AllowAutoHide = false;
+        scroll.ScrollChanged += (_, e) =>
+        {
+            if (!scroll.IsPointerOver) return;
+            if (e.OffsetDelta.X == 0 && e.OffsetDelta.Y == 0) return;
+            Show();
+        };
+        scroll.PointerExited += (_, _) => Hide();
+        Avalonia.Threading.Dispatcher.UIThread.Post(Hide, Avalonia.Threading.DispatcherPriority.Loaded);
     }
 
     private static async Task RefreshPluginsWhenReadyAsync(

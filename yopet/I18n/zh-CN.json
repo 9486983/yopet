@@ -1,4 +1,4 @@
-﻿{
+{
   "language": "简体中文",
   "description": "简体中文资源",
   "cultureName": "zh-CN",
@@ -55,7 +55,7 @@
     },
     "SettingPlugin": {
       "Name": "设置",
-      "Description": "开机自启、动画速度、深色模式与所有插件设置统一管理",
+      "Description": "主题、开机启动、动画速度与统一插件设置",
       "Group": "⚙️ 设置",
       "PluginList": "插件列表",
       "ColPlugin": "插件",
@@ -438,6 +438,15 @@
       "Name": "XAML 示例",
       "OpenAction": "打开 XAML 面板",
       "OpenActionDesc": "在宿主弹窗中显示插件内嵌的编译型 XAML 页面"
+    },
+    "Theme": {
+      "Label": "主题",
+      "Dark": "黑白",
+      "Light": "纯白",
+      "Blue": "蓝白",
+      "Pink": "粉白",
+      "Yellow": "黄白",
+      "Green": "绿白"
     }
   }
 }
