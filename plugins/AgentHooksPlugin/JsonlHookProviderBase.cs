@@ -63,10 +63,11 @@ public abstract class JsonlHookProviderBase : HookProviderBase
     };
 
     private FileSystemWatcher? _watcher;
-    private CancellationTokenSource? _cleanupCts;
     private string? _logFile;
     private long _lastLogPosition;
     private int _commandEventCount;
+
+    private string CleanupJobId => $"{Id}_log_truncate";
 
     public override void Start(IPluginHost host)
     {
@@ -101,23 +102,19 @@ public abstract class JsonlHookProviderBase : HookProviderBase
             };
             _watcher.Changed += (_, _) => OnLogChanged(host);
 
-            _cleanupCts = new CancellationTokenSource();
-            var ct = _cleanupCts.Token;
-            _ = Task.Run(async () =>
-            {
-                while (!ct.IsCancellationRequested)
-                {
-                    try { await Task.Delay(TimeSpan.FromMinutes(30), ct); }
-                    catch (TaskCanceledException) { break; }
-                    TruncateLog();
-                }
-            }, ct);
+            host.Scheduler.RegisterInterval(
+                CleanupJobId,
+                TimeSpan.FromMinutes(30),
+                () => { TruncateLog(); return Task.CompletedTask; },
+                $"🧹 {Name} 日志截断",
+                runImmediately: false);
         }
         catch { }
     }
 
     public override void Stop()
     {
+        Host?.Scheduler.Unregister(CleanupJobId);
         base.Stop();
         if (_watcher != null)
         {
@@ -125,9 +122,6 @@ public abstract class JsonlHookProviderBase : HookProviderBase
             _watcher.Dispose();
             _watcher = null;
         }
-        _cleanupCts?.Cancel();
-        _cleanupCts?.Dispose();
-        _cleanupCts = null;
         _logFile = null;
     }
 

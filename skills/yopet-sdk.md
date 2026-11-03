@@ -25,7 +25,7 @@ yopet.Sdk/              ← NuGet 引用：yopet.Core
 ├── PluginAttribute.cs   元数据特性
 ├── IPluginHost.cs       宿主交互接口（核心 API）
 ├── IPluginLogger.cs     日志接口
-├── IPluginScheduler.cs  定时任务接口
+├── IPluginScheduler.cs  定时任务接口（全局 Quartz.NET 调度器）
 ├── ISession.cs          多步会话接口
 ├── PluginAction.cs      动作描述符
 ├── PluginConfig*.cs     配置系统
@@ -46,7 +46,7 @@ yopet.Sdk/              ← NuGet 引用：yopet.Core
 ```xml
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
-    <TargetFramework>net9.0</TargetFramework>
+    <TargetFramework>net10.0</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
   </PropertyGroup>
@@ -104,7 +104,7 @@ public class MyPlugin : PluginBase
 dotnet build -c Release
 
 # 将输出的 .dll 复制到 yopet 输出目录的 plugins/ 下
-# 例如: yopet/bin/Release/net9.0/win-x64/publish/plugins/
+# 例如: yopet/bin/Release/net10.0/win-x64/publish/plugins/
 ```
 
 启动 yopet 后，插件自动从 `plugins/` 目录加载。右键宠物即可看到插件注册的动作。
@@ -472,11 +472,15 @@ host.Log("简单消息");
 
 ### 3.9 定时任务
 
-**Cron 表达式**:
+> **强制约定**：主程序使用 **Quartz.NET 4.x** 提供全局唯一的调度器，并通过构造函数注入为单例（`ISchedulerService` → `SchedulerService`），插件只通过 `host.Scheduler` 访问。
+> 插件中**禁止**再自行创建 `Timer` / `PeriodicTimer` / `DispatcherTimer`，也禁止用 `Task.Delay` 循环实现周期任务；所有 cron、轮询、延时、超时恢复、后台清理都必须注册到 `host.Scheduler`。
+> （任务回调内部为 UI 节奏或重试而做的短暂 `await Task.Delay(...)` 不属于调度，允许保留。）
+
+**Cron 表达式**（支持 5 字段 Unix 与 6/7 字段 Quartz）:
 ```csharp
 host.Scheduler.Register(
-    jobId: "my_backup",           // 唯一标识
-    cronExpression: "0 0 * * *",  // 每小时执行
+    jobId: "my_backup",           // 唯一标识（同 id 会覆盖旧任务）
+    cronExpression: "0 0 * * *",  // 每小时执行（5 字段按 Unix 解析）
     callback: async () =>
     {
         host.ShowThought("⏰ 定时任务", "执行备份...");
@@ -484,13 +488,29 @@ host.Scheduler.Register(
     description: "⏰ 每小时备份");
 ```
 
-**间隔执行** (秒级):
+**固定间隔**（秒级或 `TimeSpan`，最后一个参数控制是否立即执行）:
 ```csharp
 host.Scheduler.RegisterInterval(
     jobId: "my_heartbeat",
-    intervalSeconds: 30,   // 每30秒
+    intervalSeconds: 30,   // 每 30 秒
     callback: async () => { /* ... */ },
     description: "💓 心跳");
+
+host.Scheduler.RegisterInterval(
+    jobId: "my_refresh",
+    interval: TimeSpan.FromSeconds(1.5), // 支持亚秒/分钟级间隔
+    callback: async () => { /* ... */ },
+    description: "🖥️ 悬浮刷新",
+    runImmediately: false);              // 等待第一个间隔再执行
+```
+
+**一次性延时**（防抖、超时恢复等）:
+```csharp
+host.Scheduler.RegisterOnce(
+    jobId: "my_timeout",
+    delay: TimeSpan.FromSeconds(15),
+    callback: async () => { /* ... */ },
+    description: "⏱️ 超时恢复");
 ```
 
 **管理**:
@@ -603,13 +623,14 @@ public class MyPlugin : PluginBase { }
 - 插件运行在主进程内，异常会拖垮整个应用 — **务必 catch 所有异常**
 - 插件 DLL 使用 `AssemblyLoadContext(isCollectible: true)` 加载，理论上支持热重载
 - 插件项目需要引用 `yopet.Sdk`，后者已引用 `yopet.Core`（`ItemType` 等模型）
-- 每个插件的 `.csproj` 需以 `net9.0` 为目标框架
+- 每个插件的 `.csproj` 需以 `net10.0` 为目标框架
+- 定时任务一律使用 `host.Scheduler`（底层 Quartz.NET 全局单例），禁止插件自建 `Timer` / `PeriodicTimer` / `Task.Delay` 循环
 
 ---
 
 ## 8. 多语言（i18n）
 
-主程序已集成 **Lang.Avalonia**（12.0.3.3，MIT），插件可直接使用其 API 与 XAML 标记扩展。
+主程序已集成 **Lang.Avalonia**（12.1.1.2，MIT），插件可直接使用其 API 与 XAML 标记扩展。
 
 ### 词条库约定（统一词条库）
 
@@ -626,7 +647,7 @@ public class MyPlugin : PluginBase { }
 </Window>
 ```
 
-- 当前 .NET 9 SDK（Roslyn 4.14）下 `Lang.Avalonia.Analysis` 生成器不可用（需 Roslyn 5.3），故使用**字符串 key**；升级到 .NET 10 SDK 后可引入 Analysis 获得编译期 key 检查
+- 当前使用**字符串 key**；`Lang.Avalonia.Analysis` 在旧版 Roslyn 下不可用，后续可按 SDK 版本引入以获得编译期 key 检查
 - key 缺失时回退显示原始 key 字符串，便于发现拼写错误
 
 ### C# 中使用

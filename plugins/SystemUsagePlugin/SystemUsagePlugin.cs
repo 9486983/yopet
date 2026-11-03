@@ -20,7 +20,8 @@ public class SystemUsagePlugin : PluginBase
 
     private SystemUsageService? _service;
     private IPluginHost? _host;
-    private System.Threading.Timer? _refreshTimer;
+
+    private const string RefreshJobId = "system_usage_refresh";
 
     /// <summary>悬浮期间气泡刷新间隔</summary>
     private static readonly TimeSpan RefreshInterval = TimeSpan.FromSeconds(1.5);
@@ -43,9 +44,8 @@ public class SystemUsagePlugin : PluginBase
         {
             host.Events.Unregister(Name, EventNames.PetHoverEntered);
             host.Events.Unregister(Name, EventNames.PetHoverExited);
+            host.Scheduler.Unregister(RefreshJobId);
         }
-        _refreshTimer?.Dispose();
-        _refreshTimer = null;
         _service?.Dispose();
         _service = null;
         return Task.CompletedTask;
@@ -55,14 +55,18 @@ public class SystemUsagePlugin : PluginBase
     private void OnHoverEntered()
     {
         Refresh();
-        _refreshTimer ??= new System.Threading.Timer(_ => Refresh(), null, RefreshInterval, RefreshInterval);
+        _host?.Scheduler.RegisterInterval(
+            RefreshJobId,
+            RefreshInterval,
+            () => { Refresh(); return Task.CompletedTask; },
+            "🖥️ 系统资源悬浮刷新",
+            runImmediately: false);
     }
 
     /// <summary>鼠标离开宠物：停止刷新（气泡由气泡组件按既有规则自动隐藏）</summary>
     private void OnHoverExited()
     {
-        _refreshTimer?.Dispose();
-        _refreshTimer = null;
+        _host?.Scheduler.Unregister(RefreshJobId);
     }
 
     /// <summary>采集系统占用并通过气泡组件展示</summary>

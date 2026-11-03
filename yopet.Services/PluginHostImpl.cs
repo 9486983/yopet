@@ -12,7 +12,6 @@ namespace yopet.Services;
 public class PluginHostImpl : IPluginHost, IPluginStateResetter
 {
     private readonly IConfigService _config;
-    private readonly CronSchedulerService _schedulerService;
 
     /// <summary>插件日志对象（所有日志方法放这里）</summary>
     public IPluginLogger Logger { get; }
@@ -20,11 +19,8 @@ public class PluginHostImpl : IPluginHost, IPluginStateResetter
     /// <summary>插件本地化对象（所有文本读取放这里）</summary>
     public ILocalizer Localizer { get; }
 
-    /// <summary>插件定时任务对象（所有调度方法放这里）</summary>
+    /// <summary>全局统一的插件定时任务对象（由构造函数注入）</summary>
     public IPluginScheduler Scheduler { get; }
-
-    /// <summary>定时任务调度器（供主程序启动/停止）</summary>
-    public CronSchedulerService SchedulerService => _schedulerService;
 
     /// <summary>插件注册的动作（右键菜单）</summary>
     public List<PetActionConfig> PluginActions { get; } = new();
@@ -95,16 +91,18 @@ public class PluginHostImpl : IPluginHost, IPluginStateResetter
     /// <summary>插件事件池 —— 悬浮提示等常用事件统一注册与管理（含冲突检测、优先级）</summary>
     public PluginEventPool Events { get; } = new();
 
-    public PluginHostImpl(IConfigService config, IPluginLogger? logger = null, ILocalizer? localizer = null, CronSchedulerService? scheduler = null, PluginLoader? pluginLoader = null)
+    public PluginHostImpl(
+        IConfigService config,
+        IPluginScheduler scheduler,
+        IPluginLogger logger,
+        ILocalizer localizer,
+        PluginLoader pluginLoader)
     {
         _config = config;
+        Scheduler = scheduler;
+        Logger = logger;
+        Localizer = localizer;
         _pluginLoader = pluginLoader;
-        Logger = logger ?? new PluginLogger(
-            new LoggerService(Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "plugins", "logs")),
-            "Host");
-        Localizer = localizer ?? new Localizer();
-        _schedulerService = scheduler ?? new CronSchedulerService();
-        Scheduler = new PluginScheduler(_schedulerService, Logger.For("PluginScheduler"));
     }
 
     // ── 消息队列 ──

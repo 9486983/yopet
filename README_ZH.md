@@ -54,6 +54,11 @@
 | 🖼️ **SessionDemoPlugin** | 会话工作流示例：拖入文件夹启动会话，再拖图片自动整理 |
 | ⚙️ **SettingPlugin** | 设置中心 —— 开机自启（跨平台）、动画速度、深色模式、插件列表 |
 
+### ⏱️ 全局统一定时任务（Quartz.NET）
+- 主程序通过 DI 注册唯一的 **Quartz.NET 4.x** 内存调度器（`SchedulerService`），以构造函数注入的方式全局共享，插件统一通过 `host.Scheduler` 使用。
+- 支持 cron（5 字段 Unix 与 6/7 字段 Quartz）、固定间隔、一次性延时，以及暂停/恢复/移除。
+- 插件禁止自建定时器；自动查询、健康提醒、悬浮刷新、超时恢复、后台清理等全部走该全局调度器。
+
 ### ⚙️ 设置功能（SettingPlugin）
 原设置窗口已移除，设置功能现由 **SettingPlugin** 提供（右键宠物 → ⚙️ 设置）：
 
@@ -94,7 +99,7 @@ yopet.sln
 │   ├── ActivityMonitor.cs        AI 事件监控
 │   ├── PluginLoader.cs           插件发现与加载
 │   ├── PluginHostImpl.cs         插件宿主实现（含宿主设置 API）
-│   └── CronSchedulerService.cs   Cron 定时任务引擎
+│   └── SchedulerService.cs       全局 Quartz.NET 调度器（DI 单例，主程序与插件共用）
 ├── yopet.ViewModels/     MVVM ViewModel 层
 │   └── PetViewModel.cs           宠物逻辑 + 交互
 └── yopet/                Avalonia 应用层
@@ -113,10 +118,11 @@ yopet.sln
 
 | 组件 | 版本说明 |
 |------|---------|
-| .NET | 9.0 |
-| Avalonia | 12.0.3 (FluentTheme) |
+| .NET | 10.0 |
+| Avalonia | 12.1.4 (FluentTheme) |
 | CommunityToolkit.Mvvm | 8.4.0（源生成器） |
 | SkiaSharp | 3.119.4-preview.1.1 |
+| Quartz.NET | 4.7.1（内存模式全局调度器） |
 | 目标平台 | Windows (x64) · macOS (osx-x64/osx-arm64) · Linux |
 
 ---

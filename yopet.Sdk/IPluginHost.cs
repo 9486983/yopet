@@ -11,7 +11,7 @@ public interface IPluginHost
     // ── 本地化（独立对象，所有文本读取放这里） ──
     ILocalizer Localizer { get; }
 
-    // ── 定时任务（独立对象，所有调度方法放这里） ──
+    // ── 定时任务（独立对象，全局 Quartz.NET 调度器；插件禁止自建 Timer） ──
     IPluginScheduler Scheduler { get; }
 
     // ── 会话多步工作流 ──

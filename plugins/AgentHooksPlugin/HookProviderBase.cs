@@ -48,10 +48,15 @@ public abstract class HookProviderBase : IDisposable
     protected virtual int WorkingIdleTimeoutMs => 0;
 
     private IPluginHost? _host;
+
+    /// <summary>当前注入的宿主（Provider 停止后为 null）。</summary>
+    protected IPluginHost? Host => _host;
+
     protected IPluginLogger? Logger { get; private set; }
     private readonly object _workingLock = new();
     private bool _isWorking;
-    private CancellationTokenSource? _workingCts;
+
+    private string WorkingIdleJobId => $"{Id}_working_idle";
 
     /// <summary>
     /// 启动监听。
@@ -73,6 +78,7 @@ public abstract class HookProviderBase : IDisposable
     {
         _isRunning = false;
         StopWorking();
+        _host?.Scheduler.Unregister(WorkingIdleJobId);
         _host = null;
         Logger = null;
     }
@@ -129,20 +135,18 @@ public abstract class HookProviderBase : IDisposable
             _isWorking = true;
             host.StartAnimation(PetAnimation.Running);
 
-            _workingCts?.Cancel();
-            _workingCts?.Dispose();
-            _workingCts = null;
-
+            host.Scheduler.Unregister(WorkingIdleJobId);
             if (WorkingIdleTimeoutMs <= 0) return;
 
-            var cts = new CancellationTokenSource();
-            _workingCts = cts;
-            _ = Task.Run(async () =>
-            {
-                try { await Task.Delay(WorkingIdleTimeoutMs, cts.Token); }
-                catch (TaskCanceledException) { return; }
-                StopWorking();
-            });
+            host.Scheduler.RegisterOnce(
+                WorkingIdleJobId,
+                TimeSpan.FromMilliseconds(WorkingIdleTimeoutMs),
+                () =>
+                {
+                    StopWorking();
+                    return Task.CompletedTask;
+                },
+                $"⏱️ {Name} 工作状态超时恢复");
         }
     }
 
@@ -150,18 +154,14 @@ public abstract class HookProviderBase : IDisposable
     protected void StopWorking()
     {
         var host = _host;
-        CancellationTokenSource? cts;
 
         lock (_workingLock)
         {
             if (!_isWorking) return;
             _isWorking = false;
-            cts = _workingCts;
-            _workingCts = null;
         }
 
-        cts?.Cancel();
-        cts?.Dispose();
+        host?.Scheduler.Unregister(WorkingIdleJobId);
         host?.StopAnimation();
     }
 

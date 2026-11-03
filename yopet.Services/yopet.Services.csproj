@@ -1,6 +1,7 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <ItemGroup>
+    <PackageReference Include="Quartz" Version="4.7.1" />
     <ProjectReference Include="..\yopet.Core\yopet.Core.csproj" />
     <ProjectReference Include="..\yopet.Sdk\yopet.Sdk.csproj" />
     <PackageReference Include="Lang.Avalonia" Version="12.1.1.2" />

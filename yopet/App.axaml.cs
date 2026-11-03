@@ -45,6 +45,8 @@ public partial class App : Application
                 new LoggerService(Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "plugins", "logs")),
                 "Host"));
             services.AddSingleton<ILocalizer>(_ => new Localizer());
+            services.AddSingleton<ISchedulerService, SchedulerService>();
+            services.AddSingleton<IPluginScheduler, PluginScheduler>();
             services.AddSingleton<PluginHostImpl>();
             services.AddSingleton<PluginLoader>();
 
@@ -59,6 +61,7 @@ public partial class App : Application
             Localization.Current = localizer;
             var pluginHost = _serviceProvider.GetRequiredService<PluginHostImpl>();
             var pluginLoader = _serviceProvider.GetRequiredService<PluginLoader>();
+            var scheduler = _serviceProvider.GetRequiredService<ISchedulerService>();
             var config = configService.Config;
 
             // ── 注册多语言资源（JSON 文件位于输出目录 I18n/） ──
@@ -94,8 +97,13 @@ public partial class App : Application
             pluginLoader.LoadFromDirectory(Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "plugins"));
             var pluginInitTask = pluginLoader.InitializeAllAsync(pluginHost);
 
-            // ── 启动定时任务调度器 ──
-            pluginHost.SchedulerService.Start();
+            // ── 启动全局定时任务调度器（主程序与所有插件共用，Quartz.NET） ──
+            scheduler.Start();
+            desktop.Exit += (_, _) =>
+            {
+                scheduler.Stop();
+                _serviceProvider?.Dispose();
+            };
 
             // ── 宠物窗口 ──
             var petVm = new PetViewModel(configService, dispatcher, petdexService,

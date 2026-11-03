@@ -15,12 +15,11 @@ public class DeepSeekQueryPlugin : PluginBase
     private const string KeyInterval = "deepseek_interval";
     private const string KeyAutoQuery = "deepseek_auto_query";
     private const string KeySummaryUrl = "deepseek_summary_url";
+    private const string AutoQueryJobId = "deepseek_auto_query";
     private const string BalanceUrl = "https://api.deepseek.com/user/balance";
     private const string ChatUrl = "https://api.deepseek.com/v1/chat/completions";
 
     private IPluginHost? _host;
-    private PeriodicTimer? _timer;
-    private CancellationTokenSource? _timerCts;
 
     public override string Name => T("Name");
     public override string Description => T("Description");
@@ -113,38 +112,23 @@ public class DeepSeekQueryPlugin : PluginBase
 
     private void RestartTimerIfNeeded()
     {
-        StopTimer();
-
-        if (!IsAutoQueryEnabled) return;
         if (_host == null) return;
 
-        var interval = GetQueryIntervalMinutes();
-        _timerCts = new CancellationTokenSource();
-        var ct = _timerCts.Token;
-        _timer = new PeriodicTimer(TimeSpan.FromMinutes(interval));
+        _host.Scheduler.Unregister(AutoQueryJobId);
+        if (!IsAutoQueryEnabled) return;
 
-        _ = Task.Run(async () =>
-        {
-            try
+        var interval = TimeSpan.FromMinutes(GetQueryIntervalMinutes());
+        _host.Scheduler.RegisterInterval(
+            AutoQueryJobId,
+            interval,
+            async () =>
             {
-                while (await _timer.WaitForNextTickAsync(ct))
-                {
-                    if (string.IsNullOrEmpty(GetApiKey())) continue;
-                    await QueryBalance(silent: true);
-                    if (!IsAutoQueryEnabled) break;
-                }
-            }
-            catch (OperationCanceledException) { }
-        }, ct);
-    }
-
-    private void StopTimer()
-    {
-        _timerCts?.Cancel();
-        _timerCts?.Dispose();
-        _timerCts = null;
-        _timer?.Dispose();
-        _timer = null;
+                if (!IsAutoQueryEnabled) return;
+                if (string.IsNullOrEmpty(GetApiKey())) return;
+                await QueryBalance(silent: true);
+            },
+            "💰 自动查询 DeepSeek 余额",
+            runImmediately: false);
     }
 
     private void OnConfigChanged(object? sender, string key)
@@ -213,7 +197,11 @@ public class DeepSeekQueryPlugin : PluginBase
 
     public override Task CleanupAsync()
     {
-        StopTimer();
+        if (_host != null)
+        {
+            _host.Scheduler.Unregister(AutoQueryJobId);
+            _host.ConfigValueChanged -= OnConfigChanged;
+        }
         return base.CleanupAsync();
     }
 }

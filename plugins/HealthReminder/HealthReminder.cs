@@ -11,8 +11,9 @@ public class HealthReminderPlugin : PluginBase
     private const string KeyEye = "hr_eye";
     private const string KeyDrink = "hr_drink";
 
+    private const string ReminderJobId = "health_reminder_tick";
+
     private IPluginHost? _host;
-    private CancellationTokenSource? _cts;
 
     private static readonly string[] SitMessageKeys = ["SitMsg1", "SitMsg2", "SitMsg3", "SitMsg4"];
     private static readonly string[] EyeMessageKeys = ["EyeMsg1", "EyeMsg2", "EyeMsg3", "EyeMsg4"];
@@ -69,9 +70,13 @@ public class HealthReminderPlugin : PluginBase
         // 监听配置变更
         host.ConfigValueChanged += OnConfigChanged;
 
-        // 启动定时器
-        _cts = new CancellationTokenSource();
-        _ = RunTimerAsync(_cts.Token);
+        // 通过全局调度器每分钟检查一次
+        host.Scheduler.RegisterInterval(
+            ReminderJobId,
+            TimeSpan.FromMinutes(1),
+            () => { CheckReminders(); return Task.CompletedTask; },
+            "🧘 健康提醒检查",
+            runImmediately: false);
 
         Logger.Info("健康提醒插件已加载");
     }
@@ -83,20 +88,6 @@ public class HealthReminderPlugin : PluginBase
         _lastEye = DateTime.MinValue;
         _lastDrink = DateTime.MinValue;
         _lastActiveDate = DateTime.Today;
-    }
-
-    private async Task RunTimerAsync(CancellationToken ct)
-    {
-        while (!ct.IsCancellationRequested)
-        {
-            try
-            {
-                await Task.Delay(60_000, ct);
-                CheckReminders();
-            }
-            catch (TaskCanceledException) { break; }
-            catch { }
-        }
     }
 
     private void CheckReminders()
@@ -139,8 +130,11 @@ public class HealthReminderPlugin : PluginBase
 
     public override Task CleanupAsync()
     {
-        _cts?.Cancel();
-        _cts?.Dispose();
+        if (_host != null)
+        {
+            _host.Scheduler.Unregister(ReminderJobId);
+            _host.ConfigValueChanged -= OnConfigChanged;
+        }
         return base.CleanupAsync();
     }
 }

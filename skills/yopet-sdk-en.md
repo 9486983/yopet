@@ -25,7 +25,7 @@ yopet.Sdk/              ← NuGet reference: yopet.Core
 ├── PluginAttribute.cs   Metadata attribute
 ├── IPluginHost.cs       Host interaction interface (core API)
 ├── IPluginLogger.cs     Logging interface
-├── IPluginScheduler.cs  Scheduled task interface
+├── IPluginScheduler.cs  Scheduled task interface (global Quartz.NET scheduler)
 ├── ISession.cs          Multi-step session interface
 ├── PluginAction.cs      Action descriptor
 ├── PluginConfig*.cs     Configuration system
@@ -46,7 +46,7 @@ yopet.Sdk/              ← NuGet reference: yopet.Core
 ```xml
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
-    <TargetFramework>net9.0</TargetFramework>
+    <TargetFramework>net10.0</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
   </PropertyGroup>
@@ -104,7 +104,7 @@ public class MyPlugin : PluginBase
 dotnet build -c Release
 
 # Copy the output .dll to the plugins/ directory under the yopet output folder
-# e.g.: yopet/bin/Release/net9.0/win-x64/publish/plugins/
+# e.g.: yopet/bin/Release/net10.0/win-x64/publish/plugins/
 ```
 
 Once yopet starts, plugins are automatically loaded from the `plugins/` directory. Right-click the pet to see the registered actions.
@@ -472,11 +472,15 @@ host.Log("Simple message");
 
 ### 3.9 Scheduled Tasks
 
-**Cron expression**:
+> **Required convention**: the host runs a single global scheduler backed by **Quartz.NET 4.x**, registered as a DI singleton (`ISchedulerService` → `SchedulerService`) and injected through constructors. Plugins must access it only via `host.Scheduler`.
+> Plugins must **not** create their own `Timer` / `PeriodicTimer` / `DispatcherTimer`, and must not implement recurring work with a `Task.Delay` loop. All cron jobs, polling, delays, timeout recovery, and background cleanup must be registered on `host.Scheduler`.
+> (Short `await Task.Delay(...)` calls inside a running task for UI pacing or retries are not scheduling and remain acceptable.)
+
+**Cron expression** (5-field Unix and 6/7-field Quartz are supported):
 ```csharp
 host.Scheduler.Register(
-    jobId: "my_backup",           // unique identifier
-    cronExpression: "0 0 * * *",  // runs every hour
+    jobId: "my_backup",           // unique identifier (same id replaces the old job)
+    cronExpression: "0 0 * * *",  // runs every hour (5-field parsed as Unix)
     callback: async () =>
     {
         host.ShowThought("⏰ Scheduled Task", "Running backup...");
@@ -484,13 +488,29 @@ host.Scheduler.Register(
     description: "⏰ Hourly backup");
 ```
 
-**Interval execution** (seconds precision):
+**Fixed interval** (seconds or `TimeSpan`; the last argument controls immediate execution):
 ```csharp
 host.Scheduler.RegisterInterval(
     jobId: "my_heartbeat",
     intervalSeconds: 30,   // every 30 seconds
     callback: async () => { /* ... */ },
     description: "💓 Heartbeat");
+
+host.Scheduler.RegisterInterval(
+    jobId: "my_refresh",
+    interval: TimeSpan.FromSeconds(1.5), // sub-second/minute-level intervals supported
+    callback: async () => { /* ... */ },
+    description: "🖥️ Hover refresh",
+    runImmediately: false);              // wait for the first interval
+```
+
+**One-shot delay** (debounce, timeout recovery, etc.):
+```csharp
+host.Scheduler.RegisterOnce(
+    jobId: "my_timeout",
+    delay: TimeSpan.FromSeconds(15),
+    callback: async () => { /* ... */ },
+    description: "⏱️ Timeout recovery");
 ```
 
 **Management**:
@@ -603,13 +623,14 @@ The project includes several plugins for reference:
 - Plugins run inside the main process — an unhandled exception will crash the whole app. **Always catch all exceptions.**
 - Plugin DLLs are loaded via `AssemblyLoadContext(isCollectible: true)`, theoretically supporting hot-reload
 - Plugin projects need to reference `yopet.Sdk`, which already references `yopet.Core` (for `ItemType` etc.)
-- Each plugin's `.csproj` must target `net9.0`
+- Each plugin's `.csproj` must target `net10.0`
+- Always schedule through `host.Scheduler` (global Quartz.NET singleton); never create plugin-owned `Timer` / `PeriodicTimer` / `Task.Delay` loops
 
 ---
 
 ## 8. Localization (i18n)
 
-The main app integrates **Lang.Avalonia** (12.0.3.3, MIT). Plugins can use its API and XAML markup extension directly.
+The main app integrates **Lang.Avalonia** (12.1.1.2, MIT). Plugins can use its API and XAML markup extension directly.
 
 ### Key Store Convention (Unified Key Store)
 
@@ -626,7 +647,7 @@ The main app integrates **Lang.Avalonia** (12.0.3.3, MIT). Plugins can use its A
 </Window>
 ```
 
-- Under the current .NET 9 SDK (Roslyn 4.14) the `Lang.Avalonia.Analysis` generator is unavailable (it requires Roslyn 5.3), so **string keys** are used; after upgrading to the .NET 10 SDK you can add Analysis for compile-time key checking
+- **String keys** are used today; `Lang.Avalonia.Analysis` is unavailable on older Roslyn versions, and can be added later for compile-time key checking depending on the SDK version
 - A missing key falls back to the raw key string, which makes typos easy to spot
 
 ### Usage in C#

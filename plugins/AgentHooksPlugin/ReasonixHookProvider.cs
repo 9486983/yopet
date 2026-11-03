@@ -40,9 +40,10 @@ public class ReasonixHookProvider : HookProviderBase
         ReasonixDir, "settings.json");
 
     private FileSystemWatcher? _watcher;
-    private CancellationTokenSource? _cleanupCts;
     private string _lastEventId = "";
     private readonly HashSet<string> _processingFiles = new(StringComparer.OrdinalIgnoreCase);
+
+    private string CleanupJobId => $"{Id}_cleanup";
 
     private const string KeyEnabled = "_enabled";
     private const string KeyShowCommands = "_show_commands";
@@ -109,24 +110,20 @@ public class ReasonixHookProvider : HookProviderBase
             _watcher.Created += (_, e) => OnNewEvent(e.FullPath, host);
             _watcher.Changed += (_, e) => OnNewEvent(e.FullPath, host);
 
-            // 后台定时清理旧文件
-            _cleanupCts = new CancellationTokenSource();
-            var ct = _cleanupCts.Token;
-            _ = Task.Run(async () =>
-            {
-                while (!ct.IsCancellationRequested)
-                {
-                    try { await Task.Delay(TimeSpan.FromMinutes(5), ct); }
-                    catch (TaskCanceledException) { break; }
-                    CleanupOldFiles();
-                }
-            }, ct);
+            // 通过全局调度器定时清理旧事件文件
+            host.Scheduler.RegisterInterval(
+                CleanupJobId,
+                TimeSpan.FromMinutes(5),
+                () => { CleanupOldFiles(); return Task.CompletedTask; },
+                $"🧹 {Name} 事件文件清理",
+                runImmediately: false);
         }
         catch { }
     }
 
     public override void Stop()
     {
+        Host?.Scheduler.Unregister(CleanupJobId);
         base.Stop();
         if (_watcher != null)
         {
@@ -134,9 +131,6 @@ public class ReasonixHookProvider : HookProviderBase
             _watcher.Dispose();
             _watcher = null;
         }
-        _cleanupCts?.Cancel();
-        _cleanupCts?.Dispose();
-        _cleanupCts = null;
         _lastEventId = "";
     }
 

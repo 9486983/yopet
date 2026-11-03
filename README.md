@@ -54,6 +54,11 @@ Hot-loadable plugin system with a rich SDK. Plugins are loaded from `plugins/` d
 | 🖼️ **SessionDemoPlugin** | Demo of session workflow — drag a folder, then drag images for auto-collection |
 | ⚙️ **SettingPlugin** | Settings hub — auto-start (cross-platform), pet animation speed, dark mode, plugin list |
 
+### ⏱️ Unified Scheduling (Quartz.NET)
+- A single in-memory **Quartz.NET 4.x** scheduler (`SchedulerService`) is registered in DI and injected through constructors; the main app and every plugin share it via `host.Scheduler`.
+- Supports cron (5-field Unix and 6/7-field Quartz), fixed intervals, and one-shot delays, with pause/resume/remove.
+- Plugins must not create their own timers; auto-query, reminders, hover refresh, timeouts, and cleanup jobs all run through this global scheduler.
+
 ### ⚙️ Settings (SettingPlugin)
 The legacy settings window was removed — settings now live in the **SettingPlugin** (right-click pet → ⚙️ Settings):
 
@@ -94,7 +99,7 @@ yopet.sln
 │   ├── ActivityMonitor.cs        AI event monitoring
 │   ├── PluginLoader.cs           Plugin discovery & loading
 │   ├── PluginHostImpl.cs         Plugin host implementation (incl. host settings API)
-│   └── CronSchedulerService.cs   Cron/scheduled task engine
+│   └── SchedulerService.cs       Global Quartz.NET scheduler (DI singleton, shared by plugins)
 ├── yopet.ViewModels/     MVVM ViewModels
 │   └── PetViewModel.cs           Pet logic + interaction
 └── yopet/                Avalonia UI layer
@@ -113,10 +118,11 @@ yopet.sln
 
 | Component | Version |
 |-----------|---------|
-| .NET | 9.0 |
-| Avalonia | 12.0.3 (FluentTheme) |
+| .NET | 10.0 |
+| Avalonia | 12.1.4 (FluentTheme) |
 | CommunityToolkit.Mvvm | 8.4.0 (source generators) |
 | SkiaSharp | 3.119.4-preview.1.1 |
+| Quartz.NET | 4.7.1 (in-memory global scheduler) |
 | Target Platform | Windows (x64) · macOS (osx-x64/osx-arm64) · Linux |
 
 ---
