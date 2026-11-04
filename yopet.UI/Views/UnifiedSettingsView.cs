@@ -7,7 +7,9 @@ using Avalonia.Media;
 using Avalonia.Platform.Storage;
 using Avalonia.Threading;
 using TKCode.Arc;
+using TKCode.Arc.Icons.Lucide;
 using yopet.Sdk;
+using yopet.UI.Animation;
 using yopet.UI.Components;
 
 namespace yopet.UI.Views;
@@ -77,6 +79,7 @@ public sealed class UnifiedSettingsView : UserControl
         _card = new ArcDialogCard
         {
             Title = T("SettingsCenter"),
+            Icon = LucideIconKind.Settings,
             Body = new StackPanel
             {
                 Spacing = 12,
@@ -130,7 +133,12 @@ public sealed class UnifiedSettingsView : UserControl
 
         _selector.IsEnabled = _sections.Count > 0;
         _suppressSelection = true;
-        _selector.ItemsSource = _sections.Select(item => item.Label).ToArray();
+        _selector.ItemsSource = _sections
+            .Select(item => new SelectOption(item, item.Label)
+            {
+                Icon = Lucide.Geometry(item.Icon),
+            })
+            .ToArray();
         _selector.SelectedIndex = selectedIndex;
         _suppressSelection = false;
 
@@ -190,10 +198,10 @@ public sealed class UnifiedSettingsView : UserControl
         }
 
         _currentItem = item;
-        RenderSection(item.Section);
+        RenderSection(item.Section, animate: true);
     }
 
-    private void RenderSection(PluginConfigSection section)
+    private void RenderSection(PluginConfigSection section, bool animate = false)
     {
         _currentSection = section;
         _inputs.Clear();
@@ -215,7 +223,10 @@ public sealed class UnifiedSettingsView : UserControl
 
             if (groupFields.Count == 0) continue;
 
-            _content.Children.Add(Heading($"{group.Emoji} {group.Title}".Trim(), group.Description));
+            _content.Children.Add(Heading(
+                group.Title,
+                group.Description,
+                YopetIcons.Resolve(group.Emoji, LucideIconKind.Puzzle)));
             foreach (var field in groupFields)
             {
                 AddField(field!);
@@ -240,6 +251,9 @@ public sealed class UnifiedSettingsView : UserControl
 
         if (!themeInserted && string.Equals(section.Key, "setting", StringComparison.OrdinalIgnoreCase))
             _content.Children.Add(_themePicker);
+
+        if (animate)
+            MotionKit.Reveal(_content, 6, 0);
     }
 
     private void AddField(PluginConfigField field)
@@ -476,23 +490,36 @@ public sealed class UnifiedSettingsView : UserControl
         return true;
     }
 
-    private static Control Heading(string title, string? description)
+    private static Control Heading(
+        string title,
+        string? description,
+        LucideIconKind icon)
     {
         var heading = new TextBlock
         {
-            Text = title,
+            Text = YopetIcons.DisplayText(title),
             FontWeight = FontWeight.SemiBold,
             TextWrapping = TextWrapping.Wrap,
+            VerticalAlignment = VerticalAlignment.Center,
         };
         TKCode.Arc.ArcTokens.Bind(heading, TextBlock.ForegroundProperty,
             TKCode.Arc.DesignTokens.ArcDesignTokenKind.Foreground);
         TKCode.Arc.ArcTokens.Bind(heading, TextBlock.FontSizeProperty,
             TKCode.Arc.DesignTokens.ArcDesignTokenKind.TypeSM);
 
-        if (string.IsNullOrWhiteSpace(description))
-            return heading;
+        var iconView = YopetIcons.Create(icon, 14);
 
-        var stack = new StackPanel { Spacing = 2, Children = { heading } };
+        var row = new StackPanel
+        {
+            Orientation = Orientation.Horizontal,
+            Spacing = 6,
+            Children = { iconView, heading },
+        };
+
+        if (string.IsNullOrWhiteSpace(description))
+            return row;
+
+        var stack = new StackPanel { Spacing = 2, Children = { row } };
         var detail = new TextBlock { Text = description, TextWrapping = TextWrapping.Wrap };
         TKCode.Arc.ArcTokens.Bind(detail, TextBlock.ForegroundProperty,
             TKCode.Arc.DesignTokens.ArcDesignTokenKind.TextMuted);
@@ -513,7 +540,9 @@ public sealed class UnifiedSettingsView : UserControl
 
     private sealed record SectionItem(PluginConfigSection Section)
     {
-        public string Label =>
-            $"{Section.Emoji} {Section.Title}".Trim();
+        public string Label => YopetIcons.DisplayText(Section.Title);
+
+        public LucideIconKind Icon =>
+            YopetIcons.Resolve(Section.Emoji, LucideIconKind.Puzzle);
     }
 }

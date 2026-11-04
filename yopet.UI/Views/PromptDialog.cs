@@ -3,10 +3,13 @@ using Avalonia.Controls;
 using Avalonia.Input;
 using Avalonia.Layout;
 using Avalonia.Media;
+using Avalonia.Threading;
 using TKCode.Arc;
 using TKCode.Arc.DesignTokens;
+using TKCode.Arc.Icons.Lucide;
 using yopet.Sdk;
 using yopet.UI;
+using yopet.UI.Animation;
 using yopet.UI.Components;
 
 namespace yopet.Views;
@@ -85,13 +88,13 @@ public static class PromptDialog
         {
             Orientation = Orientation.Horizontal,
             Spacing = 8,
-            Children = { ArcActions.Secondary(config.CancelLabel) },
+            Children = { ArcActions.Secondary(config.CancelLabel, icon: LucideIconKind.X) },
         };
         ((TKCode.Arc.Button)actions.Children[0]).Click += (_, _) => result.TrySetResult(null);
 
         if (config.AllowMultiple || config.AllowCustom)
         {
-            var confirm = ArcActions.Primary(config.ConfirmLabel);
+            var confirm = ArcActions.Primary(config.ConfirmLabel, icon: LucideIconKind.Check);
             confirm.Click += (_, _) => Submit();
             actions.Children.Add(confirm);
         }
@@ -106,6 +109,7 @@ public static class PromptDialog
         var card = new ArcDialogCard
         {
             Title = config.Title,
+            Icon = LucideIconKind.MessageCircleQuestion,
             Description = config.Description,
             Width = 380,
             Compact = true,
@@ -118,7 +122,16 @@ public static class PromptDialog
             Actions = actions,
         };
 
+        var revealControls = body.Children
+            .OfType<Control>()
+            .Where(control => control.IsVisible)
+            .ToArray();
+        MotionKit.PrepareStagger(revealControls, 6, 0);
+
         var popup = PetWindow.ShowDialogOn(owner, card);
+        Dispatcher.UIThread.Post(
+            () => MotionKit.PlayStagger(revealControls, 6, 0, 24),
+            DispatcherPriority.Loaded);
         popup.Closed += (_, _) => result.TrySetResult(null);
 
         try

@@ -1,5 +1,6 @@
 ﻿using Avalonia.Controls;
 using Avalonia.Layout;
+using TKCode.Arc.Icons.Lucide;
 using yopet.Sdk;
 using yopet.UI.Components;
 
@@ -12,8 +13,12 @@ public static class ConfirmDialog
     {
         var tcs = new TaskCompletionSource<bool>();
 
-        var yesBtn = ArcActions.Primary(Localization.T("Localization.Dialogs.Confirm"));
-        var noBtn = ArcActions.Secondary(Localization.T("Localization.Dialogs.Cancel"));
+        var yesBtn = ArcActions.Primary(
+            Localization.T("Localization.Dialogs.Confirm"),
+            icon: LucideIconKind.Check);
+        var noBtn = ArcActions.Secondary(
+            Localization.T("Localization.Dialogs.Cancel"),
+            icon: LucideIconKind.X);
 
         yesBtn.Click += (_, _) => tcs.TrySetResult(true);
         noBtn.Click += (_, _) => tcs.TrySetResult(false);
@@ -21,6 +26,7 @@ public static class ConfirmDialog
         var card = new ArcDialogCard
         {
             Title = title,
+            Icon = LucideIconKind.CircleHelp,
             Description = text,
             Width = 300,
             Actions = new StackPanel

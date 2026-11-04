@@ -4,9 +4,12 @@ using Avalonia.Input;
 using Avalonia.Layout;
 using Avalonia.Media;
 using Avalonia.Media.Imaging;
+using Avalonia.Threading;
 using TKCode.Arc;
 using TKCode.Arc.DesignTokens;
+using TKCode.Arc.Icons.Lucide;
 using yopet.Sdk;
+using yopet.UI.Animation;
 using yopet.UI.Components;
 
 namespace yopet.Views;
@@ -36,6 +39,11 @@ public static class ListDialog
         var card = new ArcDialogCard
         {
             Title = BuildTitle(config),
+            Icon = YopetIcons.Resolve(
+                config.Emoji,
+                config.LayoutMode == ListDialogLayoutMode.CardGrid
+                    ? LucideIconKind.LayoutGrid
+                    : LucideIconKind.Table),
             Width = config.LayoutMode == ListDialogLayoutMode.CardGrid
                 ? 520
                 : ResolveTableWidth(config.Columns),
@@ -71,9 +79,17 @@ public static class ListDialog
                 return;
             }
 
-            content.Children.Add(config.LayoutMode == ListDialogLayoutMode.CardGrid
+            var listView = config.LayoutMode == ListDialogLayoutMode.CardGrid
                 ? BuildCardGrid(config, items, Close)
-                : BuildTable(config, items, Close));
+                : BuildTable(config, items, Close);
+            content.Children.Add(listView);
+
+            if (config.LayoutMode == ListDialogLayoutMode.CardGrid && listView is Panel panel)
+            {
+                Dispatcher.UIThread.Post(
+                    () => MotionKit.StaggerReveal(panel.Children.OfType<Control>(), 8, 0, 14),
+                    DispatcherPriority.Loaded);
+            }
         }
 
         config.DataChanged += OnDataChanged;
@@ -85,22 +101,8 @@ public static class ListDialog
         return await result.Task;
     }
 
-    private static string BuildTitle(ListDialogConfig config)
-    {
-        var title = config.Title?.Trim() ?? "";
-        if (string.IsNullOrWhiteSpace(title))
-            return config.Emoji?.Trim() ?? "";
-        if (HasLeadingIcon(title))
-            return title;
-        var emoji = config.Emoji?.Trim();
-        return string.IsNullOrWhiteSpace(emoji) ? title : $"{emoji} {title}";
-    }
-
-    private static bool HasLeadingIcon(string text)
-    {
-        var first = text[0];
-        return char.IsSurrogate(first) || (first >= 0x2000 && first <= 0x2BFF);
-    }
+    private static string BuildTitle(ListDialogConfig config) =>
+        YopetIcons.DisplayText(config.Title);
 
     private static Control BuildToolbar(ListDialogConfig config)
     {
@@ -112,12 +114,25 @@ public static class ListDialog
 
     private static Control BuildToolbarAction(ListToolbarAction action)
     {
+        var kind = YopetIcons.Resolve(action.Emoji, LucideIconKind.Zap);
+        var label = YopetIcons.DisplayText(action.Label);
+
         if (action.Type == ListToolbarActionType.Dropdown && action.Children is { Count: > 0 })
         {
-            var menu = new TKCode.Arc.DropdownMenu { Label = $"{action.Emoji} {action.Label}".Trim() };
+            var menu = new TKCode.Arc.DropdownMenu
+            {
+                Label = label,
+                Icon = Lucide.Geometry(kind),
+            };
             foreach (var child in action.Children)
             {
-                var entry = new TKCode.Arc.MenuEntry { Header = $"{child.Emoji} {child.Label}".Trim() };
+                var entry = new TKCode.Arc.MenuEntry
+                {
+                    Header = YopetIcons.DisplayText(child.Label),
+                    Icon = YopetIcons.Create(
+                        YopetIcons.Resolve(child.Emoji, LucideIconKind.Zap),
+                        16),
+                };
                 entry.Click += async (_, _) =>
                 {
                     if (child.Callback is not null) await child.Callback();
@@ -128,8 +143,8 @@ public static class ListDialog
         }
 
         var button = action.IsPrimary
-            ? ArcActions.Primary($"{action.Emoji} {action.Label}".Trim())
-            : ArcActions.Secondary($"{action.Emoji} {action.Label}".Trim());
+            ? ArcActions.Primary(label, icon: kind)
+            : ArcActions.Secondary(label, icon: kind);
         button.Click += async (_, _) =>
         {
             if (action.Callback is not null) await action.Callback();
@@ -270,16 +285,27 @@ public static class ListDialog
     private static Control BuildRowAction(ListRowAction action, Dictionary<string, string> row)
     {
         var emoji = ResolveRowToken(action.Emoji, row);
-        var label = ResolveRowToken(action.Label, row);
+        var label = YopetIcons.DisplayText(ResolveRowToken(action.Label, row));
+        var kind = YopetIcons.Resolve(emoji, LucideIconKind.Zap);
 
         if (action.Type == ListRowActionType.Dropdown && action.Children is { Count: > 0 })
         {
-            var menu = new TKCode.Arc.DropdownMenu { Label = $"{emoji} {label}".Trim() };
+            var menu = new TKCode.Arc.DropdownMenu
+            {
+                Label = label,
+                Icon = Lucide.Geometry(kind),
+            };
             foreach (var child in action.Children)
             {
                 var childEmoji = ResolveRowToken(child.Emoji, row);
-                var childLabel = ResolveRowToken(child.Label, row);
-                var entry = new TKCode.Arc.MenuEntry { Header = $"{childEmoji} {childLabel}".Trim() };
+                var childLabel = YopetIcons.DisplayText(ResolveRowToken(child.Label, row));
+                var entry = new TKCode.Arc.MenuEntry
+                {
+                    Header = childLabel,
+                    Icon = YopetIcons.Create(
+                        YopetIcons.Resolve(childEmoji, LucideIconKind.Zap),
+                        16),
+                };
                 entry.Click += async (_, _) =>
                 {
                     if (child.Callback is not null) await child.Callback(row);
@@ -289,7 +315,7 @@ public static class ListDialog
             return menu;
         }
 
-        var button = ArcActions.Secondary($"{emoji} {label}".Trim());
+        var button = ArcActions.Secondary(label, icon: kind);
         if (!string.IsNullOrWhiteSpace(action.Tooltip))
             ToolTip.SetTip(button, action.Tooltip);
         button.Click += async (_, _) =>
@@ -354,13 +380,12 @@ public static class ListDialog
             }
             else
             {
-                card.Media = new TextBlock
-                {
-                    Text = config.CardFallbackEmoji,
-                    FontSize = 42,
-                    HorizontalAlignment = HorizontalAlignment.Center,
-                    VerticalAlignment = VerticalAlignment.Center,
-                };
+                var fallbackIcon = YopetIcons.Create(
+                    config.CardFallbackEmoji,
+                    42,
+                    LucideIconKind.Image);
+                fallbackIcon.HorizontalAlignment = HorizontalAlignment.Center;
+                card.Media = fallbackIcon;
             }
 
             card.PointerPressed += async (_, _) =>

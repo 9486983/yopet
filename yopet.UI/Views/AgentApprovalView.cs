@@ -1,17 +1,20 @@
 ﻿using Avalonia;
-using Avalonia.Animation;
 using Avalonia.Controls;
 using Avalonia.Layout;
-using Avalonia.Threading;
 using Avalonia.VisualTree;
 using System.Reflection;
 using TKCode.Arc;
 using yopet.Sdk;
+using yopet.UI.Animation;
 
 namespace yopet.Views;
 
 public sealed class AgentApprovalView : IDialogView<string?>
 {
+    private static readonly PropertyInfo? SurfaceProperty = typeof(AgentStatus).GetProperty(
+        "Surface",
+        BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic);
+
     private readonly TaskCompletionSource<string?> _result = new();
 
     public AgentApprovalView(AgentApprovalConfig config)
@@ -48,43 +51,27 @@ public sealed class AgentApprovalView : IDialogView<string?>
             Width = 448,
             Height = 72,
             Children = { status },
-            Transitions = new Transitions
-            {
-                new DoubleTransition
-                {
-                    Property = Layoutable.HeightProperty,
-                    Duration = TimeSpan.FromMilliseconds(200),
-                },
-            },
         };
 
-        status.ExpandedChanged += async (_, e) =>
+        IDisposable? heightFollower = null;
+        void FollowSurface()
         {
-            if (!e.IsExpanded)
-            {
-                // Let the host follow the panel's own collapse animation instead
-                // of snapping the window; keep the shadow inset outside layout.
-                content.Height = Math.Max(status.Bounds.Height, 40) + 32;
+            if (heightFollower is not null)
                 return;
-            }
 
-            var lastHeight = 0d;
-            for (var i = 0; i < 20 && status.IsExpanded; i++)
-            {
-                await Task.Delay(50);
+            var surface = FindSurface(status);
+            if (surface is null)
+                return;
 
-                var panelHeight = FindPanelHeight(status);
-                if (panelHeight <= 0)
-                    continue;
+            heightFollower = MotionKit.FollowHeight(surface, content, 32);
+        }
 
-                if (Math.Abs(panelHeight - lastHeight) < 0.5 && i >= 3)
-                    break;
-
-                lastHeight = panelHeight;
-                // The panel is an overlay and is not part of SizeToContent.
-                // Leave room below the measured surface for its floating shadow.
-                content.Height = panelHeight + 32;
-            }
+        FollowSurface();
+        status.TemplateApplied += (_, _) => FollowSurface();
+        content.DetachedFromVisualTree += (_, _) =>
+        {
+            heightFollower?.Dispose();
+            heightFollower = null;
         };
 
         View = content;
@@ -103,24 +90,14 @@ public sealed class AgentApprovalView : IDialogView<string?>
 
     public void Cancel() => _result.TrySetResult(null);
 
-    private static double FindPanelHeight(AgentStatus status)
+    private static Control? FindSurface(AgentStatus status)
     {
-        var surfaceProperty = status.GetType().GetProperty(
-            "Surface",
-            BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic);
-        if (surfaceProperty?.GetValue(status) is Control surface)
-            return surface.Bounds.Height;
+        if (SurfaceProperty?.GetValue(status) is Control surface)
+            return surface;
 
-        var root = TopLevel.GetTopLevel(status);
-        if (root == null)
-            return 0;
-
-        var panel = root.GetVisualDescendants()
+        return TopLevel.GetTopLevel(status)?
+            .GetVisualDescendants()
             .OfType<Control>()
-            .Where(control => control.GetType().Name == "AgentStatusSurface")
-            .OrderByDescending(control => control.Bounds.Height)
-            .FirstOrDefault();
-
-        return panel?.Bounds.Height ?? 0;
+            .FirstOrDefault(control => control.GetType().Name == "AgentStatusSurface");
     }
 }

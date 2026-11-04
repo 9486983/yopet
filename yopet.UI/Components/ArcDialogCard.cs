@@ -4,6 +4,7 @@ using Avalonia.Layout;
 using Avalonia.Media;
 using TKCode.Arc;
 using TKCode.Arc.DesignTokens;
+using TKCode.Arc.Icons.Lucide;
 
 namespace yopet.UI.Components;
 
@@ -11,6 +12,7 @@ namespace yopet.UI.Components;
 public class ArcDialogCard : ArcSurface
 {
     private readonly TextBlock _title;
+    private readonly LucideIcon _titleIcon;
     private readonly TextBlock _description;
     private readonly ContentControl _body;
     private readonly ContentControl _actions;
@@ -26,6 +28,15 @@ public class ArcDialogCard : ArcSurface
         };
         ArcTokens.Bind(_title, TextBlock.ForegroundProperty, ArcDesignTokenKind.Foreground);
         ArcTokens.Bind(_title, TextBlock.FontSizeProperty, ArcDesignTokenKind.TypeLG);
+        _title.VerticalAlignment = VerticalAlignment.Center;
+
+        _titleIcon = new LucideIcon
+        {
+            Size = 18,
+            IsVisible = false,
+            VerticalAlignment = VerticalAlignment.Center,
+        };
+        ArcTokens.Bind(_titleIcon, ArcGlyph.ForegroundProperty, ArcDesignTokenKind.Foreground);
 
         _description = new TextBlock
         {
@@ -51,7 +62,12 @@ public class ArcDialogCard : ArcSurface
         {
             Children =
             {
-                _title,
+                new StackPanel
+                {
+                    Orientation = Orientation.Horizontal,
+                    Spacing = 8,
+                    Children = { _titleIcon, _title },
+                },
                 _description,
                 _body,
                 _actions,
@@ -62,7 +78,18 @@ public class ArcDialogCard : ArcSurface
     public string? Title
     {
         get => _title.Text;
-        set => _title.Text = value;
+        set => _title.Text = YopetIcons.DisplayText(value);
+    }
+
+    public LucideIconKind? Icon
+    {
+        get => _titleIcon.IsVisible ? _titleIcon.Kind : null;
+        set
+        {
+            _titleIcon.IsVisible = value.HasValue;
+            if (value is { } kind)
+                _titleIcon.Kind = kind;
+        }
     }
 
     public bool Compact

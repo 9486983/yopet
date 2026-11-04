@@ -4,6 +4,8 @@
         xmlns:controls="clr-namespace:yopet.Controls"
         xmlns:ui="clr-namespace:yopet.UI.Components"
         xmlns:arc="https://github.com/AIDotNet/TKCode.Arc"
+        xmlns:lucide="https://github.com/AIDotNet/TKCode.Arc/lucide"
+        xmlns:conv="clr-namespace:yopet.UI.Converters"
         x:Class="yopet.PetWindow"
         x:CompileBindings="False"
         Title="{c:I18n Localization.App.Title}"
@@ -21,6 +23,10 @@
         PointerEntered="OnPetPointerEntered"
         PointerExited="OnPetPointerExited"
         DragDrop.AllowDrop="True">
+
+  <Window.Resources>
+    <conv:EmojiIconConverter x:Key="EmojiIconConverter" />
+  </Window.Resources>
 
   <Grid DragDrop.AllowDrop="True"
         DragDrop.DragEnter="OnDragEnter"
@@ -50,13 +56,15 @@
               <Grid RowDefinitions="Auto,Auto">
                 <Grid ColumnDefinitions="Auto,*">
                   <Grid Width="18" Height="18" Margin="0,0,5,0" VerticalAlignment="Center">
-                    <TextBlock Text="💬" FontSize="12" VerticalAlignment="Center"
-                               HorizontalAlignment="Left" />
-                    <TextBlock Text="{Binding ThoughtTitleIcon}"
-                               FontSize="9"
-                               Foreground="{arc:ArcDesignTokenResource Accent}"
-                               HorizontalAlignment="Right" VerticalAlignment="Bottom"
-                               Margin="0,0,-1,-1" />
+                    <lucide:LucideIcon Kind="MessageCircle" Size="12"
+                                      Foreground="{arc:ArcDesignTokenResource Foreground}"
+                                      VerticalAlignment="Center"
+                                      HorizontalAlignment="Left" />
+                    <lucide:LucideIcon Kind="{Binding ThoughtTitleIcon, Converter={StaticResource EmojiIconConverter}}"
+                                      Size="9"
+                                      Foreground="{arc:ArcDesignTokenResource Foreground}"
+                                      HorizontalAlignment="Right" VerticalAlignment="Bottom"
+                                      Margin="0,0,-1,-1" />
                   </Grid>
                   <TextBlock Grid.Column="1"
                              Text="{Binding ThoughtTitleText}"
@@ -97,7 +105,11 @@
             IsVisible="{Binding IsIndicatorVisible}"
             HorizontalAlignment="Right" VerticalAlignment="Top"
             Margin="0,16,16,0">
-      <TextBlock Text="{Binding IndicatorText}" FontSize="13" HorizontalAlignment="Center" VerticalAlignment="Center" />
+      <lucide:LucideIcon Kind="{Binding IndicatorText, Converter={StaticResource EmojiIconConverter}}"
+                        Size="13"
+                        Foreground="{arc:ArcDesignTokenResource Foreground}"
+                        HorizontalAlignment="Center"
+                        VerticalAlignment="Center" />
     </Border>
 
     <!-- 进度环：有任务执行中，点击取消 -->
