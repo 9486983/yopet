@@ -1,6 +1,7 @@
 ﻿using Avalonia.Controls;
 using Avalonia.Input;
 using Avalonia.Layout;
+using TKCode.Arc.Icons.Lucide;
 using yopet.Sdk;
 using yopet.UI.Components;
 
@@ -22,8 +23,12 @@ public static class InputDialog
             Width = 300,
         };
 
-        var okBtn = ArcActions.Primary(Localization.T("Localization.Dialogs.Confirm"));
-        var cancelBtn = ArcActions.Secondary(Localization.T("Localization.Dialogs.Cancel"));
+        var okBtn = ArcActions.Primary(
+            Localization.T("Localization.Dialogs.Confirm"),
+            icon: LucideIconKind.Check);
+        var cancelBtn = ArcActions.Secondary(
+            Localization.T("Localization.Dialogs.Cancel"),
+            icon: LucideIconKind.X);
 
         okBtn.Click += (_, _) => tcs.TrySetResult(input.Text);
         cancelBtn.Click += (_, _) => tcs.TrySetResult(null);
@@ -36,6 +41,7 @@ public static class InputDialog
         var card = new ArcDialogCard
         {
             Title = title,
+            Icon = LucideIconKind.Pencil,
             Body = input,
             Width = 340,
             Actions = new StackPanel

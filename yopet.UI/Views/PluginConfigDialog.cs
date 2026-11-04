@@ -6,6 +6,7 @@ using Avalonia.Layout;
 using Avalonia.Media;
 using Avalonia.Platform.Storage;
 using TKCode.Arc;
+using TKCode.Arc.Icons.Lucide;
 using yopet.Sdk;
 using yopet.UI.Components;
 
@@ -55,12 +56,17 @@ public static class PluginConfigDialog
 
         body.Children.Add(status);
 
-        var closeButton = ArcActions.Secondary(Localization.T("Localization.Dialogs.Cancel"));
-        var saveButton = ArcActions.Primary(Localization.T("Localization.Dialogs.Confirm"));
+        var closeButton = ArcActions.Secondary(
+            Localization.T("Localization.Dialogs.Cancel"),
+            icon: LucideIconKind.X);
+        var saveButton = ArcActions.Primary(
+            Localization.T("Localization.Dialogs.Confirm"),
+            icon: LucideIconKind.Check);
 
         var card = new ArcDialogCard
         {
-            Title = $"{section.Emoji} {section.Title}".Trim(),
+            Title = section.Title,
+            Icon = YopetIcons.Resolve(section.Emoji, LucideIconKind.Settings),
             Width = 480,
             Body = new ScrollViewer
             {

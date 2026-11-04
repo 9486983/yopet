@@ -8,9 +8,11 @@ using Avalonia.Platform.Storage;
 using Avalonia.Threading;
 using Avalonia.VisualTree;
 using System.Runtime.CompilerServices;
+using TKCode.Arc.Icons.Lucide;
 using yopet.Core.Models;
 using yopet.Sdk;
 using yopet.ViewModels;
+using yopet.UI.Animation;
 using yopet.UI.Components;
 using yopet.Views;
 
@@ -114,18 +116,18 @@ public partial class PetWindow : Window
             };
             shell.Children.Add(dragBar);
 
-            var closeText = new TextBlock
+            var closeIcon = new LucideIcon
             {
-                Text = "\u00d7",
-                FontSize = 18,
+                Kind = LucideIconKind.X,
+                Size = 16,
                 HorizontalAlignment = Avalonia.Layout.HorizontalAlignment.Center,
                 VerticalAlignment = Avalonia.Layout.VerticalAlignment.Center,
             };
-            TKCode.Arc.ArcTokens.Bind(closeText, TextBlock.ForegroundProperty,
+            TKCode.Arc.ArcTokens.Bind(closeIcon, TKCode.Arc.ArcGlyph.ForegroundProperty,
                 TKCode.Arc.DesignTokens.ArcDesignTokenKind.Foreground);
 
             var close = ArcActions.Ghost("");
-            close.Content = closeText;
+            close.Content = closeIcon;
             close.Width = 32;
             close.Height = 32;
             close.Padding = new Thickness(0);
@@ -179,8 +181,12 @@ public partial class PetWindow : Window
             window.Position = new PixelPoint(x, y);
         }
 
+        MotionKit.PrepareReveal(content);
         window.Opened += (_, _) =>
+        {
+            MotionKit.PlayReveal(content);
             Dispatcher.UIThread.Post(Fit, DispatcherPriority.Loaded);
+        };
         window.SizeChanged += (_, _) => Fit();
         Fit();
 
@@ -361,12 +367,18 @@ public partial class PetWindow : Window
     {
         if (_vm == null || _actionsWindow?.IsVisible == true) return;
 
-        var panel = new StackPanel { Spacing = 0, Width = 220 };
+        var panel = new StackPanel { Spacing = 0, Width = 196 };
         Window? actionWindow = null;
 
-        void AddRow(string header, Action invoke, bool danger = false)
+        void AddRow(
+            string header,
+            Action invoke,
+            bool danger = false,
+            LucideIconKind? icon = null)
         {
-            var button = danger ? ArcActions.Danger(header) : ArcActions.Ghost(header);
+            var button = danger
+                ? ArcActions.Danger(header, icon)
+                : ArcActions.Ghost(header, icon);
             button.HorizontalAlignment = Avalonia.Layout.HorizontalAlignment.Stretch;
             button.HorizontalContentAlignment = Avalonia.Layout.HorizontalAlignment.Left;
             button.MinHeight = 28;
@@ -380,23 +392,47 @@ public partial class PetWindow : Window
             panel.Children.Add(button);
         }
 
-        void AddHeading(string text)
+        void AddHeading(string text, LucideIconKind? icon = null)
         {
             var heading = new TextBlock
             {
-                Text = text,
-                Margin = new Thickness(8, 7, 8, 3),
+                Text = YopetIcons.DisplayText(text),
                 TextWrapping = TextWrapping.Wrap,
                 FontSize = 9.5,
                 FontWeight = Avalonia.Media.FontWeight.SemiBold,
                 Opacity = 0.72,
                 IsHitTestVisible = false,
+                VerticalAlignment = Avalonia.Layout.VerticalAlignment.Center,
             };
             TKCode.Arc.ArcTokens.Bind(heading, TextBlock.ForegroundProperty,
                 TKCode.Arc.DesignTokens.ArcDesignTokenKind.TextMuted);
             TKCode.Arc.ArcTokens.Bind(heading, TextBlock.FontSizeProperty,
                 TKCode.Arc.DesignTokens.ArcDesignTokenKind.TypeXS);
-            panel.Children.Add(heading);
+
+            var row = new StackPanel
+            {
+                Orientation = Avalonia.Layout.Orientation.Horizontal,
+                Spacing = 5,
+                Margin = new Thickness(8, 7, 8, 3),
+                IsHitTestVisible = false,
+            };
+
+            if (icon is { } kind)
+            {
+                var iconView = new LucideIcon
+                {
+                    Kind = kind,
+                    Size = 11,
+                    Opacity = 0.72,
+                    VerticalAlignment = Avalonia.Layout.VerticalAlignment.Center,
+                };
+                TKCode.Arc.ArcTokens.Bind(iconView, TKCode.Arc.ArcGlyph.ForegroundProperty,
+                    TKCode.Arc.DesignTokens.ArcDesignTokenKind.TextMuted);
+                row.Children.Add(iconView);
+            }
+
+            row.Children.Add(heading);
+            panel.Children.Add(row);
         }
 
         void AddSeparator()
@@ -415,7 +451,8 @@ public partial class PetWindow : Window
             var statusSuffix = string.IsNullOrEmpty(status) ? "" : $"（{status}）";
             AddRow(string.Format(
                     T("Localization.PetWindow.MenuEndSession"), title, statusSuffix),
-                () => _vm.EndSessionCallback?.Invoke());
+                () => _vm.EndSessionCallback?.Invoke(),
+                icon: LucideIconKind.CircleStop);
             AddSeparator();
         }
         else if (_vm.IsActivated)
@@ -423,46 +460,55 @@ public partial class PetWindow : Window
             var name = _vm.ActivatedFileAction?.Name ?? "";
             AddRow(string.Format(
                     T("Localization.PetWindow.MenuUnlock"), name),
-                () => _vm.DeactivateAction());
+                () => _vm.DeactivateAction(),
+                icon: LucideIconKind.LockOpen);
             AddSeparator();
         }
 
-        AddRow(T("Localization.PetWindow.MenuPetdex"), OpenPetdex);
+        AddRow(T("Localization.PetWindow.MenuPetdex"), OpenPetdex,
+            icon: LucideIconKind.BookOpen);
         AddRow(T("Localization.PetWindow.ReloadPlugins"),
-            () => _vm?.ReloadPluginsCallback?.Invoke());
+            () => _vm?.ReloadPluginsCallback?.Invoke(),
+            icon: LucideIconKind.RefreshCw);
         AddSeparator();
 
         _vm.RefreshActionsCallback?.Invoke();
         if (_vm.Actions.Count > 0)
         {
-            AddHeading(T("Localization.PetWindow.MenuPlugins"));
-
             var groups = _vm.Actions
                 .GroupBy(a => string.IsNullOrEmpty(a.Display?.Group?.Invoke() ?? a.Group)
                     ? ""
-                    : (a.Display?.Group?.Invoke() ?? a.Group));
+                    : (a.Display?.Group?.Invoke() ?? a.Group))
+                .Select(group => new
+                {
+                    Key = group.Key,
+                    Actions = group.ToList(),
+                });
 
             foreach (var group in groups)
             {
-                if (!string.IsNullOrEmpty(group.Key))
-                    AddHeading(group.Key);
+                if (!string.IsNullOrEmpty(group.Key) && group.Actions.Count > 1)
+                    AddHeading(group.Key, LucideIconKind.Puzzle);
 
-                foreach (var action in group)
+                foreach (var action in group.Actions)
                 {
-                    var name = action.Display?.Name?.Invoke() ?? action.Name;
-                    AddRow($"{action.Emoji} {name}",
-                        () => _vm?.PerformActionCommand.Execute(action));
+                    var name = YopetIcons.DisplayText(
+                        action.Display?.Name?.Invoke() ?? action.Name);
+                    AddRow(name,
+                        () => _vm?.PerformActionCommand.Execute(action),
+                        icon: YopetIcons.Resolve(action.Emoji, LucideIconKind.Puzzle));
                 }
             }
             AddSeparator();
         }
 
-        AddRow(T("Localization.PetWindow.MenuClose"), Close, danger: true);
+        AddRow(T("Localization.PetWindow.MenuClose"), Close,
+            danger: true, icon: LucideIconKind.Power);
 
         var surface = new ArcSurface
         {
-            Width = 240,
-            Padding = new Thickness(6, 4, 2, 4),
+            Width = 212,
+            Padding = new Thickness(5, 3, 2, 3),
             Child = new ScrollViewer
             {
                 Content = panel,
