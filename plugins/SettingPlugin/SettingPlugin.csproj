@@ -2,7 +2,7 @@
 
   <ItemGroup>
     <PackageReference Include="Avalonia" Version="12.1.4" />
-    <PackageReference Include="TKCode.Arc" Version="0.3.2-preview.2" />
+    <PackageReference Include="TKCode.Arc" Version="0.4.0-preview.1" />
     <ProjectReference Include="..\..\yopet.Sdk\yopet.Sdk.csproj" />
     <ProjectReference Include="..\..\yopet.UI\yopet.UI.csproj" />
   </ItemGroup>

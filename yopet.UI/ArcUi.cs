@@ -43,6 +43,7 @@ public static class ArcUi
             .WithArcFonts()
             .UseArc(arc => arc
                 .UseArcControls()
+                .UseArcSpecial()
                 .UseLanguages(LanguageTags.EnUS,
                     [LanguageTags.EnUS, LanguageTags.ZhCN, LanguageTags.ZhTW])
                 .WithTheme(theme => theme

@@ -80,6 +80,9 @@ public interface IPluginHost
     /// <summary>弹出选项/输入对话框，返回选中的选项或自定义输入；null 表示取消</summary>
     Task<IReadOnlyList<string>?> ShowPromptDialog(PromptDialogConfig config);
 
+    /// <summary>Shows a custom interactive view and awaits its result.</summary>
+    Task<T?> ShowDialogAsync<T>(IDialogView<T> dialog);
+
     /// <summary>弹出列表弹窗（气泡样式），支持自定义数据、操作列、编辑、工具栏</summary>
     Task ShowListDialog(ListDialogConfig config);
 

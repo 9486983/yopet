@@ -180,7 +180,6 @@ if ($LASTEXITCODE -ne 0) { throw "MSI build failed" }
 
 # ── Cleanup ──
 Remove-Item $WxsFile, $locWxl -Force -ErrorAction SilentlyContinue
-Remove-Item $PluginsDir -Recurse -Force -ErrorAction SilentlyContinue
 if (Test-Path "$env:TEMP\_wix_build") {
     Remove-Item "$env:TEMP\_wix_build" -Recurse -Force -ErrorAction SilentlyContinue
 }

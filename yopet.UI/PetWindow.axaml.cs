@@ -39,14 +39,31 @@ public partial class PetWindow : Window
     /// <summary>气泡定位目标（供弹窗 Popup 定位用）</summary>
     public Control BubbleTarget => PetBody;
 
+    public Control? BubbleBody =>
+        BubblePopup.Child is Grid grid && grid.Children.Count > 0
+            ? grid.Children[0] as Control
+            : null;
+
+    public bool BubbleIsOpen => BubblePopup.IsOpen;
+
     /// <summary>在独立透明窗口中显示内容，避免 Popup 内无法创建 Arc 覆盖层。</summary>
     public Window ShowDialog(Control content) =>
         CreateDialogWindow(this, content);
 
-    public static Window ShowDialogOn(Window owner, Control content) =>
-        CreateDialogWindow(owner, content);
+    public static Window ShowDialogOn(
+        Window owner,
+        Control content,
+        bool showClose = true,
+        bool alignToBubbleBottom = false,
+        Func<double>? bottomInset = null) =>
+        CreateDialogWindow(owner, content, showClose, alignToBubbleBottom, bottomInset);
 
-    private static Window CreateDialogWindow(Window owner, Control content, bool showClose = true)
+    private static Window CreateDialogWindow(
+        Window owner,
+        Control content,
+        bool showClose = true,
+        bool alignToBubbleBottom = false,
+        Func<double>? bottomInset = null)
     {
         var screen = owner.Screens.ScreenFromWindow(owner);
         var workArea = screen?.WorkingArea;
@@ -54,7 +71,12 @@ public partial class PetWindow : Window
         var maxWidth = (workArea is { } areaW ? areaW.Width - 16 : 1200) / scaling;
         var maxHeight = (workArea is { } areaH ? areaH.Height - 16 : 900) / scaling;
         var width = double.IsNaN(content.Width) ? 420 : Math.Min(content.Width, maxWidth);
-        var estimatedHeight = double.IsNaN(content.Height) ? 600 : Math.Min(content.Height, maxHeight);
+
+        content.Measure(new Size(width, maxHeight));
+        var measuredHeight = content.DesiredSize.Height;
+        var estimatedHeight = double.IsNaN(content.Height)
+            ? Math.Min(Math.Max(measuredHeight, 160), maxHeight)
+            : Math.Min(content.Height, maxHeight);
 
         var window = new Window
         {
@@ -133,6 +155,25 @@ public partial class PetWindow : Window
             var actualHeight = (int)Math.Ceiling((window.Bounds.Height <= 1 ? estimatedHeight : window.Bounds.Height) * scaling);
             var x = owner.Position.X + (int)(owner.Bounds.Width * scaling / 2 - actualWidth / 2.0);
             var y = owner.Position.Y - (int)Math.Clamp(actualHeight + 24, 180, bounds.Height - 40);
+
+            if (alignToBubbleBottom && owner is PetWindow pet)
+            {
+                try
+                {
+                    // Align with the flat bottom of the bubble body, not the tail tip.
+                    var body = pet.BubbleBody;
+                    var bubbleBottom = pet.BubbleIsOpen && body is { Bounds.Height: > 0 }
+                        ? body.PointToScreen(new Point(0, body.Bounds.Height)).Y
+                        : pet.BubbleTarget.PointToScreen(new Point(0, 0)).Y - 26;
+                    var inset = (int)Math.Ceiling(bottomInset?.Invoke() ?? 0);
+                    y = (int)Math.Ceiling((double)bubbleBottom) - actualHeight + inset;
+                }
+                catch
+                {
+                    // The pet visual is not attached during early startup.
+                }
+            }
+
             x = Math.Clamp(x, bounds.X + 8, bounds.Right - actualWidth - 8);
             y = Math.Clamp(y, bounds.Y + 8, bounds.Bottom - actualHeight - 8);
             window.Position = new PixelPoint(x, y);

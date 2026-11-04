@@ -10,8 +10,9 @@
     <PackageReference Include="Avalonia" Version="12.1.4" />
     <PackageReference Include="Lang.Avalonia" Version="12.1.1.2" />
     <PackageReference Include="SkiaSharp" Version="3.119.4" />
-    <PackageReference Include="TKCode.Arc" Version="0.3.2-preview.2" />
-    <PackageReference Include="TKCode.Arc.Fonts" Version="0.3.2-preview.2" />
+    <PackageReference Include="TKCode.Arc" Version="0.4.0-preview.1" />
+    <PackageReference Include="TKCode.Arc.Fonts" Version="0.4.0-preview.1" />
+    <PackageReference Include="TKCode.Arc.Special" Version="0.4.0-preview.1" />
   </ItemGroup>
 
   <ItemGroup>

@@ -5,7 +5,7 @@
     <!-- 关键：显式引用 Avalonia 12.1.4（Lang.Avalonia 传递的 Avalonia exclude 了 Build 目标，
          .axaml 的 XamlIl 编译需要本包提供的 MSBuild 目标；版本必须与主程序一致） -->
     <PackageReference Include="Avalonia" Version="12.1.4" />
-    <PackageReference Include="TKCode.Arc" Version="0.3.2-preview.2" />
+    <PackageReference Include="TKCode.Arc" Version="0.4.0-preview.1" />
   </ItemGroup>
 
   <PropertyGroup>

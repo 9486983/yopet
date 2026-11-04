@@ -16,7 +16,7 @@ public static class PromptDialog
     public static async Task<IReadOnlyList<string>?> ShowAsync(Window owner, PromptDialogConfig config)
     {
         var result = new TaskCompletionSource<IReadOnlyList<string>?>();
-        var body = new StackPanel { Spacing = 8 };
+        var body = new StackPanel { Spacing = 6 };
         var checkboxes = new List<(PromptOption Option, TKCode.Arc.Checkbox Box)>();
         var validation = new TextBlock
         {
@@ -107,11 +107,12 @@ public static class PromptDialog
         {
             Title = config.Title,
             Description = config.Description,
-            Width = 460,
+            Width = 380,
+            Compact = true,
             Body = new ScrollViewer
             {
                 Content = body,
-                MaxHeight = 420,
+                MaxHeight = 300,
                 HorizontalScrollBarVisibility = Avalonia.Controls.Primitives.ScrollBarVisibility.Disabled,
             },
             Actions = actions,
@@ -141,7 +142,8 @@ public static class PromptDialog
 
         button.HorizontalAlignment = HorizontalAlignment.Stretch;
         button.HorizontalContentAlignment = HorizontalAlignment.Left;
-        button.MinHeight = 42;
+        button.MinHeight = 36;
+        button.Padding = new Thickness(12, 5);
 
         if (!string.IsNullOrWhiteSpace(option.Description))
         {
@@ -157,7 +159,8 @@ public static class PromptDialog
             {
                 Text = option.Description,
                 TextWrapping = TextWrapping.Wrap,
-                Margin = new Thickness(0, 2, 0, 0),
+                Margin = new Thickness(0, 1, 0, 0),
+                LineHeight = 17,
             };
             ArcTokens.Bind(description, TextBlock.ForegroundProperty, ArcDesignTokenKind.TextSecondary);
             ArcTokens.Bind(description, TextBlock.FontSizeProperty, ArcDesignTokenKind.TypeXS);

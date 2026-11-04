@@ -3,6 +3,7 @@
   <ItemGroup>
     <PackageReference Include="Avalonia" Version="12.1.4" />
     <ProjectReference Include="..\..\yopet.Sdk\yopet.Sdk.csproj" />
+    <ProjectReference Include="..\..\yopet.UI\yopet.UI.csproj" />
   </ItemGroup>
 
   <PropertyGroup>

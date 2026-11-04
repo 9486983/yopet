@@ -233,6 +233,19 @@ public partial class App : Application
                 Avalonia.Threading.Dispatcher.UIThread.InvokeAsync(
                     () => Views.PromptDialog.ShowAsync(petWindow, config));
 
+            pluginHost.OnShowDialog = dialog =>
+            {
+                var popup = PetWindow.ShowDialogOn(
+                    petWindow,
+                    dialog.View,
+                    dialog.Options.ShowClose,
+                    dialog.Options.AlignToBubbleBottom,
+                    dialog.Options.BottomInset);
+
+                popup.Closed += (_, _) => dialog.Cancel();
+                return () => { if (popup.IsVisible) popup.Close(); };
+            };
+
             // ── 连接插件列表弹窗回调 ──
             pluginHost.OnShowListDialog = async config =>
                 await Views.ListDialog.ShowAsync(petWindow, config);

@@ -3,6 +3,7 @@ using System.Text;
 using System.Text.Json;
 using Avalonia.Threading;
 using yopet.Sdk;
+using yopet.Views;
 
 namespace AgentHooksPlugin;
 
@@ -29,6 +30,7 @@ public class OpencodeHookProvider : JsonlHookProviderBase
 
     private readonly ConcurrentDictionary<string, string> _pending = new(StringComparer.Ordinal);
     private readonly object _replyLock = new();
+    private readonly SemaphoreSlim _promptGate = new(1, 1);
 
     private sealed record OpencodeQuestion(
         string Header,
@@ -113,43 +115,30 @@ public class OpencodeHookProvider : JsonlHookProviderBase
             var allowAlways = T("OpencodeAllowAlways");
             var reject = T("OpencodeReject");
 
-            var prompt = new PromptDialogConfig
+            var approval = new AgentApprovalConfig
             {
                 Title = T("OpencodePermissionTitle"),
                 Description = BuildPermissionDetail(root),
-                ConfirmLabel = T("OpencodeConfirm"),
-                CancelLabel = reject,
-                ValidationMessage = T("OpencodeRequired"),
-                Options =
-                [
-                    new PromptOption
-                    {
-                        Label = allowOnce,
-                        Description = T("OpencodeAllowOnceDesc"),
-                        Kind = PromptOptionKind.Primary,
-                    },
-                    new PromptOption
-                    {
-                        Label = allowAlways,
-                        Description = T("OpencodeAllowAlwaysDesc"),
-                    },
-                    new PromptOption
-                    {
-                        Label = reject,
-                        Description = T("OpencodeRejectDesc"),
-                        Kind = PromptOptionKind.Danger,
-                    },
-                ],
+                AgentName = string.IsNullOrWhiteSpace(project)
+                    ? "Opencode"
+                    : $"Opencode · {project}",
+                Activity = T("OpencodePermissionTitle"),
+                ApproveLabel = allowOnce,
+                AlwaysLabel = allowAlways,
+                DenyLabel = reject,
+                OnceValue = allowOnce,
+                AlwaysValue = allowAlways,
+                RejectValue = reject,
             };
 
             Logger?.Info($"[OpencodeHook] permission prompt {project} {requestId}");
-            var selected = await ShowOnUiThreadAsync(host, prompt);
+            var selected = await ShowOnUiThreadAsync(host, () => new AgentApprovalView(approval));
             if (!_isRunning)
                 return;
 
-            var reply = selected is { Count: > 0 } && selected[0] == allowAlways
+            var reply = selected == allowAlways
                 ? "always"
-                : selected is { Count: > 0 } && selected[0] == allowOnce
+                : selected == allowOnce
                     ? "once"
                     : "reject";
 
@@ -244,16 +233,51 @@ public class OpencodeHookProvider : JsonlHookProviderBase
         }
     }
 
-    private static async Task<IReadOnlyList<string>?> ShowOnUiThreadAsync(
+    private async Task<IReadOnlyList<string>?> ShowOnUiThreadAsync(
         IPluginHost host,
         PromptDialogConfig prompt)
     {
-        IReadOnlyList<string>? result = null;
-        await Dispatcher.UIThread.InvokeAsync(async () =>
+        await _promptGate.WaitAsync();
+        try
         {
-            result = await host.ShowPromptDialog(prompt);
-        });
-        return result;
+            if (!_isRunning)
+                return null;
+
+            IReadOnlyList<string>? result = null;
+            await Dispatcher.UIThread.InvokeAsync(async () =>
+            {
+                result = await host.ShowPromptDialog(prompt);
+            });
+            return result;
+        }
+        finally
+        {
+            _promptGate.Release();
+        }
+    }
+
+    private async Task<T?> ShowOnUiThreadAsync<T>(
+        IPluginHost host,
+        Func<IDialogView<T>> createDialog)
+    {
+        await _promptGate.WaitAsync();
+        try
+        {
+            if (!_isRunning)
+                return default;
+
+            T? result = default;
+            await Dispatcher.UIThread.InvokeAsync(async () =>
+            {
+                var dialog = createDialog();
+                result = await host.ShowDialogAsync(dialog);
+            });
+            return result;
+        }
+        finally
+        {
+            _promptGate.Release();
+        }
     }
 
     private void WriteReply(
@@ -336,9 +360,16 @@ public class OpencodeHookProvider : JsonlHookProviderBase
 
         var patterns = GetStringArray(root, "patterns");
         if (patterns.Count > 0)
-            parts.Add(string.Join("\n", patterns));
+        {
+            var patternLines = new List<string>();
+            foreach (var pattern in patterns)
+                patternLines.Add("• " + pattern);
+
+            parts.Add(string.Join("\n", patternLines));
+        }
 
         var metadataKeys = new[] { "command", "filePath", "path", "url", "description", "title" };
+        var metadataLines = new List<string>();
         var metadataShown = false;
 
         if (root.TryGetProperty("metadata", out var metadata) && metadata.ValueKind == JsonValueKind.Object)
@@ -352,15 +383,18 @@ public class OpencodeHookProvider : JsonlHookProviderBase
                 if (string.IsNullOrWhiteSpace(text))
                     continue;
 
-                parts.Add(text);
+                metadataLines.Add(text);
                 metadataShown = true;
             }
 
             if (!metadataShown)
-                parts.Add(metadata.GetRawText());
+                metadataLines.Add(metadata.GetRawText());
         }
 
-        var detail = string.Join("\n", parts);
+        if (metadataLines.Count > 0)
+            parts.Add(string.Join("\n", metadataLines));
+
+        var detail = string.Join("\n\n", parts);
         return detail.Length > 1200 ? detail[..1200] + "…" : detail;
     }
 

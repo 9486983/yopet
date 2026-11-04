@@ -85,6 +85,8 @@ public class PluginHostImpl : IPluginHost, IPluginStateResetter
     /// <summary>选项/输入对话框回调</summary>
     public Func<PromptDialogConfig, Task<IReadOnlyList<string>?>>? OnShowPromptDialog { get; set; }
 
+    public Func<IDialogView, Action>? OnShowDialog { get; set; }
+
     /// <summary>列表弹窗回调</summary>
     public Func<ListDialogConfig, Task>? OnShowListDialog { get; set; }
 
@@ -332,6 +334,23 @@ public class PluginHostImpl : IPluginHost, IPluginStateResetter
         if (OnShowPromptDialog != null)
             return OnShowPromptDialog(config);
         return Task.FromResult<IReadOnlyList<string>?>(null);
+    }
+
+    public async Task<T?> ShowDialogAsync<T>(IDialogView<T> dialog)
+    {
+        if (OnShowDialog == null)
+            return default;
+
+        Action? close = null;
+        try
+        {
+            close = OnShowDialog(dialog);
+            return await dialog.Result;
+        }
+        finally
+        {
+            close?.Invoke();
+        }
     }
 
     public Task ShowListDialog(ListDialogConfig config)

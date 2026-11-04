@@ -5,11 +5,12 @@
 
 ## 当前状态
 
-- yopet 端的 opencode 权限/提问弹窗已经可以显示。
-- 用户在 yopet 中点击后，回复会写入：
+- 权限审批使用 `AgentStatus`（NeedsInput），提问继续使用 `PromptDialog`。
+- 单选/多选 question 已在 opencode + yopet 中完成端到端验证。
+- 权限回复也已完成一次端到端验证（`client.v1`）。
+- opencode 需要以 `--port 4096` 启动，插件才有可用的 HTTP 服务；默认 TUI 的 `serverUrl` 是 fallback，不会监听端口。
+- 用户在 yopet 中确认后写入：
   `~/.config/opencode/yopet-hooks-replies.jsonl`
-- 但 opencode 侧仍会停留在等待选择的状态，回复链路尚未端到端打通。
-- 最近一次修复已加入正确的 v1 SDK 调用和多重 HTTP 回退，但尚未在重启后的环境中完成验证。
 
 ## 实现结构
 
@@ -20,7 +21,7 @@
 3. `AgentHooksPlugin` 监听日志，识别：
    - `permission_asked`
    - `question_asked`
-4. yopet 使用 `PromptDialog` 显示权限选项、单选/多选问题和自定义输入。
+4. yopet 使用 `AgentStatus` 显示权限审批，使用 `PromptDialog` 显示单选/多选问题和自定义输入。
 5. 用户选择后，C# 写入：
    `~/.config/opencode/yopet-hooks-replies.jsonl`
 6. opencode 插件轮询回复文件，尝试调用 opencode API 完成确认。
@@ -132,6 +133,13 @@ question_reply_debug
 5. 如果所有 attempt 都报 `missing` / `HTTP 404`，下一步应优先抓取真实 `serverUrl` 和实际可用的 API 路径。
 6. 如果 `client_v1_permission` 为 `undefined`，需要改用 v2 SDK 或直接构造 v2 HTTP 请求。
 7. question 功能还要确认当前 agent 是否真的启用了 question 工具。
+
+## 多个 opencode 实例
+
+- 所有实例共享 `yopet-hooks.jsonl` / `yopet-hooks-replies.jsonl`，request id 全局唯一，回复按 id 路由。
+- yopet 已串行化审批/提问弹窗，避免多个实例同时弹出互相遮挡。
+- 每个 TUI 实例都必须显式指定不同的端口，例如 `--port 4096`、`--port 4097`；否则 `serverUrl` 不可达，回复会失败。
+- 审批界面会显示实例所在项目名，便于区分。
 
 ## 备注
 

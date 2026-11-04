@@ -15,6 +15,7 @@ public class ArcDialogCard : ArcSurface
     private readonly ContentControl _body;
     private readonly ContentControl _actions;
     private string? _descriptionText;
+    private bool _compact;
 
     public ArcDialogCard()
     {
@@ -62,6 +63,21 @@ public class ArcDialogCard : ArcSurface
     {
         get => _title.Text;
         set => _title.Text = value;
+    }
+
+    public bool Compact
+    {
+        get => _compact;
+        set
+        {
+            _compact = value;
+            Padding = new Thickness(value ? 16 : 20);
+            _description.Margin = new Thickness(0, value ? 4 : 6, 0, 0);
+            _description.LineHeight = value ? 18 : double.NaN;
+            _body.Margin = new Thickness(0, value ? 12 : 16, 0, 0);
+            _actions.Height = value ? 44 : 56;
+            _actions.Margin = new Thickness(0, value ? 4 : 8, 0, 0);
+        }
     }
 
     public string? Description
