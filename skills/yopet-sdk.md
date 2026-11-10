@@ -132,10 +132,23 @@ public override async Task InitializeAsync(IPluginHost host)
 ```bash
 # 构建
 dotnet build -c Release
-
-# 将输出的 .dll 复制到 yopet 输出目录的 plugins/ 下
-# 例如: yopet/bin/Release/net10.0/win-x64/publish/plugins/
 ```
+
+每个插件部署到 `plugins/` 下的独立目录：
+
+```text
+plugins/
+  MyPlugin/
+    MyPlugin.dll
+    MyPlugin.deps.json
+    ...私有依赖和 runtimes
+```
+
+- 目录名应与入口 DLL 名称一致。
+- `yopet.Sdk`、Avalonia、TKCode.Arc 等主机共享程序集保留在应用根目录，由主机加载。
+- 主机不存在的依赖通过 `AssemblyDependencyResolver` 从插件目录加载。
+- 与主机同名但版本不同的私有依赖会在打包时被拒绝。
+- 旧的扁平 `plugins/*.dll` 布局仍然兼容。
 
 启动 yopet 后，插件自动从 `plugins/` 目录加载。右键宠物即可看到插件注册的动作。
 

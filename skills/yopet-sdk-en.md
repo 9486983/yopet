@@ -132,10 +132,23 @@ public override async Task InitializeAsync(IPluginHost host)
 ```bash
 # Build
 dotnet build -c Release
-
-# Copy the output .dll to the plugins/ directory under the yopet output folder
-# e.g.: yopet/bin/Release/net10.0/win-x64/publish/plugins/
 ```
+
+Deploy each plugin in its own directory under `plugins/`:
+
+```text
+plugins/
+  MyPlugin/
+    MyPlugin.dll
+    MyPlugin.deps.json
+    ...private dependencies and runtimes
+```
+
+- The directory name should match the entry DLL name.
+- Host-shared assemblies (`yopet.Sdk`, Avalonia, TKCode.Arc, etc.) stay in the application root and are resolved from the host.
+- Dependencies that do not exist in the host are loaded from the plugin directory through `AssemblyDependencyResolver`.
+- A private dependency with the same name but a different version from a host assembly is rejected during packaging.
+- The legacy flat `plugins/*.dll` layout is still accepted for backward compatibility.
 
 Once yopet starts, plugins are automatically loaded from the `plugins/` directory. Right-click the pet to see the registered actions.
 

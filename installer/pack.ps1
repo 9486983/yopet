@@ -14,6 +14,39 @@ $ExeDesc      = "desktop pet companion"
 
 $ScriptDir     = Split-Path -Parent $PSCommandPath
 $ProjectRoot   = Split-Path -Parent $ScriptDir
+
+function Resolve-Dotnet10 {
+    $candidates = @()
+    if ($env:YOPET_DOTNET) { $candidates += $env:YOPET_DOTNET }
+    if ($env:DOTNET_ROOT) { $candidates += (Join-Path $env:DOTNET_ROOT "dotnet.exe") }
+    if ($env:USERPROFILE) { $candidates += (Join-Path $env:USERPROFILE ".dotnet\dotnet.exe") }
+    $candidates += "C:\Program Files\dotnet\dotnet.exe"
+    $pathDotnet = Get-Command dotnet -ErrorAction SilentlyContinue
+    if ($pathDotnet) { $candidates += $pathDotnet.Source }
+
+    foreach ($candidate in ($candidates | Select-Object -Unique)) {
+        if (-not (Test-Path -LiteralPath $candidate)) { continue }
+        $sdks = & $candidate --list-sdks 2>$null
+        if ($sdks -match '^\s*10\.') { return $candidate }
+    }
+
+    throw "No .NET 10 SDK found. Install .NET 10 SDK or set YOPET_DOTNET to its dotnet.exe path."
+}
+
+function Get-RelativePath([string]$BasePath, [string]$FullPath) {
+    $trimChars = [char[]]@('\', '/')
+    $base = [System.IO.Path]::GetFullPath($BasePath).TrimEnd($trimChars)
+    $full = [System.IO.Path]::GetFullPath($FullPath)
+    if ($full.StartsWith($base, [System.StringComparison]::OrdinalIgnoreCase)) {
+        return $full.Substring($base.Length).TrimStart($trimChars)
+    }
+    throw "Path '$FullPath' is not under '$BasePath'."
+}
+
+$DotnetExe = Resolve-Dotnet10
+$env:DOTNET_ROOT = Split-Path -Parent $DotnetExe
+$env:PATH = "$(Split-Path -Parent $DotnetExe);$env:PATH"
+Write-Host "Using .NET SDK: $(& $DotnetExe --version)"
 $PublishDir    = Join-Path $ProjectRoot "yopet\bin\$Configuration\net10.0\$Runtime\publish"
 $PluginsDir    = Join-Path $PublishDir "plugins"
 $WxsFile       = Join-Path $env:TEMP "pet-yue-build.wxs"
@@ -22,46 +55,99 @@ $OutputMsi     = Join-Path $ScriptDir "yopet-$Version.msi"
 # ── 1. Ensure WiX installed ──
 if (-not (Get-Command wix.exe -ErrorAction SilentlyContinue)) {
     Write-Host "[1/5] Installing WiX Toolset..."
-    dotnet tool install --global wix --version 5.*
+    & $DotnetExe tool install --global wix --version 5.*
 }
 
 # ── 2. Publish main project ──
 Write-Host "[2/5] Publishing main project..."
-dotnet publish (Join-Path $ProjectRoot "yopet\yopet.csproj") `
+& $DotnetExe publish (Join-Path $ProjectRoot "yopet\yopet.csproj") `
     --configuration $Configuration --runtime $Runtime --self-contained false -p:NuGetAudit=false
 if ($LASTEXITCODE -ne 0) { throw "Publish failed" }
 
-# ── 3. Build plugins and copy to publish/plugins/ ──
+# ���� 3. Build plugins and copy to publish/plugins/ ����
 Write-Host "[3/5] Building plugins..."
 if (Test-Path $PluginsDir) { Remove-Item $PluginsDir -Recurse -Force }
 New-Item -ItemType Directory -Path $PluginsDir | Out-Null
 
-$skipDlls = @("yopet.Sdk.dll", "yopet.Core.dll",
-              "yopet.Services.dll", "yopet.ViewModels.dll", "yopet.UI.dll",
-              "TKCode.Arc.dll", "TKCode.Arc.Core.dll", "TKCode.Arc.Foundation.dll",
-              "TKCode.Arc.Fonts.dll", "Avalonia.dll", "Avalonia.Base.dll",
-              "Avalonia.Controls.dll", "Lang.Avalonia.dll", "Lang.Avalonia.Json.dll")
+$rootFileHashes = [System.Collections.Generic.Dictionary[string, System.Collections.Generic.HashSet[string]]]::new(
+    [System.StringComparer]::OrdinalIgnoreCase)
+Get-ChildItem -LiteralPath $PublishDir -Recurse -File | ForEach-Object {
+    if (-not $rootFileHashes.ContainsKey($_.Name)) {
+        $rootFileHashes[$_.Name] = [System.Collections.Generic.HashSet[string]]::new(
+            [System.StringComparer]::OrdinalIgnoreCase)
+    }
+    [void]$rootFileHashes[$_.Name].Add(
+        (Get-FileHash -LiteralPath $_.FullName -Algorithm SHA256).Hash)
+}
 
 $projFiles = Get-ChildItem -Path (Join-Path $ProjectRoot "plugins") -Recurse -Filter "*.csproj"
+$skippedDuplicateNames = [System.Collections.Generic.HashSet[string]]::new(
+    [System.StringComparer]::OrdinalIgnoreCase)
 foreach ($proj in $projFiles) {
-    Write-Host "  Building $($proj.BaseName)..."
-    dotnet build $proj.FullName --configuration $Configuration 2>&1 | Out-Null
-    if ($LASTEXITCODE -ne 0) { throw "Plugin $($proj.BaseName) build failed" }
+    $pluginName = $proj.BaseName
+    Write-Host "  Building $pluginName..."
+    & $DotnetExe build $proj.FullName --configuration $Configuration 2>&1 | Out-Null
+    if ($LASTEXITCODE -ne 0) { throw "Plugin $pluginName build failed" }
+
     $binDir = Join-Path $proj.Directory.FullName "bin\$Configuration\net10.0"
-    if (Test-Path $binDir) {
-        foreach ($f in Get-ChildItem -File $binDir -Filter "*.dll") {
-            if ($f.Name -notin $skipDlls -and
-                $f.Name -notlike "TKCode.*" -and
-                $f.Name -notlike "Avalonia*" -and
-                $f.Name -notlike "Lang.Avalonia*" -and
-                $f.Name -notlike "SkiaSharp*") {
-                Copy-Item $f.FullName (Join-Path $PluginsDir $f.Name) -Force
+    $entryDll = Join-Path $binDir "$pluginName.dll"
+    if (-not (Test-Path -LiteralPath $entryDll)) {
+        throw "Plugin entry assembly not found: $entryDll"
+    }
+
+    $stagingDir = Join-Path $PluginsDir $pluginName
+    New-Item -ItemType Directory -Path $stagingDir -Force | Out-Null
+    Copy-Item -LiteralPath $entryDll -Destination $stagingDir -Force
+
+    $entryDeps = Join-Path $binDir "$pluginName.deps.json"
+    if (-not (Test-Path -LiteralPath $entryDeps)) {
+        throw "Plugin dependency manifest not found: $entryDeps"
+    }
+    Copy-Item -LiteralPath $entryDeps -Destination $stagingDir -Force
+
+    foreach ($f in Get-ChildItem -LiteralPath $binDir -Recurse -File) {
+        if ($f.Extension -eq ".pdb") { continue }
+
+        $relativePath = Get-RelativePath $binDir $f.FullName
+        if ($relativePath.Equals("$pluginName.dll", [System.StringComparison]::OrdinalIgnoreCase) -or
+            $relativePath.Equals("$pluginName.deps.json", [System.StringComparison]::OrdinalIgnoreCase)) {
+            continue
+        }
+
+        if ($relativePath.StartsWith("runtimes\", [System.StringComparison]::OrdinalIgnoreCase)) {
+            $runtimeParts = $relativePath.Split('\')
+            if ($runtimeParts.Length -gt 1 -and
+                $runtimeParts[1] -notin @("win", $Runtime)) {
+                continue
             }
         }
+
+        if ($rootFileHashes.ContainsKey($f.Name)) {
+            $pluginHash = (Get-FileHash -LiteralPath $f.FullName -Algorithm SHA256).Hash
+            if (-not $rootFileHashes[$f.Name].Contains($pluginHash)) {
+                throw "Plugin dependency '$relativePath' differs from the host copy. Use a shared host version or isolate the dependency."
+            }
+            [void]$skippedDuplicateNames.Add($f.Name)
+            continue
+        }
+
+        $destination = Join-Path $stagingDir $relativePath
+        $destinationDir = Split-Path -Parent $destination
+        New-Item -ItemType Directory -Path $destinationDir -Force | Out-Null
+        Copy-Item -LiteralPath $f.FullName -Destination $destination -Force
     }
 }
-$pluginCount = (Get-ChildItem $PluginsDir -Filter "*.dll").Count
-Write-Host "  $pluginCount plugin dll(s) copied"
+
+$pluginCount = (Get-ChildItem -LiteralPath $PluginsDir -Directory).Count
+$pluginDllCount = (Get-ChildItem -LiteralPath $PluginsDir -Recurse -File -Filter "*.dll").Count
+Write-Host "  $pluginCount plugin folder(s), $pluginDllCount dll(s) staged; $($skippedDuplicateNames.Count) host duplicate name(s) skipped"
+
+$missingEntries = Get-ChildItem -LiteralPath $PluginsDir -Directory | Where-Object {
+    -not (Test-Path -LiteralPath (Join-Path $_.FullName "$($_.Name).dll"))
+}
+if ($missingEntries) {
+    throw "Plugin entries missing: $($missingEntries.Name -join ', ')"
+}
 
 # ── 4. Generate .wxs ──
 Write-Host "[4/5] Generating WiX source file..."
@@ -81,6 +167,69 @@ $sb.AppendLine("      <Directory Id=`"PublisherFolder`" Name=`"$( $Manufacturer 
 $sb.AppendLine("        <Directory Id=`"INSTALLFOLDER`" Name=`"$( $AppName )`">") | Out-Null
 
 $compRefs = New-Object System.Collections.Generic.List[string]
+$wixDirectoryIds = [System.Collections.Generic.HashSet[string]]::new(
+    [System.StringComparer]::OrdinalIgnoreCase)
+
+function ConvertTo-WixAttribute([string]$value) {
+    return [System.Security.SecurityElement]::Escape($value)
+}
+
+function New-WixDirectoryId([string]$value) {
+    $base = "d_" + ($value -replace '[^a-zA-Z0-9_]', '_')
+    $id = $base
+    $suffix = 0
+    while (-not $wixDirectoryIds.Add($id)) {
+        $suffix++
+        $id = "${base}_$suffix"
+    }
+    return $id
+}
+
+function New-WixComponentId([string]$value, $used) {
+    $base = "p_" + ($value -replace '[^a-zA-Z0-9_]', '_')
+    $id = $base
+    $suffix = 0
+    while ($used -contains $id) {
+        $suffix++
+        $id = "${base}_$suffix"
+    }
+    $used.Add($id)
+    return $id
+}
+
+function Add-WixPluginDirectory {
+    param(
+        [System.Text.StringBuilder]$Builder,
+        [System.IO.DirectoryInfo]$Directory,
+        [string]$PluginName,
+        [string]$RelativePath
+    )
+
+    foreach ($subDirectory in Get-ChildItem -LiteralPath $Directory.FullName -Directory | Sort-Object Name) {
+        $subRelativePath = if ($RelativePath) {
+            Join-Path $RelativePath $subDirectory.Name
+        } else {
+            $subDirectory.Name
+        }
+        $directoryId = New-WixDirectoryId "${PluginName}_$subRelativePath"
+        $Builder.AppendLine("            <Directory Id=`"$directoryId`" Name=`"$(ConvertTo-WixAttribute $subDirectory.Name)`">") | Out-Null
+        Add-WixPluginDirectory -Builder $Builder -Directory $subDirectory -PluginName $PluginName -RelativePath $subRelativePath
+        $Builder.AppendLine('            </Directory>') | Out-Null
+    }
+
+    foreach ($file in Get-ChildItem -LiteralPath $Directory.FullName -File | Sort-Object Name) {
+        $fileRelativePath = if ($RelativePath) {
+            Join-Path $RelativePath $file.Name
+        } else {
+            $file.Name
+        }
+        $componentId = New-WixComponentId "${PluginName}_$fileRelativePath" $compRefs
+        $sourcePath = "!(bindpath.plugins)\$PluginName\$fileRelativePath"
+        $Builder.AppendLine("            <Component Id=`"$componentId`" Guid=`"*`">") | Out-Null
+        $Builder.AppendLine("              <File Source=`"$(ConvertTo-WixAttribute $sourcePath)`" />") | Out-Null
+        $Builder.AppendLine('            </Component>') | Out-Null
+    }
+}
 
 # Main files
 $pubFiles = Get-ChildItem -File $PublishDir | Where-Object { $_.Extension -notin '.pdb' }
@@ -94,17 +243,13 @@ foreach ($file in $pubFiles) {
     $sb.AppendLine("          </Component>") | Out-Null
 }
 
-# plugins/ subdirectory
+# plugins/ subdirectories
 $sb.AppendLine('          <Directory Id="pluginsDir" Name="plugins">') | Out-Null
-$pluginFiles = Get-ChildItem -File $PluginsDir
-foreach ($file in $pluginFiles) {
-    $baseId = "p_" + [System.IO.Path]::GetFileNameWithoutExtension($file.Name) -replace '[^a-zA-Z0-9_]', '_'
-    $id = $baseId; $suffix = 0
-    while ($compRefs -contains $id) { $suffix++; $id = "${baseId}_$suffix" }
-    $compRefs.Add($id)
-    $sb.AppendLine("            <Component Id=`"$id`" Guid=`"*`">") | Out-Null
-    $sb.AppendLine("              <File Source=`"!(bindpath.plugins)\$($file.Name)`" />") | Out-Null
-    $sb.AppendLine("            </Component>") | Out-Null
+foreach ($pluginDirectory in Get-ChildItem -LiteralPath $PluginsDir -Directory | Sort-Object Name) {
+    $pluginDirectoryId = New-WixDirectoryId $pluginDirectory.Name
+    $sb.AppendLine("            <Directory Id=`"$pluginDirectoryId`" Name=`"$(ConvertTo-WixAttribute $pluginDirectory.Name)`">") | Out-Null
+    Add-WixPluginDirectory -Builder $sb -Directory $pluginDirectory -PluginName $pluginDirectory.Name -RelativePath ""
+    $sb.AppendLine('            </Directory>') | Out-Null
 }
 $sb.AppendLine('          </Directory>') | Out-Null
 
