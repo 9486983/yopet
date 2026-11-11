@@ -211,6 +211,8 @@
       "NeedFolderMsg": "Drop a folder first to start the file flow task",
       "StartedTitle": "📋 Task Started",
       "StartedMsg": "Resident mode is active.\n\nDropped JPG files will be moved to WAIT/JPG beside them, and matching RAW files to WAIT/RAW.\n\nClick the ring at the top-right of the pet to stop.",
+      "AlreadySortedTitle": "📂 Resident Mode Resumed",
+      "AlreadySortedMsg": "This folder is already sorted by extension, so the sort step is skipped.\n\nWorking folder: {0}\n\nDrop JPG files to continue pairing RAW.",
       "WaitingStatus": "Waiting for JPG files",
       "SortedTitle": "✅ Folder Sorted",
       "SortedMsg": "Moved {0} files into {1} extension folders.",

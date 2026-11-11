@@ -175,6 +175,17 @@ public class ImagePickerPlugin : PluginBase
         IPluginHost host,
         CancellationToken token)
     {
+        session.Context["rootDir"] = folder;
+
+        if (ImagePickerService.IsSorted(folder))
+        {
+            session.Status = T("WaitingStatus");
+            session.Progress = -1;
+            host.ShowThought(T("AlreadySortedTitle"), string.Format(T("AlreadySortedMsg"), folder));
+            host.ShowReaction("📂");
+            return;
+        }
+
         var result = await Task.Run(() => ImagePickerService.SortByExtension(folder, token), token);
         session.Status = string.Format(T("SortedStatus"), result.MovedCount);
         host.ShowThought(

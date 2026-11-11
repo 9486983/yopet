@@ -211,6 +211,8 @@
       "NeedFolderMsg": "首次请拖入一个文件夹来启动文件流转任务",
       "StartedTitle": "📋 任务已启动",
       "StartedMsg": "已进入常驻模式。\n\n拖入 JPG 文件将自动移动到同级 WAIT/JPG，并把同名 RAW 移动到 WAIT/RAW。\n\n点击宠物右上角的圆环可终止任务。",
+      "AlreadySortedTitle": "📂 已进入常驻模式",
+      "AlreadySortedMsg": "该文件夹已按后缀整理过，跳过归档阶段。\n\n工作目录：{0}\n\n拖入 JPG 文件继续配对 RAW。",
       "WaitingStatus": "等待拖入 JPG 文件",
       "SortedTitle": "✅ 文件夹已整理",
       "SortedMsg": "已移动 {0} 个文件到 {1} 个按后缀命名的文件夹。",

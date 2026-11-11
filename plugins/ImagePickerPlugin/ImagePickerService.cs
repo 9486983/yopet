@@ -23,6 +23,65 @@ internal static class ImagePickerService
     public static bool IsRaw(string path)
         => RawExtensions.Contains(Path.GetExtension(path));
 
+    /// <summary>
+    /// 判断文件夹是否已经按后缀整理过。
+    /// 依据内部是否已有按后缀命名的子文件夹（或 WAIT 目录）来判定，
+    /// 用于再次拖入同一文件夹时跳过归档阶段，直接进入常驻。
+    /// </summary>
+    public static bool IsSorted(string folder)
+    {
+        if (!Directory.Exists(folder))
+            return false;
+
+        foreach (var sub in Directory.GetDirectories(folder, "*", SearchOption.TopDirectoryOnly))
+        {
+            var name = Path.GetFileName(sub);
+
+            if (name.Equals("WAIT", StringComparison.OrdinalIgnoreCase))
+                return true;
+
+            if (name.Equals("NO_EXT", StringComparison.OrdinalIgnoreCase))
+                return true;
+
+            if (IsExtensionFolderName(name) && ContainsFilesWithExtension(sub, name))
+                return true;
+        }
+
+        return false;
+    }
+
+    private static bool IsExtensionFolderName(string name)
+    {
+        if (string.IsNullOrWhiteSpace(name) || name.Length > 10)
+            return false;
+
+        foreach (var c in name)
+        {
+            if (!char.IsLetterOrDigit(c))
+                return false;
+        }
+
+        return true;
+    }
+
+    private static bool ContainsFilesWithExtension(string directory, string extensionName)
+    {
+        try
+        {
+            foreach (var file in Directory.EnumerateFiles(directory, "*", SearchOption.TopDirectoryOnly))
+            {
+                var extension = Path.GetExtension(file).TrimStart('.');
+                if (extension.Equals(extensionName, StringComparison.OrdinalIgnoreCase))
+                    return true;
+            }
+        }
+        catch
+        {
+        }
+
+        return false;
+    }
+
     public static FolderSortResult SortByExtension(string folder, CancellationToken token)
     {
         var folderNames = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
