@@ -2,6 +2,11 @@
 # One-click MSI packager for yopet
 $ErrorActionPreference = "Stop"
 
+$dotnetCmd = Get-Command dotnet -ErrorAction SilentlyContinue
+if ($dotnetCmd -and (-not $env:DOTNET_ROOT -or -not (Test-Path (Join-Path $env:DOTNET_ROOT "dotnet.exe")))) {
+    $env:DOTNET_ROOT = Split-Path -Parent $dotnetCmd.Source
+}
+
 # ── Config ──
 $Version       = "1.0.0"
 $Configuration = "Release"
