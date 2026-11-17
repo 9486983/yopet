@@ -1,4 +1,5 @@
-﻿using Avalonia;
+﻿using System.Runtime.InteropServices;
+using Avalonia;
 using Avalonia.Animation;
 using Avalonia.Animation.Easings;
 using Avalonia.Controls;
@@ -6,8 +7,10 @@ using Avalonia.Input;
 using Avalonia.Layout;
 using Avalonia.Media;
 using Avalonia.Threading;
-using yopet.Core.Models;
+using TKCode.Arc;
 using TKCode.Arc.DesignTokens;
+using yopet.Core.Models;
+using yopet.UI.Components;
 
 namespace yopet.Views;
 
@@ -16,31 +19,24 @@ public class FileRadialMenu : Window
     private readonly List<FileActionConfig> _actions;
     private readonly PixelPoint _anchorCenter;
     private readonly List<Border> _items = [];
+    private readonly List<Border> _highlights = [];
     private readonly bool[] _itemReady = [];
+    private Border? _tipCard;
+    private TextBlock? _tipTitle;
+    private TextBlock? _tipDesc;
+    private DispatcherTimer? _cursorTimer;
     private readonly Action<FileActionConfig>? _onActivate;
     private bool _closed;
     private int _hoveredIndex = -1;
     private int _activatedIndex = -1; // 防止重复激活
+    private double _menuSize;
+    private double _radius;
+    private double _itemSize;
 
-    private const double MenuSize = 300;
-    private const double Radius = 88;
-    private const double ItemSize = 72;
+    private const double TipWidth = 120;
+    private const double TipHeight = 56;
     private const int ItemAppearStaggerMs = 10;
     private const int ItemScaleDurationMs = 110;
-
-    // 全圆分 12 份（以时钟为参考），ArcPosition 指定从第几份开始
-    // 选项依次占据连续的 1 份位置，不跳格
-    private const int TotalParts = 12;
-    private const int ArcPosition = 0;   // 0=12点  1=1点  2=2点  ... 11=11点
-
-    private static double ArcStep => 2 * Math.PI / TotalParts;
-    private static double ArcCenterAngle => -Math.PI / 2 + ArcPosition * ArcStep;
-
-    private static readonly Lazy<Color> BgOverlay = new(() => Token(ArcDesignTokenKind.SurfaceRaised));
-    private static readonly Lazy<Color> BorderColor = new(() => Token(ArcDesignTokenKind.Border));
-    private static readonly Lazy<Color> TextPrimary = new(() => Token(ArcDesignTokenKind.Foreground));
-    private static readonly Lazy<Color> AccentPrimary = new(() => Token(ArcDesignTokenKind.Accent));
-    private static readonly Lazy<Color> BgHover = new(() => Token(ArcDesignTokenKind.SurfaceMuted));
 
     private FileRadialMenu(List<FileActionConfig> actions, PixelPoint anchorCenter, Action<FileActionConfig>? onActivate)
     {
@@ -48,9 +44,21 @@ public class FileRadialMenu : Window
         _anchorCenter = anchorCenter;
         _onActivate = onActivate;
 
+        var count = actions.Count;
+        _itemSize = 56;
+
+        // 均匀铺满整圈，并根据选项数量自动计算半径与窗口尺寸，保证选项之间不相交
+        var tileRadius = _itemSize * Math.Sqrt(2) / 2;
+        var step = count > 1 ? 2 * Math.PI / count : 0;
+        var requiredRadius = count > 1
+            ? (2 * tileRadius + 14) / (2 * Math.Sin(step / 2))
+            : 0;
+        _radius = count > 1 ? Math.Max(96, requiredRadius) : 0;
+        _menuSize = Math.Max(260, 2 * (_radius + tileRadius + 14));
+
         Title = "";
-        Width = MenuSize;
-        Height = MenuSize;
+        Width = _menuSize;
+        Height = _menuSize;
         WindowDecorations = WindowDecorations.None;
         CanResize = false;
         ShowInTaskbar = false;
@@ -62,35 +70,63 @@ public class FileRadialMenu : Window
 
         var scaling = this.RenderScaling;
         Position = new PixelPoint(
-            _anchorCenter.X - (int)(MenuSize * scaling / 2),
-            _anchorCenter.Y - (int)(MenuSize * scaling / 2));
+            _anchorCenter.X - (int)(_menuSize * scaling / 2),
+            _anchorCenter.Y - (int)(_menuSize * scaling / 2));
 
-        var canvas = new Canvas { Width = MenuSize, Height = MenuSize };
+        var canvas = new Canvas { Width = _menuSize, Height = _menuSize };
+        DragDrop.SetAllowDrop(canvas, true);
         Content = canvas;
 
-        var count = actions.Count;
-        var baseBg = new SolidColorBrush(BgOverlay.Value);
-        var baseBorder = new SolidColorBrush(BorderColor.Value);
-        var textClr = new SolidColorBrush(TextPrimary.Value);
+        var halfItem = _itemSize / 2;
 
-        var halfItem = ItemSize / 2;
-
-        // 每个选项占据 1 份位置，从 ArcPosition 开始顺时针排列
+        // 选项从 12 点方向开始，均匀分布在整圈
         for (var i = 0; i < count; i++)
         {
             var action = actions[i];
-            var angle = ArcCenterAngle + i * ArcStep;
-            var cx = MenuSize / 2 + Radius * Math.Cos(angle);
-            var cy = MenuSize / 2 + Radius * Math.Sin(angle);
+            var angle = -Math.PI / 2 + i * step;
+            var cx = _menuSize / 2 + _radius * Math.Cos(angle);
+            var cy = _menuSize / 2 + _radius * Math.Sin(angle);
+
+            var nameBlock = new TextBlock
+            {
+                Text = YopetIcons.DisplayText(action.Name),
+                FontSize = 10,
+                HorizontalAlignment = HorizontalAlignment.Center,
+                FontWeight = FontWeight.SemiBold,
+                MaxWidth = _itemSize - 8,
+                TextAlignment = TextAlignment.Center,
+                TextWrapping = TextWrapping.Wrap,
+                MaxLines = 2,
+                TextTrimming = TextTrimming.CharacterEllipsis,
+            };
+            ArcTokens.Bind(nameBlock, TextBlock.ForegroundProperty, ArcDesignTokenKind.Foreground);
+
+            var content = new StackPanel
+            {
+                VerticalAlignment = VerticalAlignment.Center,
+                HorizontalAlignment = HorizontalAlignment.Center,
+                Spacing = 2,
+                Children =
+                {
+                    YopetIcons.Create(action.Emoji, 18),
+                    nameBlock,
+                },
+            };
+
+            var highlight = new Border
+            {
+                CornerRadius = new CornerRadius(12),
+                Opacity = 0,
+                IsHitTestVisible = false,
+            };
+            ArcTokens.Bind(highlight, Border.BackgroundProperty, ArcDesignTokenKind.AccentSubtle);
 
             var btn = new Border
             {
-                Width = ItemSize,
-                Height = ItemSize,
-                CornerRadius = new CornerRadius(halfItem),
-                Background = baseBg,
-                BorderThickness = new Thickness(2),
-                BorderBrush = baseBorder,
+                Width = _itemSize,
+                Height = _itemSize,
+                CornerRadius = new CornerRadius(12),
+                BorderThickness = new Thickness(1),
                 Cursor = new Cursor(StandardCursorType.Hand),
                 Opacity = 0,
                 RenderTransformOrigin = new RelativePoint(0.5, 0.5, RelativeUnit.Relative),
@@ -99,36 +135,80 @@ public class FileRadialMenu : Window
                 {
                     new DoubleTransition { Property = OpacityProperty, Duration = TimeSpan.FromMilliseconds(100), Easing = new CubicEaseOut() },
                 },
-                Child = new StackPanel
+                Child = new Grid
                 {
-                    VerticalAlignment = VerticalAlignment.Center,
-                    HorizontalAlignment = HorizontalAlignment.Center,
-                    Spacing = 2,
-                    Children =
-                    {
-                        new TextBlock { Text = action.Emoji, FontSize = 24, HorizontalAlignment = HorizontalAlignment.Center },
-                        new TextBlock
-                        {
-                            Text = action.Name, FontSize = 11,
-                            Foreground = textClr,
-                            HorizontalAlignment = HorizontalAlignment.Center,
-                            FontWeight = FontWeight.SemiBold,
-                        },
-                    },
+                    Children = { highlight, content },
                 },
             };
+            ArcTokens.Bind(btn, Border.BackgroundProperty, ArcDesignTokenKind.SurfaceRaised);
+            ArcTokens.Bind(btn, Border.BorderBrushProperty, ArcDesignTokenKind.Border);
 
             Canvas.SetLeft(btn, cx - halfItem);
             Canvas.SetTop(btn, cy - halfItem);
             canvas.Children.Add(btn);
             _items.Add(btn);
+            _highlights.Add(highlight);
         }
+
+        // 悬停在某个选项上时，在菜单中心显示功能说明（始终位于宠物附近，不会被屏幕边缘裁掉）
+        _tipTitle = new TextBlock
+        {
+            FontSize = 11,
+            FontWeight = FontWeight.SemiBold,
+            TextWrapping = TextWrapping.Wrap,
+            TextAlignment = TextAlignment.Center,
+            MaxLines = 1,
+            TextTrimming = TextTrimming.CharacterEllipsis,
+        };
+        ArcTokens.Bind(_tipTitle, TextBlock.ForegroundProperty, ArcDesignTokenKind.Foreground);
+
+        _tipDesc = new TextBlock
+        {
+            FontSize = 10,
+            TextWrapping = TextWrapping.Wrap,
+            TextAlignment = TextAlignment.Center,
+            MaxLines = 2,
+            TextTrimming = TextTrimming.CharacterEllipsis,
+            IsVisible = false,
+        };
+        ArcTokens.Bind(_tipDesc, TextBlock.ForegroundProperty, ArcDesignTokenKind.Foreground);
+
+        _tipCard = new Border
+        {
+            Width = TipWidth,
+            Height = TipHeight,
+            Padding = new Thickness(8, 4),
+            CornerRadius = new CornerRadius(10),
+            BorderThickness = new Thickness(1),
+            IsHitTestVisible = false,
+            IsVisible = false,
+            ZIndex = 20,
+            Child = new StackPanel
+            {
+                Spacing = 1,
+                VerticalAlignment = VerticalAlignment.Center,
+                Children = { _tipTitle, _tipDesc },
+            },
+        };
+        ArcTokens.Bind(_tipCard, Border.BackgroundProperty, ArcDesignTokenKind.SurfaceRaised);
+        ArcTokens.Bind(_tipCard, Border.BorderBrushProperty, ArcDesignTokenKind.Accent);
+
+        Canvas.SetLeft(_tipCard, (_menuSize - TipWidth) / 2);
+        Canvas.SetTop(_tipCard, (_menuSize - TipHeight) / 2);
+        canvas.Children.Add(_tipCard);
+
         _itemReady = new bool[_items.Count];
 
-        AddHandler(DragDrop.DragOverEvent, (_, e) =>
+        void HandleDragOver(DragEventArgs e)
         {
             e.DragEffects = DragDropEffects.Copy;
             var pt = e.GetPosition(canvas);
+            if (pt.X < 0 || pt.Y < 0 || pt.X > _menuSize || pt.Y > _menuSize)
+            {
+                HighlightNearest(new Point(-9999, -9999));
+                return;
+            }
+
             var idx = FindNearestIndex(pt);
 
             HighlightNearest(pt);
@@ -140,7 +220,11 @@ public class FileRadialMenu : Window
                 // 激活视觉：金色边框，不覆盖 HighlightNearest 效果
                 if (!_closed) _onActivate?.Invoke(_actions[idx]);
             }
-        });
+        }
+
+        // 同时挂到窗口与内容控件上，避免不同平台/窗口的拖放事件落点差异
+        AddHandler(DragDrop.DragOverEvent, (_, e) => HandleDragOver(e));
+        canvas.AddHandler(DragDrop.DragOverEvent, (_, e) => HandleDragOver(e));
 
         AddHandler(DragDrop.DropEvent, async (_, e) =>
         {
@@ -186,7 +270,13 @@ public class FileRadialMenu : Window
             leaveCts?.Cancel();
         });
 
-        Deactivated += (_, _) => Close();
+        Deactivated += (_, _) =>
+        {
+            StopCursorTracking();
+            Close();
+        };
+
+        Closed += (_, _) => StopCursorTracking();
 
         KeyDown += (_, e) =>
         {
@@ -204,6 +294,7 @@ public class FileRadialMenu : Window
         Show();
         Opacity = 1;
         _ = AnimateItemsIn();
+        StartCursorTracking();
     }
 
     private async Task AnimateItemsIn()
@@ -248,7 +339,7 @@ public class FileRadialMenu : Window
             {
                 if (!_itemReady[i]) continue;
                 var phase = t * 2 * Math.PI / 1.8 + i * Math.PI / 3;
-                var offset = Math.Sin(phase) * 5;
+                var offset = Math.Sin(phase) * 2;
                 _items[i].RenderTransform = new TransformGroup
                 {
                     Children = new Transforms
@@ -266,22 +357,41 @@ public class FileRadialMenu : Window
     {
         var idx = FindNearestIndex(pt);
         if (idx == _hoveredIndex) return;
-        if (_hoveredIndex >= 0 && _hoveredIndex < _items.Count)
+
+        if (_hoveredIndex >= 0 && _hoveredIndex < _highlights.Count)
         {
-            _items[_hoveredIndex].Background = new SolidColorBrush(BgOverlay.Value);
-            _items[_hoveredIndex].BorderBrush = new SolidColorBrush(BorderColor.Value);
+            _highlights[_hoveredIndex].Opacity = 0;
+            _items[_hoveredIndex].BorderThickness = new Thickness(1);
         }
-        if (idx >= 0 && idx < _items.Count)
+        if (idx >= 0 && idx < _highlights.Count)
         {
-            _items[idx].Background = new SolidColorBrush(BgHover.Value);
-            _items[idx].BorderBrush = new SolidColorBrush(AccentPrimary.Value);
+            _highlights[idx].Opacity = 1;
+            _items[idx].BorderThickness = new Thickness(2);
         }
         _hoveredIndex = idx;
+        UpdateTip(idx);
+    }
+
+    private void UpdateTip(int idx)
+    {
+        if (_tipCard == null || _tipTitle == null || _tipDesc == null) return;
+
+        if (idx < 0 || idx >= _actions.Count || idx >= _items.Count)
+        {
+            _tipCard.IsVisible = false;
+            return;
+        }
+
+        var action = _actions[idx];
+        _tipTitle.Text = YopetIcons.DisplayText(action.Name);
+        _tipDesc.Text = action.Description ?? "";
+        _tipDesc.IsVisible = !string.IsNullOrWhiteSpace(_tipDesc.Text);
+        _tipCard.IsVisible = true;
     }
 
     private int FindNearestIndex(Point pt)
     {
-        var halfItem = ItemSize / 2;
+        var halfItem = _itemSize / 2;
         var best = -1;
         var bestDist = double.MaxValue;
         for (var i = 0; i < _items.Count; i++)
@@ -293,7 +403,9 @@ public class FileRadialMenu : Window
             var dist = dx * dx + dy * dy;
             if (dist < bestDist) { bestDist = dist; best = i; }
         }
-        return bestDist <= 55 * 55 ? best : -1;
+
+        var threshold = _itemSize * 0.8;
+        return bestDist <= threshold * threshold ? best : -1;
     }
 
     private static Task<string[]> ReadFiles(DragEventArgs e)
@@ -326,8 +438,52 @@ public class FileRadialMenu : Window
         menu.Open();
     }
 
-    private static Color Token(ArcDesignTokenKind kind) =>
-        Application.Current?.TryFindResource(kind, out var value) == true && value is Color color
-            ? color
-            : Colors.Transparent;
+    // 原生拖放过程中部分环境下 DragOver 不会触发视觉更新；
+    // 因此额外用系统光标位置定时刷新悬停项，保证 tips 实时显示。
+    private void StartCursorTracking()
+    {
+        if (!OperatingSystem.IsWindows() || _cursorTimer != null) return;
+
+        _cursorTimer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(40) };
+        _cursorTimer.Tick += (_, _) =>
+        {
+            if (_closed || !IsVisible) return;
+
+            try
+            {
+                if (!GetCursorPos(out var screenPoint)) return;
+                var pt = this.PointToClient(new PixelPoint(screenPoint.X, screenPoint.Y));
+
+                if (pt.X < 0 || pt.Y < 0 || pt.X > _menuSize || pt.Y > _menuSize)
+                {
+                    // 光标不在菜单内：清除高亮并隐藏说明
+                    HighlightNearest(new Point(-9999, -9999));
+                    return;
+                }
+
+                HighlightNearest(pt);
+            }
+            catch
+            {
+                // 窗口正在关闭/句柄失效时忽略
+            }
+        };
+        _cursorTimer.Start();
+    }
+
+    private void StopCursorTracking()
+    {
+        _cursorTimer?.Stop();
+        _cursorTimer = null;
+    }
+
+    [StructLayout(LayoutKind.Sequential)]
+    private struct NativePoint
+    {
+        public int X;
+        public int Y;
+    }
+
+    [DllImport("user32.dll")]
+    private static extern bool GetCursorPos(out NativePoint point);
 }

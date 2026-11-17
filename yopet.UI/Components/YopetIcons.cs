@@ -66,6 +66,8 @@ public static class YopetIcons
             0x1F9EA => LucideIconKind.FlaskConical,
             0x1F3A8 => LucideIconKind.Palette,
             0x1F4E5 => LucideIconKind.Inbox,
+            0x1F5A5 => LucideIconKind.Monitor,
+            0x1F5BC => LucideIconKind.FileImage,
             0x1F43E => LucideIconKind.PawPrint,
             0x2728 => LucideIconKind.Sparkles,
             _ => fallback,
