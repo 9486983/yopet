@@ -257,7 +257,10 @@ public partial class PetWindow : Window
     }
 
     private void OnCancelTaskPointerPressed(object? sender, PointerPressedEventArgs e)
-        => _vm?.CancelRunningTaskCommand.Execute(null);
+    {
+        e.Handled = true;
+        _vm?.CancelRunningTaskCommand.Execute(null);
+    }
 
     // ── 手动拖拽（计算方向 + 更新位置） ──
     private void OnWindowPointerPressed(object? sender, PointerPressedEventArgs e)

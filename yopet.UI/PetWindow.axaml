@@ -114,17 +114,18 @@
 
     <!-- 进度环：有任务执行中，点击取消 -->
     <Grid x:Name="RingGrid"
-          Width="28" Height="28"
+          Width="32" Height="32"
+          ZIndex="50"
           IsVisible="{Binding IsTaskRunning}"
           HorizontalAlignment="Right" VerticalAlignment="Top"
-          Margin="0,13,13,0"
+          Margin="0,8,8,0"
           Cursor="Hand"
           ToolTip.Tip="{c:I18n Localization.PetWindow.CancelTaskTip}"
           Background="Transparent"
           PointerPressed="OnCancelTaskPointerPressed">
       <!-- 轨道背景圆圈（不拦截点击） -->
       <Ellipse Stroke="{arc:ArcDesignTokenResource AccentSubtle}" StrokeThickness="1"
-               Width="20" Height="20"
+               Width="24" Height="24"
                HorizontalAlignment="Center" VerticalAlignment="Center"
                IsHitTestVisible="False" />
       <!-- 旋转圆点（不拦截点击） -->
