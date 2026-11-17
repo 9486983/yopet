@@ -80,8 +80,8 @@
           </StackPanel>
         </ui:ArcSurface>
 
-        <!-- 漫画气泡的小尾巴：向右移动，尖端反向左弯 -->
-        <Grid Grid.Row="1" Width="20" Height="17"
+        <!-- 宽气泡：保留原来的弯曲尾巴 -->
+        <Grid x:Name="CurvedTail" Grid.Row="1" Width="20" Height="17"
               HorizontalAlignment="Center" VerticalAlignment="Top"
               Margin="0,-2,0,0" IsHitTestVisible="False">
           <Grid.RenderTransform>
@@ -91,6 +91,20 @@
                 Fill="{arc:ArcDesignTokenResource SurfaceRaised}"
                 Stretch="None" />
           <Path Data="M 20,0 C 17,3 10,8 4,17 C 4,10 2,5 0,0"
+                Stroke="{arc:ArcDesignTokenResource Border}"
+                StrokeThickness="1"
+                Stretch="None" />
+        </Grid>
+
+        <!-- 小气泡：直尾巴居中，避免被圆角切出缺口 -->
+        <Grid x:Name="StraightTail" Grid.Row="1" Width="18" Height="17"
+              HorizontalAlignment="Center" VerticalAlignment="Top"
+              Margin="0,-3,0,0" IsHitTestVisible="False"
+              IsVisible="False">
+          <Path Data="M 0,0 L 18,0 C 14,6 11,11 9,17 C 7,11 4,6 0,0 Z"
+                Fill="{arc:ArcDesignTokenResource SurfaceRaised}"
+                Stretch="None" />
+          <Path Data="M 0,0 C 4,6 7,11 9,17 C 11,11 14,6 18,0"
                 Stroke="{arc:ArcDesignTokenResource Border}"
                 StrokeThickness="1"
                 Stretch="None" />

@@ -34,9 +34,20 @@ public partial class PetWindow : Window
     public PetWindow()
     {
         InitializeComponent();
+        BubbleBody?.SizeChanged += (_, _) => UpdateBubbleTail();
+        BubblePopup.Opened += (_, _) => UpdateBubbleTail();
         var t = new DispatcherTimer { Interval = TimeSpan.FromSeconds(3) };
         t.Tick += (_, _) => { if (IsVisible) Topmost = true; };
         t.Start();
+    }
+
+    /// <summary>气泡较窄时改用居中直尾巴，避免尾巴落在圆角上产生缺口。</summary>
+    private void UpdateBubbleTail()
+    {
+        var width = BubbleBody?.Bounds.Width ?? 0;
+        var useStraight = width > 0 && width < 92;
+        CurvedTail.IsVisible = !useStraight;
+        StraightTail.IsVisible = useStraight;
     }
 
     private static string T(string key) => Localization.T(key);
