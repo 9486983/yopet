@@ -651,7 +651,7 @@ public class MyPlugin : PluginBase { }
 | `plugins/PinTopPlugin/` | 热键注册、配置系统、Overlay 窗口、列表弹窗 |
 | `plugins/DeepSeekPlugin/` | 定时任务、HTTP 调用、配置持久化、消息队列 |
 | `plugins/FileUtilityPlugin/` | 径向菜单、文件操作、RunWithAnimation 动画 |
-| `plugins/PythonScriptPlugin/` | 列表弹窗（含下拉操作）、配置分组、定时任务、输入框交互 |
+| `plugins/ScriptManagerPlugin/` | 列表弹窗（含下拉操作）、配置分组、定时任务、输入框交互、多解释器脚本执行 |
 | `plugins/SessionDemoPlugin/` | 会话工作流完整示例 |
 | `plugins/AgentHooksPlugin/` | 动态配置开关、列表弹窗数据刷新、多 Provider 管理 |
 | `plugins/HealthReminder/` | 定时任务、配置监听、随机消息 |

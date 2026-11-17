@@ -50,7 +50,7 @@ Hot-loadable plugin system with a rich SDK. Plugins are loaded from `plugins/` d
 | 🔑 **DeepSeekPlugin** | Query DeepSeek API balance, usage stats, and cache hit rate; supports scheduled auto-query |
 | 📁 **FileUtilityPlugin** | File details, MD5 hash, ZIP compression, open in explorer/notepad, copy path |
 | 🧘 **HealthReminder** | Sitting/eye/drink reminders with configurable intervals (now implemented as a plugin) |
-| 🐍 **PythonScriptPlugin** | Mount `.py` scripts by drag-and-drop, run/edit/delete/cron-schedule them |
+| 📜 **ScriptManagerPlugin** | Mount `.py/.bat/.cmd/.ps1/.sh/.js/.vbs` scripts by drag-and-drop, run/edit/delete/cron-schedule them, and bind scripts to pet click events |
 | 🖼️ **SessionDemoPlugin** | Demo of session workflow — drag a folder, then drag images for auto-collection |
 | ⚙️ **SettingPlugin** | Settings hub — auto-start (cross-platform), pet animation speed, dark mode, plugin list |
 

@@ -395,7 +395,7 @@ public partial class PetViewModel : ObservableObject
             ["File Tools"] = "🗂️",
             ["Mail to Markdown"] = "✉️",
             ["Pin Top"] = "📌",
-            ["Python Script Manager"] = "🐍",
+            ["Script Manager"] = "📜",
             ["Image Organizer"] = "🖼️",
             ["Program Scheduler"] = "⏰",
             ["Xaml Demo"] = "🧪",
@@ -409,7 +409,7 @@ public partial class PetViewModel : ObservableObject
             ["文件工具"] = "🗂️",
             ["邮件转 Markdown"] = "✉️",
             ["窗口置顶器"] = "📌",
-            ["Python 脚本管理器"] = "🐍",
+            ["脚本管理器"] = "📜",
             ["图片整理器"] = "🖼️",
             ["程序定时启停"] = "⏰",
         };

@@ -23,6 +23,9 @@ public partial class PetWindow : Window
     private PetViewModel? _vm;
     private DateTime _lastClick = DateTime.MinValue;
     private bool _isDragging;
+    private bool _dragMoved; // 本次按下期间是否发生了拖拽位移
+    private int _clickToken; // 用于作废过期的单击延迟检查
+    private const double DragThreshold = 4; // 拖拽判定阈值（屏幕像素）
     private PixelPoint _dragStartWinPos; // 按下时的窗口 Position
     private PixelPoint _dragStartScreenMouse; // 按下时鼠标屏幕坐标
     private int _lastScreenX; // 上一帧鼠标屏幕 X 坐标
@@ -263,6 +266,7 @@ public partial class PetWindow : Window
         {
             if (!e.GetCurrentPoint(this).Properties.IsLeftButtonPressed) return;
             _isDragging = true;
+            _dragMoved = false;
             _dragStartWinPos = Position;
             _dragStartScreenMouse = this.PointToScreen(e.GetCurrentPoint(this).Position);
             _lastScreenX = _dragStartScreenMouse.X;
@@ -288,6 +292,11 @@ public partial class PetWindow : Window
 
         // 窗口位置 = 起始窗口位置 + (当前鼠标屏幕坐标 - 起始鼠标屏幕坐标)
         var curScreen = this.PointToScreen(curPt.Position);
+        if (Math.Abs(curScreen.X - _dragStartScreenMouse.X) > DragThreshold ||
+            Math.Abs(curScreen.Y - _dragStartScreenMouse.Y) > DragThreshold)
+        {
+            _dragMoved = true;
+        }
         Position = new PixelPoint(
             _dragStartWinPos.X + (curScreen.X - _dragStartScreenMouse.X),
             _dragStartWinPos.Y + (curScreen.Y - _dragStartScreenMouse.Y));
@@ -302,6 +311,19 @@ public partial class PetWindow : Window
     private void OnWindowPointerReleased(object? sender, PointerReleasedEventArgs e)
     {
         if (!_isDragging) return;
+
+        // 兜底：即使没有收到 PointerMoved，松手位置明显偏离也视为拖拽
+        try
+        {
+            var cur = this.PointToScreen(e.GetCurrentPoint(this).Position);
+            if (Math.Abs(cur.X - _dragStartScreenMouse.X) > DragThreshold ||
+                Math.Abs(cur.Y - _dragStartScreenMouse.Y) > DragThreshold)
+            {
+                _dragMoved = true;
+            }
+        }
+        catch { }
+
         EndDrag();
     }
 
@@ -327,24 +349,26 @@ public partial class PetWindow : Window
             if (!properties.IsLeftButtonPressed) return;
         }
         catch { return; }
+        _dragMoved = false;
         var now = DateTime.Now;
         if ((now - _lastClick).TotalMilliseconds < 350)
         {
             _lastClick = DateTime.MinValue;
+            _clickToken++; // 作废上一次按下排队的单击检查
             _vm?.OnPetDoubleClicked(); // 通知插件（事件池）
             OpenPetdex();
         }
         else
         {
             _lastClick = now;
+            var token = ++_clickToken;
             Dispatcher.UIThread.Post(async () =>
             {
                 await Task.Delay(400);
-                if ((DateTime.Now - _lastClick).TotalMilliseconds >= 380)
-                {
-                    _vm?.OnPetClicked(); // 通知插件（事件池）
-                    _vm?.SingleClickCommand.Execute(null);
-                }
+                // 令牌已变化（发生了双击）或期间发生过拖拽 → 不视为单击
+                if (token != _clickToken || _dragMoved) return;
+                _vm?.OnPetClicked(); // 通知插件（事件池）
+                _vm?.SingleClickCommand.Execute(null);
             });
         }
     }
