@@ -50,7 +50,7 @@
 | 🔑 **DeepSeekPlugin** | 查询 DeepSeek API 余额和使用量，支持定时自动查询 |
 | 📁 **FileUtilityPlugin** | 文件详情、MD5 哈希、ZIP 压缩、资源管理器定位、记事本打开、复制路径 |
 | 🧘 **HealthReminder** | 久坐/用眼/喝水定时提醒（现已实现为插件） |
-| 🐍 **PythonScriptPlugin** | 拖入 .py 文件挂载脚本，支持运行/编辑/删除/Cron 定时执行 |
+| 📜 **ScriptManagerPlugin** | 拖入 .py/.bat/.cmd/.ps1/.sh/.js/.vbs 脚本挂载，支持运行/编辑/删除/Cron 定时执行，并可绑定宠物单击/双击事件 |
 | 🖼️ **SessionDemoPlugin** | 会话工作流示例：拖入文件夹启动会话，再拖图片自动整理 |
 | ⚙️ **SettingPlugin** | 设置中心 —— 开机自启（跨平台）、动画速度、深色模式、插件列表 |
 

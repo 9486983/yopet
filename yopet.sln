@@ -29,7 +29,7 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SettingPlugin", "plugins\Se
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AgentHooksPlugin", "plugins\AgentHooksPlugin\AgentHooksPlugin.csproj", "{15717E36-DF3E-4A9D-B7E0-5943DFD0F2A9}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "PythonScriptPlugin", "plugins\PythonScriptPlugin\PythonScriptPlugin.csproj", "{BCF7584A-BB7A-42C0-BE91-619378A01822}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ScriptManagerPlugin", "plugins\ScriptManagerPlugin\ScriptManagerPlugin.csproj", "{BCF7584A-BB7A-42C0-BE91-619378A01822}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "XamlDemoPlugin", "plugins\XamlDemoPlugin\XamlDemoPlugin.csproj", "{6E319B95-1B3C-488B-83CE-AD9715E0805F}"
 EndProject
