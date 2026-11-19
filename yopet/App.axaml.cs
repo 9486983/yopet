@@ -253,7 +253,12 @@ public partial class App : Application
             // ── 连接插件自定义页面弹窗（插件 dll 内嵌 XAML，点击弹窗外部关闭） ──
             pluginHost.OnShowCustomView = (view, _) =>
             {
-                PetWindow.ShowDialogOn(petWindow, view);
+                var popup = PetWindow.ShowDialogOn(petWindow, view);
+                popup.Closed += (_, _) =>
+                {
+                    // 关闭后释放插件页面引用，避免插件 ALC / 图片资源长期驻留
+                    popup.Content = null;
+                };
                 return Task.CompletedTask;
             };
 

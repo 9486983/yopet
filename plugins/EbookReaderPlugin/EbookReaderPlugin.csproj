@@ -1,0 +1,33 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\yopet.Sdk\yopet.Sdk.csproj" />
+    <!-- 插件内嵌编译型 XAML 必须显式引用 Avalonia（版本与主程序一致） -->
+    <PackageReference Include="Avalonia" Version="12.1.4" />
+    <!-- 复用主程序的 Arc 设计系统，保证插件与现有界面风格一致 -->
+    <PackageReference Include="TKCode.Arc" Version="0.4.0-preview.1" />
+    <PackageReference Include="TKCode.Arc.Icons.Lucide" Version="0.4.0-preview.1" />
+    <!-- 封面缩略图与主色提取（与主程序 Avalonia 使用的 SkiaSharp 版本一致） -->
+    <PackageReference Include="SkiaSharp" Version="3.119.4" />
+    <!-- EPUB 2/3 解析使用成熟库，避免重复实现容器、OPF、NCX 等细节 -->
+    <PackageReference Include="VersOne.Epub" Version="3.3.6" />
+  </ItemGroup>
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <CopyLocalLockFileAssemblies>true</CopyLocalLockFileAssemblies>
+    <NoWarn>$(NoWarn);CA2255</NoWarn>
+  </PropertyGroup>
+
+  <Target Name="CopyToPlugins" AfterTargets="Build" Condition="'$(SkipPluginCopy)' != 'true'">
+    <Copy SourceFiles="$(OutputPath)$(AssemblyName).dll"
+          DestinationFolder="..\..\yopet\bin\$(Configuration)\net10.0\plugins" />
+    <!-- 第三方依赖放到 plugins/deps，由插件的模块初始化器按需解析 -->
+    <Copy SourceFiles="$(OutputPath)VersOne.Epub.dll"
+          DestinationFolder="..\..\yopet\bin\$(Configuration)\net10.0\plugins\deps"
+          Condition="Exists('$(OutputPath)VersOne.Epub.dll')" />
+  </Target>
+
+</Project>

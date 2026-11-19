@@ -1,4 +1,4 @@
-﻿using Avalonia;
+using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Controls.Primitives;
 using Avalonia.Input;
@@ -87,6 +87,9 @@ public partial class PetWindow : Window
         var maxWidth = (workArea is { } areaW ? areaW.Width - 16 : 1200) / scaling;
         var maxHeight = (workArea is { } areaH ? areaH.Height - 16 : 900) / scaling;
         var width = double.IsNaN(content.Width) ? 420 : Math.Min(content.Width, maxWidth);
+        var chromeInset = DialogChrome.GetInset(content);
+        var showHostDragBar = DialogChrome.GetHostDragBar(content);
+        var buttonInset = DialogChrome.GetButtonInset(content);
 
         content.Measure(new Size(width, maxHeight));
         var measuredHeight = content.DesiredSize.Height;
@@ -114,21 +117,26 @@ public partial class PetWindow : Window
 
         if (showClose)
         {
-            var dragBar = new Border
+            if (showHostDragBar)
             {
-                Height = 34,
-                Background = Brushes.Transparent,
-                Cursor = new Cursor(StandardCursorType.SizeAll),
-                HorizontalAlignment = Avalonia.Layout.HorizontalAlignment.Stretch,
-                VerticalAlignment = Avalonia.Layout.VerticalAlignment.Top,
-            };
-            dragBar.PointerPressed += (_, e) =>
-            {
-                if (!e.GetCurrentPoint(dragBar).Properties.IsLeftButtonPressed) return;
-                window.BeginMoveDrag(e);
-                e.Handled = true;
-            };
-            shell.Children.Add(dragBar);
+                var dragBar = new Border
+                {
+                    Height = 34,
+                    Background = Brushes.Transparent,
+                    Cursor = new Cursor(StandardCursorType.SizeAll),
+                    HorizontalAlignment = Avalonia.Layout.HorizontalAlignment.Stretch,
+                    VerticalAlignment = Avalonia.Layout.VerticalAlignment.Top,
+                    Margin = new Thickness(chromeInset, chromeInset, chromeInset, 0),
+                };
+                dragBar.PointerPressed += (_, e) =>
+                {
+                    if (!e.GetCurrentPoint(dragBar).Properties.IsLeftButtonPressed) return;
+                    window.BeginMoveDrag(e);
+                    e.Handled = true;
+                };
+                dragBar.ZIndex = 90;
+                shell.Children.Add(dragBar);
+            }
 
             var closeIcon = new LucideIcon
             {
@@ -149,9 +157,8 @@ public partial class PetWindow : Window
             close.VerticalContentAlignment = Avalonia.Layout.VerticalAlignment.Center;
             close.HorizontalAlignment = Avalonia.Layout.HorizontalAlignment.Right;
             close.VerticalAlignment = Avalonia.Layout.VerticalAlignment.Top;
-            close.Margin = new Thickness(0, 6, 6, 0);
+            close.Margin = new Thickness(0, 6 + chromeInset, buttonInset + chromeInset, 0);
             close.Click += (_, _) => window.Close();
-            dragBar.ZIndex = 90;
             close.ZIndex = 100;
             shell.Children.Add(close);
         }
@@ -370,7 +377,6 @@ public partial class PetWindow : Window
             _lastClick = DateTime.MinValue;
             _clickToken++; // 作废上一次按下排队的单击检查
             _vm?.OnPetDoubleClicked(); // 通知插件（事件池）
-            OpenPetdex();
         }
         else
         {

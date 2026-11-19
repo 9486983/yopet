@@ -41,6 +41,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "yopet.UI", "yopet.UI\yopet.
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ImagePickerPlugin", "plugins\ImagePickerPlugin\ImagePickerPlugin.csproj", "{16B3B99C-72D4-4D82-A396-BF7DF3917438}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "EbookReaderPlugin", "plugins\EbookReaderPlugin\EbookReaderPlugin.csproj", "{DF05B9F9-B49A-465F-B0DF-A61ADBDD11F9}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -267,6 +269,18 @@ Global
 		{16B3B99C-72D4-4D82-A396-BF7DF3917438}.Release|x64.Build.0 = Release|Any CPU
 		{16B3B99C-72D4-4D82-A396-BF7DF3917438}.Release|x86.ActiveCfg = Release|Any CPU
 		{16B3B99C-72D4-4D82-A396-BF7DF3917438}.Release|x86.Build.0 = Release|Any CPU
+		{DF05B9F9-B49A-465F-B0DF-A61ADBDD11F9}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{DF05B9F9-B49A-465F-B0DF-A61ADBDD11F9}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{DF05B9F9-B49A-465F-B0DF-A61ADBDD11F9}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{DF05B9F9-B49A-465F-B0DF-A61ADBDD11F9}.Debug|x64.Build.0 = Debug|Any CPU
+		{DF05B9F9-B49A-465F-B0DF-A61ADBDD11F9}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{DF05B9F9-B49A-465F-B0DF-A61ADBDD11F9}.Debug|x86.Build.0 = Debug|Any CPU
+		{DF05B9F9-B49A-465F-B0DF-A61ADBDD11F9}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{DF05B9F9-B49A-465F-B0DF-A61ADBDD11F9}.Release|Any CPU.Build.0 = Release|Any CPU
+		{DF05B9F9-B49A-465F-B0DF-A61ADBDD11F9}.Release|x64.ActiveCfg = Release|Any CPU
+		{DF05B9F9-B49A-465F-B0DF-A61ADBDD11F9}.Release|x64.Build.0 = Release|Any CPU
+		{DF05B9F9-B49A-465F-B0DF-A61ADBDD11F9}.Release|x86.ActiveCfg = Release|Any CPU
+		{DF05B9F9-B49A-465F-B0DF-A61ADBDD11F9}.Release|x86.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -284,5 +298,6 @@ Global
 		{C4D5E6F7-A8B9-4C1D-8E2F-3A4B5C6D7E8F} = {07D57EEB-2F50-60C4-C011-FE4FA775C9A8}
 		{BCFEA877-02A7-4F3D-9475-9AB6937AA59C} = {07D57EEB-2F50-60C4-C011-FE4FA775C9A8}
 		{16B3B99C-72D4-4D82-A396-BF7DF3917438} = {07D57EEB-2F50-60C4-C011-FE4FA775C9A8}
+		{DF05B9F9-B49A-465F-B0DF-A61ADBDD11F9} = {07D57EEB-2F50-60C4-C011-FE4FA775C9A8}
 	EndGlobalSection
 EndGlobal
