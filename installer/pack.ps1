@@ -21,6 +21,7 @@ $ScriptDir     = Split-Path -Parent $PSCommandPath
 $ProjectRoot   = Split-Path -Parent $ScriptDir
 $PublishDir    = Join-Path $ProjectRoot "yopet\bin\$Configuration\net10.0\$Runtime\publish"
 $PluginsDir    = Join-Path $PublishDir "plugins"
+$PluginDepsDir = Join-Path $PluginsDir "deps"
 $WxsFile       = Join-Path $env:TEMP "pet-yue-build.wxs"
 $OutputMsi     = Join-Path $ScriptDir "yopet-$Version.msi"
 
@@ -40,6 +41,7 @@ if ($LASTEXITCODE -ne 0) { throw "Publish failed" }
 Write-Host "[3/5] Building plugins..."
 if (Test-Path $PluginsDir) { Remove-Item $PluginsDir -Recurse -Force }
 New-Item -ItemType Directory -Path $PluginsDir | Out-Null
+New-Item -ItemType Directory -Path $PluginDepsDir | Out-Null
 
 $skipDlls = @("yopet.Sdk.dll", "yopet.Core.dll",
               "yopet.Services.dll", "yopet.ViewModels.dll", "yopet.UI.dll",
@@ -48,25 +50,38 @@ $skipDlls = @("yopet.Sdk.dll", "yopet.Core.dll",
               "Avalonia.Controls.dll", "Lang.Avalonia.dll", "Lang.Avalonia.Json.dll")
 
 $projFiles = Get-ChildItem -Path (Join-Path $ProjectRoot "plugins") -Recurse -Filter "*.csproj"
+if ($projFiles.Count -eq 0) { throw "No plugin projects found under plugins/" }
+
+Write-Host "  Discovered $($projFiles.Count) plugin project(s): $($projFiles.BaseName -join ', ')"
 foreach ($proj in $projFiles) {
     Write-Host "  Building $($proj.BaseName)..."
     dotnet build $proj.FullName --configuration $Configuration 2>&1 | Out-Null
     if ($LASTEXITCODE -ne 0) { throw "Plugin $($proj.BaseName) build failed" }
+
     $binDir = Join-Path $proj.Directory.FullName "bin\$Configuration\net10.0"
-    if (Test-Path $binDir) {
-        foreach ($f in Get-ChildItem -File $binDir -Filter "*.dll") {
-            if ($f.Name -notin $skipDlls -and
-                $f.Name -notlike "TKCode.*" -and
-                $f.Name -notlike "Avalonia*" -and
-                $f.Name -notlike "Lang.Avalonia*" -and
-                $f.Name -notlike "SkiaSharp*") {
-                Copy-Item $f.FullName (Join-Path $PluginsDir $f.Name) -Force
-            }
+    if (-not (Test-Path $binDir)) { throw "Plugin $($proj.BaseName) output not found: $binDir" }
+
+    $pluginAssembly = Join-Path $binDir "$($proj.BaseName).dll"
+    if (-not (Test-Path $pluginAssembly)) {
+        throw "Plugin assembly not found: $pluginAssembly"
+    }
+    Copy-Item $pluginAssembly (Join-Path $PluginsDir "$($proj.BaseName).dll") -Force
+
+    foreach ($f in Get-ChildItem -File $binDir -Filter "*.dll") {
+        if ($f.Name -eq "$($proj.BaseName).dll") { continue }
+        if ($f.Name -notin $skipDlls -and
+            $f.Name -notlike "TKCode.*" -and
+            $f.Name -notlike "Avalonia*" -and
+            $f.Name -notlike "Lang.Avalonia*" -and
+            $f.Name -notlike "SkiaSharp*" -and
+            -not (Test-Path (Join-Path $PublishDir $f.Name))) {
+            Copy-Item $f.FullName (Join-Path $PluginDepsDir $f.Name) -Force
         }
     }
 }
 $pluginCount = (Get-ChildItem $PluginsDir -Filter "*.dll").Count
-Write-Host "  $pluginCount plugin dll(s) copied"
+$depCount = (Get-ChildItem $PluginDepsDir -Filter "*.dll").Count
+Write-Host "  $pluginCount plugin dll(s), $depCount plugin dependency dll(s) copied"
 
 # ── 4. Generate .wxs ──
 Write-Host "[4/5] Generating WiX source file..."
@@ -101,6 +116,20 @@ foreach ($file in $pubFiles) {
 
 # plugins/ subdirectory
 $sb.AppendLine('          <Directory Id="pluginsDir" Name="plugins">') | Out-Null
+
+# plugins/deps/ subdirectory
+$sb.AppendLine('            <Directory Id="pluginDepsDir" Name="deps">') | Out-Null
+foreach ($file in Get-ChildItem -File $PluginDepsDir) {
+    $baseId = "pd_" + [System.IO.Path]::GetFileNameWithoutExtension($file.Name) -replace '[^a-zA-Z0-9_]', '_'
+    $id = $baseId; $suffix = 0
+    while ($compRefs -contains $id) { $suffix++; $id = "${baseId}_$suffix" }
+    $compRefs.Add($id)
+    $sb.AppendLine("              <Component Id=`"$id`" Guid=`"*`">") | Out-Null
+    $sb.AppendLine("                <File Source=`"!(bindpath.plugindeps)\$($file.Name)`" />") | Out-Null
+    $sb.AppendLine("              </Component>") | Out-Null
+}
+$sb.AppendLine('            </Directory>') | Out-Null
+
 $pluginFiles = Get-ChildItem -File $PluginsDir
 foreach ($file in $pluginFiles) {
     $baseId = "p_" + [System.IO.Path]::GetFileNameWithoutExtension($file.Name) -replace '[^a-zA-Z0-9_]', '_'
@@ -179,6 +208,7 @@ Write-Host "[5/5] Building MSI..."
 wix build $WxsFile -out $OutputMsi -arch x64 -ext WixToolset.UI.wixext `
     -loc $locWxl `
     -bindpath pub="$PublishDir" -bindpath plugins="$PluginsDir" `
+    -bindpath plugindeps="$PluginDepsDir" `
     -bindpath i18n="$(Join-Path $PublishDir 'I18n')" `
     -intermediatefolder "$env:TEMP\_wix_build"
 if ($LASTEXITCODE -ne 0) { throw "MSI build failed" }
