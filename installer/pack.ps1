@@ -1,5 +1,11 @@
 #!/usr/bin/env pwsh
 # One-click MSI packager for yopet
+param(
+    [switch]$InPlace,
+    [string]$InstallDir,
+    [string]$Version = ""
+)
+
 $ErrorActionPreference = "Stop"
 
 $dotnetCmd = Get-Command dotnet -ErrorAction SilentlyContinue
@@ -8,7 +14,8 @@ if ($dotnetCmd -and (-not $env:DOTNET_ROOT -or -not (Test-Path (Join-Path $env:D
 }
 
 # ── Config ──
-$Version       = "1.0.0"
+if ($InstallDir) { $InPlace = $true }
+if (-not $Version) { $Version = if ($InPlace) { "1.0.1" } else { "1.0.0" } }
 $Configuration = "Release"
 $Runtime       = "win-x64"
 $UpgradeCode   = "649E83B3-1177-464F-9AAE-396C8EC3EE66"
@@ -16,6 +23,7 @@ $AppName       = "yopet"
 $Manufacturer  = "Zhuoyue(9486983)"
 $ExeName       = "yopet.exe"
 $ExeDesc      = "desktop pet companion"
+$RegistryKey   = "Software\$Manufacturer\$AppName"
 
 $ScriptDir     = Split-Path -Parent $PSCommandPath
 $ProjectRoot   = Split-Path -Parent $ScriptDir
@@ -24,6 +32,68 @@ $PluginsDir    = Join-Path $PublishDir "plugins"
 $PluginDepsDir = Join-Path $PluginsDir "deps"
 $WxsFile       = Join-Path $env:TEMP "pet-yue-build.wxs"
 $OutputMsi     = Join-Path $ScriptDir "yopet-$Version.msi"
+
+function ConvertTo-XmlText([string]$Value) {
+    return [System.Security.SecurityElement]::Escape($Value)
+}
+
+function Get-InstalledDirectory([string]$ExplicitDir) {
+    if ($ExplicitDir) {
+        return $ExplicitDir
+    }
+
+    $config = Get-ItemProperty -Path "HKCU:\$RegistryKey" -ErrorAction SilentlyContinue
+    if ($config.InstallDir) {
+        return [string]$config.InstallDir
+    }
+
+    $shortcut = Join-Path $env:APPDATA "Microsoft\Windows\Start Menu\Programs\$AppName\$AppName.lnk"
+    if (Test-Path -LiteralPath $shortcut) {
+        $shell = New-Object -ComObject WScript.Shell
+        $target = $shell.CreateShortcut($shortcut).TargetPath
+        if ($target -and (Test-Path -LiteralPath $target)) {
+            return Split-Path -Parent $target
+        }
+    }
+
+    $uninstallRoots = @(
+        "HKCU:\Software\Microsoft\Windows\CurrentVersion\Uninstall",
+        "HKLM:\Software\Microsoft\Windows\CurrentVersion\Uninstall",
+        "HKLM:\Software\WOW6432Node\Microsoft\Windows\CurrentVersion\Uninstall"
+    )
+    foreach ($root in $uninstallRoots) {
+        $entry = Get-ItemProperty -Path (Join-Path $root "*") -ErrorAction SilentlyContinue |
+            Where-Object { $_.DisplayName -eq $AppName -and $_.InstallLocation } |
+            Select-Object -First 1
+        if ($entry) {
+            return [string]$entry.InstallLocation
+        }
+    }
+
+    throw "未找到已安装目录。请使用 -InstallDir 指定路径，或先安装一次。"
+}
+
+if ($InPlace) {
+    $InstallDir = [System.IO.Path]::GetFullPath((Get-InstalledDirectory $InstallDir).Trim())
+    $InstallDir = $InstallDir.TrimEnd("\")
+    if ($InstallDir -match '^[A-Za-z]:$') {
+        throw "安装目录不能是盘符根目录: $InstallDir"
+    }
+
+    $targetExe = Join-Path $InstallDir $ExeName
+    if (-not (Test-Path -LiteralPath $targetExe)) {
+        throw "安装目录中未找到 ${ExeName}: $InstallDir"
+    }
+
+    $running = Get-Process -Name $AppName -ErrorAction SilentlyContinue |
+        Where-Object { $_.Path -and [string]::Equals($_.Path, $targetExe, [System.StringComparison]::OrdinalIgnoreCase) }
+    if ($running) {
+        throw "目标程序正在运行，请先退出: $targetExe"
+    }
+
+    Write-Host "Install directory: $InstallDir"
+    Write-Host "Version: $Version"
+}
 
 # ── 1. Ensure WiX installed ──
 if (-not (Get-Command wix.exe -ErrorAction SilentlyContinue)) {
@@ -86,19 +156,38 @@ Write-Host "  $pluginCount plugin dll(s), $depCount plugin dependency dll(s) cop
 # ── 4. Generate .wxs ──
 Write-Host "[4/5] Generating WiX source file..."
 
+$safeInstallDir = ConvertTo-XmlText $InstallDir
+$safeRegistryKey = ConvertTo-XmlText $RegistryKey
 $sb = New-Object System.Text.StringBuilder
 $sb.AppendLine('<?xml version="1.0" encoding="utf-8"?>') | Out-Null
 $sb.AppendLine('<Wix xmlns="http://wixtoolset.org/schemas/v4/wxs"') | Out-Null
 $sb.AppendLine('     xmlns:ui="http://wixtoolset.org/schemas/v4/wxs/ui">') | Out-Null
 $sb.AppendLine("  <Package Name=`"$( $AppName )`" Language=`"2052`" Version=`"$Version`" Manufacturer=`"$( $Manufacturer )`"") | Out-Null
 $sb.AppendLine("           UpgradeCode=`"$UpgradeCode`" InstallerVersion=`"200`" Scope=`"perUser`" Codepage=`"65001`">") | Out-Null
-$sb.AppendLine('    <MajorUpgrade DowngradeErrorMessage="!(loc.DowngradeMsg)" />') | Out-Null
+if ($InPlace) {
+    $sb.AppendLine('    <MajorUpgrade AllowSameVersionUpgrades="yes" DowngradeErrorMessage="!(loc.DowngradeMsg)" />') | Out-Null
+} else {
+    $sb.AppendLine('    <MajorUpgrade DowngradeErrorMessage="!(loc.DowngradeMsg)" />') | Out-Null
+}
 $sb.AppendLine('    <MediaTemplate CompressionLevel="high" EmbedCab="yes" />') | Out-Null
-$sb.AppendLine('    <ui:WixUI Id="WixUI_InstallDir" InstallDirectory="INSTALLFOLDER" />') | Out-Null
+if ($InPlace) {
+    $sb.AppendLine('    <ui:WixUI Id="WixUI_Minimal" />') | Out-Null
+    $sb.AppendLine("    <Property Id=`"INSTALLFOLDER`" Value=`"$safeInstallDir`" />") | Out-Null
+    $sb.AppendLine('    <Property Id="INSTALLDIR_FROM_REGISTRY">') | Out-Null
+    $sb.AppendLine("      <RegistrySearch Id=`"InstalledDirSearch`" Root=`"HKCU`" Key=`"$safeRegistryKey`" Name=`"InstallDir`" Type=`"raw`" />") | Out-Null
+    $sb.AppendLine('    </Property>') | Out-Null
+    $sb.AppendLine('    <SetProperty Id="INSTALLFOLDER" Value="[INSTALLDIR_FROM_REGISTRY]" Before="CostInitialize" Sequence="both" Condition="INSTALLDIR_FROM_REGISTRY" />') | Out-Null
+} else {
+    $sb.AppendLine('    <ui:WixUI Id="WixUI_InstallDir" InstallDirectory="INSTALLFOLDER" />') | Out-Null
+}
 $sb.AppendLine('') | Out-Null
 $sb.AppendLine("    <StandardDirectory Id=`"LocalAppDataFolder`">") | Out-Null
-$sb.AppendLine("      <Directory Id=`"PublisherFolder`" Name=`"$( $Manufacturer )`">") | Out-Null
-$sb.AppendLine("        <Directory Id=`"INSTALLFOLDER`" Name=`"$( $AppName )`">") | Out-Null
+if ($InPlace) {
+    $sb.AppendLine("      <Directory Id=`"INSTALLFOLDER`" Name=`"$( $AppName )`">") | Out-Null
+} else {
+    $sb.AppendLine("      <Directory Id=`"PublisherFolder`" Name=`"$( $Manufacturer )`">") | Out-Null
+    $sb.AppendLine("        <Directory Id=`"INSTALLFOLDER`" Name=`"$( $AppName )`">") | Out-Null
+}
 
 $compRefs = New-Object System.Collections.Generic.List[string]
 
@@ -159,7 +248,9 @@ if (Test-Path $i18nPublishDir) {
 }
 
 $sb.AppendLine('        </Directory>') | Out-Null
-$sb.AppendLine('      </Directory>') | Out-Null
+if (-not $InPlace) {
+    $sb.AppendLine('      </Directory>') | Out-Null
+}
 $sb.AppendLine('    </StandardDirectory>') | Out-Null
 $sb.AppendLine('') | Out-Null
 
@@ -170,7 +261,10 @@ $sb.AppendLine('        <Component Id="ShortcutComponent" Guid="*">') | Out-Null
 $sb.AppendLine("          <Shortcut Id=`"PetShortcut`" Name=`"$( $AppName )`" Description=`"$( $ExeDesc )`"") | Out-Null
 $sb.AppendLine("                    Target=`"[INSTALLFOLDER]$ExeName`" />") | Out-Null
 $sb.AppendLine('          <RemoveFolder Id="RemoveShortcutFolder" Directory="AppShortcutFolder" On="uninstall" />') | Out-Null
-$sb.AppendLine("          <RegistryValue Root=`"HKCU`" Key=`"Software\$( $Manufacturer )\$( $AppName )`" Name=`"installed`" Type=`"integer`" Value=`"1`" />") | Out-Null
+$sb.AppendLine("          <RegistryValue Root=`"HKCU`" Key=`"$safeRegistryKey`" Name=`"installed`" Type=`"integer`" Value=`"1`" />") | Out-Null
+if ($InPlace) {
+    $sb.AppendLine("          <RegistryValue Root=`"HKCU`" Key=`"$safeRegistryKey`" Name=`"InstallDir`" Type=`"string`" Value=`"[INSTALLFOLDER]`" />") | Out-Null
+}
 $sb.AppendLine('        </Component>') | Out-Null
 $sb.AppendLine('      </Directory>') | Out-Null
 $sb.AppendLine('    </StandardDirectory>') | Out-Null
@@ -221,3 +315,6 @@ if (Test-Path "$env:TEMP\_wix_build") {
 
 $size = [math]::Round((Get-Item $OutputMsi).Length / 1MB, 1)
 Write-Host "`n[Done] $OutputMsi (${size} MB)"
+if ($InPlace) {
+    Write-Host "Install directory embedded: $InstallDir"
+}
