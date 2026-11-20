@@ -11,6 +11,10 @@ public static class TextUtil
         @"^[ \t]*(?:(?:第[0-9一二三四五六七八九十百千万零〇两]+[章节回卷部篇集])|(?:Chapter|CHAPTER|Part|PART)[ \t]+[0-9IVXLCivxlc]+|(?:序章|楔子|前言|后记|尾声|引子))(?:[ \t]|$|[：:、.．]).*$",
         RegexOptions.Compiled | RegexOptions.Multiline);
 
+    private static readonly Regex StandaloneSectionRegex = new(
+        @"^[ \t]*[一二三四五六七八九十百千万零〇两]+[、.．：:]?[ \t]*$",
+        RegexOptions.Compiled | RegexOptions.Multiline);
+
     private static readonly Regex MarkdownHeadingRegex = new(
         @"^#{1,4}[ \t]+.+$",
         RegexOptions.Compiled | RegexOptions.Multiline);
@@ -70,6 +74,31 @@ public static class TextUtil
         return match.Success ? CleanInline(match.Groups["author"].Value) : "";
     }
 
+    public static string IndentParagraphs(string? text)
+    {
+        if (string.IsNullOrEmpty(text))
+            return "";
+
+        var lines = text
+            .Replace("\r\n", "\n")
+            .Replace('\r', '\n')
+            .Split('\n');
+
+        for (var i = 0; i < lines.Length; i++)
+        {
+            var line = lines[i];
+            if (string.IsNullOrWhiteSpace(line))
+            {
+                lines[i] = "";
+                continue;
+            }
+
+            lines[i] = "\u3000\u3000" + line.TrimStart(' ', '\t', '\u3000');
+        }
+
+        return string.Join('\n', lines);
+    }
+
     public static List<Chapter> SplitChapters(string text, string fallbackTitle)
     {
         text = Normalize(text);
@@ -79,6 +108,7 @@ public static class TextUtil
         var matches = new List<Match>();
         matches.AddRange(MarkdownHeadingRegex.Matches(text).Cast<Match>());
         matches.AddRange(ChineseChapterRegex.Matches(text).Cast<Match>());
+        matches.AddRange(StandaloneSectionRegex.Matches(text).Cast<Match>());
         matches = matches
             .Where(match => match.Length > 0)
             .GroupBy(match => match.Index)

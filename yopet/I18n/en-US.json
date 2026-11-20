@@ -43,6 +43,8 @@
       "FontSizeLabel": "Size",
       "LineSpacingLabel": "Spacing",
       "ThemeLabel": "Theme",
+      "CloseOnOutsideOn": "Click away: on",
+      "CloseOnOutsideOff": "Click away: off",
       "OpacityHint": "Window opacity {0}% · Ctrl + wheel to adjust",
       "SystemDefault": "System default",
       "LineSpacingCompact": "Compact",

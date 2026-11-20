@@ -22,7 +22,8 @@ public static class PaginationEngine
         double height,
         FontFamily? fontFamily,
         double fontSize,
-        double lineSpacing)
+        double lineSpacing,
+        double firstPageHeaderHeight = 0)
     {
         if (string.IsNullOrEmpty(text))
             return new List<PageTextSlice> { new() { Text = "", CharStart = 0, CharEnd = 0 } };
@@ -43,6 +44,10 @@ public static class PaginationEngine
         var startLine = 0;
         var usedHeight = 0.0;
         var available = Math.Max(height - 2, lineHeight);
+        var firstAvailable = firstPageHeaderHeight > 0
+            ? Math.Max(height - firstPageHeaderHeight - 2, lineHeight)
+            : available;
+        var currentAvailable = firstAvailable;
 
         for (var i = 0; i < lines.Count; i++)
         {
@@ -50,11 +55,12 @@ public static class PaginationEngine
             if (currentHeight <= 0)
                 currentHeight = lineHeight;
 
-            if (usedHeight + currentHeight > available && i > startLine)
+            if (usedHeight + currentHeight > currentAvailable && i > startLine)
             {
                 AddPage(pages, text, lines, startLine, i);
                 startLine = i;
                 usedHeight = 0;
+                currentAvailable = available;
             }
 
             usedHeight += currentHeight;

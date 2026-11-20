@@ -24,6 +24,7 @@ public static class EpubParser
 
         var navigationPath = book.Content?.NavigationHtmlFile?.FilePath;
         var chapters = new List<Chapter>();
+        var currentParentTitle = "";
 
         foreach (var file in book.ReadingOrder ?? new List<EpubLocalTextContentFile>())
         {
@@ -31,28 +32,31 @@ public static class EpubParser
                 string.Equals(file.FilePath, navigationPath, StringComparison.OrdinalIgnoreCase))
                 continue;
 
-            var body = HtmlTextConverter.ToPlainText(file.Content);
-            if (body.Length == 0)
-                continue;
+            var storyTitle = HtmlTextConverter.ExtractStoryTitle(file.Content);
+            if (!string.IsNullOrWhiteSpace(storyTitle))
+                currentParentTitle = storyTitle;
 
-            var heading = ExtractHeading(file.Content);
-            var chapterTitle = navTitles.TryGetValue(file.FilePath ?? "", out var navTitle)
-                ? navTitle
-                : heading;
+            var navTitle = navTitles.TryGetValue(file.FilePath ?? "", out var mappedTitle)
+                ? mappedTitle
+                : "";
+            var hasSectionHeading = HtmlTextConverter.HasSectionHeading(file.Content);
+            var preferredTitle = hasSectionHeading && !string.IsNullOrWhiteSpace(currentParentTitle)
+                ? currentParentTitle
+                : !string.IsNullOrWhiteSpace(navTitle)
+                    ? navTitle
+                    : hasSectionHeading
+                        ? currentParentTitle
+                        : "";
+            var fallbackTitle = string.IsNullOrWhiteSpace(preferredTitle)
+                ? $"第 {chapters.Count + 1} 章"
+                : preferredTitle;
 
-            if (string.IsNullOrWhiteSpace(chapterTitle))
-                chapterTitle = $"第 {chapters.Count + 1} 章";
+            var (_, fileChapters) = HtmlTextConverter.BuildFromHtml(
+                file.Content,
+                fallbackTitle,
+                string.IsNullOrWhiteSpace(preferredTitle) ? null : preferredTitle);
 
-            if (!string.IsNullOrWhiteSpace(heading) &&
-                body.StartsWith(heading, StringComparison.Ordinal))
-            {
-                body = body[heading.Length..].TrimStart('\n', '\r', ' ', '\t');
-            }
-
-            if (body.Length == 0)
-                continue;
-
-            chapters.Add(new Chapter { Title = chapterTitle, Text = body });
+            chapters.AddRange(fileChapters);
         }
 
         if (chapters.Count == 0)
@@ -139,20 +143,4 @@ public static class EpubParser
         }
     }
 
-    private static string ExtractHeading(string? html)
-    {
-        if (string.IsNullOrWhiteSpace(html))
-            return "";
-
-        var match = System.Text.RegularExpressions.Regex.Match(
-            html,
-            "<h[12][^>]*>(?<title>.*?)</h[12]>",
-            System.Text.RegularExpressions.RegexOptions.IgnoreCase |
-            System.Text.RegularExpressions.RegexOptions.Singleline);
-        if (!match.Success)
-            return "";
-
-        var title = HtmlTextConverter.ToPlainText(match.Groups["title"].Value);
-        return title.Length > 80 ? title[..80] : title;
-    }
 }

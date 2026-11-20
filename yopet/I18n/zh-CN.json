@@ -43,6 +43,8 @@
       "FontSizeLabel": "字号",
       "LineSpacingLabel": "行距",
       "ThemeLabel": "主题",
+      "CloseOnOutsideOn": "点外部关闭：开",
+      "CloseOnOutsideOff": "点外部关闭：关",
       "OpacityHint": "窗体透明度 {0}% · Ctrl + 滚轮调整",
       "SystemDefault": "系统默认",
       "LineSpacingCompact": "紧凑",

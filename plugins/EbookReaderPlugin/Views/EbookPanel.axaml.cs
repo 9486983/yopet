@@ -30,6 +30,7 @@ public partial class EbookPanel : UserControl
     private const string ThemeKey = "ebook.theme";
     private const string ShelfModeKey = "ebook.shelf_mode";
     private const string PageOpacityKey = "ebook.page_opacity";
+    private const string CloseOnOutsideClickKey = "ebook.close_on_outside_click";
     private const double DialogInset = 24;
 
     private const int CoverColumns = 3;
@@ -80,6 +81,8 @@ public partial class EbookPanel : UserControl
     private double _fontSize = 16;
     private double _lineSpacing = 1.7;
     private double _pageOpacity = 0.9;
+    private bool _closeOnOutsideClick = true;
+    private bool _suppressCloseOnOutside;
     private string? _fontFamilyName;
     private int _themeIndex;
     private int _shelfMode;
@@ -97,6 +100,7 @@ public partial class EbookPanel : UserControl
     private double _wheelAccumulator;
     private DateTime _lastWheelTurnUtc;
     private readonly TranslateTransform _pageTransform = new();
+    private readonly TranslateTransform _readerFooterTransform = new();
     private readonly DispatcherTimer _chromeHideTimer;
     private readonly DispatcherTimer _configSaveTimer;
     private int _selectionStart;
@@ -171,9 +175,11 @@ public partial class EbookPanel : UserControl
         {
             new DoubleTransition { Property = Visual.OpacityProperty, Duration = quickFade, Easing = new CubicEaseOut() },
         };
+        ReaderFooter.RenderTransform = _readerFooterTransform;
         ReaderFooter.Transitions = new Transitions
         {
-            new DoubleTransition { Property = Visual.OpacityProperty, Duration = quickFade, Easing = new CubicEaseOut() },
+            new DoubleTransition { Property = Visual.OpacityProperty, Duration = TimeSpan.FromMilliseconds(160), Easing = new CubicEaseOut() },
+            new DoubleTransition { Property = TranslateTransform.YProperty, Duration = TimeSpan.FromMilliseconds(180), Easing = new CubicEaseOut() },
         };
 
         LoadSettings();
@@ -293,6 +299,10 @@ public partial class EbookPanel : UserControl
         if (double.TryParse(opacity, NumberStyles.Float, CultureInfo.InvariantCulture, out var parsedOpacity))
             _pageOpacity = Math.Clamp(parsedOpacity, 0.1, 1.0);
 
+        var closeOnOutside = _host.GetConfig(CloseOnOutsideClickKey);
+        if (bool.TryParse(closeOnOutside, out var parsedCloseOnOutside))
+            _closeOnOutsideClick = parsedCloseOnOutside;
+
         var shelfMode = _host.GetConfig(ShelfModeKey);
         if (int.TryParse(shelfMode, NumberStyles.Integer, CultureInfo.InvariantCulture, out var parsedShelfMode))
             _shelfMode = Math.Clamp(parsedShelfMode, 0, 1);
@@ -364,6 +374,7 @@ public partial class EbookPanel : UserControl
         FontSizeLabelText.Text = L("FontSizeLabel", "字号");
         LineSpacingLabelText.Text = L("LineSpacingLabel", "行距");
         ThemeLabelText.Text = L("ThemeLabel", "主题");
+        UpdateCloseOnOutsideButton();
 
         HighlightSelectionButton.Content = L("Highlight", "高亮");
         AnnotateSelectionButton.Content = L("Annotate", "批注");
@@ -489,11 +500,18 @@ public partial class EbookPanel : UserControl
 
     private void ApplyTypography()
     {
-        PageText.FontFamily = string.IsNullOrWhiteSpace(_fontFamilyName)
+        var fontFamily = string.IsNullOrWhiteSpace(_fontFamilyName)
             ? FontFamily.Default
             : new FontFamily(_fontFamilyName);
+
+        PageText.FontFamily = fontFamily;
         PageText.FontSize = _fontSize;
         PageText.LineHeight = _fontSize * _lineSpacing;
+
+        var headingSize = Math.Clamp(_fontSize + 4, 16, 32);
+        PageChapterHeading.FontFamily = fontFamily;
+        PageChapterHeading.FontSize = headingSize;
+        PageChapterHeading.LineHeight = headingSize * 1.5;
     }
 
     private void ApplyTypographyAndRepaginate()
@@ -527,7 +545,8 @@ public partial class EbookPanel : UserControl
         PageFrame.BorderThickness = new Thickness(0);
         PageFrame.CornerRadius = new CornerRadius(0);
         PageText.Foreground = foregroundBrush;
-        PageText.SelectionBrush = new SolidColorBrush(Color.Parse("#663B82F6"));
+        PageChapterHeading.Foreground = foregroundBrush;
+        PageText.SelectionBrush = CreateSelectionBrush();
 
         if (_document is not null)
         {
@@ -541,7 +560,21 @@ public partial class EbookPanel : UserControl
         UpdateOpacityText();
     }
 
-    // ── 书架 ──
+    private IBrush CreateSelectionBrush()
+    {
+        var color = Color.Parse("#3B82F6");
+        try
+        {
+            var accent = ArcTokens.GetColor(this, ArcDesignTokenKind.Accent);
+            if (accent.A > 0)
+                color = accent;
+        }
+        catch
+        {
+        }
+
+        return new SolidColorBrush(Color.FromArgb(0x66, color.R, color.G, color.B));
+    }
 
     private async Task OpenBookAsync(BookRecord? book, EbookDocument? parsedDocument = null)
     {
@@ -661,7 +694,8 @@ public partial class EbookPanel : UserControl
         ReaderFooter.IsVisible = false;
         ReaderStatusBar.IsVisible = true;
         ReaderHeaderOverlay.Opacity = 1;
-        ReaderFooter.Opacity = 1;
+        _readerFooterTransform.Y = 8;
+        ReaderFooter.Opacity = 0;
         ReaderListOverlay.IsVisible = false;
         SelectionToolbar.IsVisible = false;
         RootContent.Margin = new Thickness(10, 0, 10, 8);
@@ -694,10 +728,12 @@ public partial class EbookPanel : UserControl
         _chromeHideTimer.Stop();
 
         ReaderPanel.IsVisible = false;
+        PageChapterHeading.IsVisible = false;
         ReaderFooter.IsVisible = false;
         ReaderStatusBar.IsVisible = false;
         ReaderHeaderOverlay.IsVisible = false;
-        ReaderFooter.Opacity = 1;
+        _readerFooterTransform.Y = 8;
+        ReaderFooter.Opacity = 0;
         ReaderHeaderOverlay.Opacity = 1;
         ReaderListOverlay.IsVisible = false;
         ClearReaderList();
@@ -738,12 +774,15 @@ public partial class EbookPanel : UserControl
         {
             _chromeVisible = true;
             _chromeHideTimer.Stop();
-            ReaderFooter.IsVisible = true;
+            _readerFooterTransform.Y = 8;
             ReaderFooter.Opacity = 0;
+            ReaderFooter.IsVisible = true;
             Dispatcher.UIThread.Post(() =>
             {
                 if (!_chromeVisible)
                     return;
+
+                _readerFooterTransform.Y = 0;
                 ReaderFooter.Opacity = 1;
             }, DispatcherPriority.Background);
             return;
@@ -753,6 +792,7 @@ public partial class EbookPanel : UserControl
         _chromeHideTimer.Stop();
         _settingsOpen = false;
         SettingsStrip.IsVisible = false;
+        _readerFooterTransform.Y = 8;
         ReaderFooter.Opacity = 0;
         _ = HideReaderChromeAsync();
     }
@@ -764,7 +804,7 @@ public partial class EbookPanel : UserControl
             return;
 
         ReaderFooter.IsVisible = false;
-        ReaderFooter.Opacity = 1;
+        ReaderFooter.Opacity = 0;
     }
 
     private void OnReaderPointerMoved(object? sender, PointerEventArgs e)
@@ -844,6 +884,7 @@ public partial class EbookPanel : UserControl
             _chapterIndex = chapterIndex;
             RefreshChapterAnnotations();
             var chapter = _document.Chapters[chapterIndex];
+            var chapterTitle = GetChapterTitle(chapterIndex, chapter);
             var fontFamily = string.IsNullOrWhiteSpace(_fontFamilyName)
                 ? null
                 : new FontFamily(_fontFamilyName);
@@ -855,7 +896,8 @@ public partial class EbookPanel : UserControl
                 PageText.Bounds.Height,
                 fontFamily,
                 _fontSize,
-                _lineSpacing));
+                _lineSpacing,
+                GetChapterHeadingHeight(chapterTitle)));
 
             var chapterStart = _document.GetChapterStart(chapterIndex);
             var offset = (int)Math.Clamp(restorePosition - chapterStart, 0, chapter.Text.Length);
@@ -881,10 +923,12 @@ public partial class EbookPanel : UserControl
         _pageIndex = Math.Clamp(_pageIndex, 0, _pages.Count - 1);
         var page = _pages[_pageIndex];
         var chapter = _document.Chapters[_chapterIndex];
-        var chapterTitle = string.IsNullOrWhiteSpace(chapter.Title)
-            ? $"第 {_chapterIndex + 1} 章"
-            : chapter.Title;
+        var chapterTitle = GetChapterTitle(_chapterIndex, chapter);
+        var showHeading = _pageIndex == 0;
 
+        PageChapterHeading.Text = chapterTitle;
+        PageChapterHeading.IsVisible = showHeading;
+        _pageTransform.Y = showHeading ? GetChapterHeadingHeight(chapterTitle) : 0;
         _pageTransform.X = 8;
         SetPageInlines(page);
         ReaderChapterTitle.Text = chapterTitle;
@@ -902,6 +946,20 @@ public partial class EbookPanel : UserControl
         UpdateNavigationState();
         UpdateBookmarkButtonState();
         SaveProgress(globalOffset, total);
+    }
+
+    private string GetChapterTitle(int chapterIndex, Chapter chapter) =>
+        string.IsNullOrWhiteSpace(chapter.Title)
+            ? $"第 {chapterIndex + 1} 章"
+            : chapter.Title;
+
+    private double GetChapterHeadingHeight(string? chapterTitle)
+    {
+        if (string.IsNullOrWhiteSpace(chapterTitle))
+            return 0;
+
+        var headingSize = Math.Clamp(_fontSize + 4, 16, 32);
+        return headingSize * 1.5 + 8;
     }
 
     private long CurrentGlobalOffset()
@@ -1054,6 +1112,37 @@ public partial class EbookPanel : UserControl
             Dispatcher.UIThread.Post(() => Focus(), DispatcherPriority.Input);
     }
 
+    private void OnCloseOnOutsideValueChanged(object? sender, ActionSwapValueChangedEventArgs e)
+    {
+        var closeOnOutside = string.Equals(e.Value, "on", StringComparison.OrdinalIgnoreCase);
+        if (_suppressCloseOnOutside || closeOnOutside == _closeOnOutsideClick)
+        {
+            UpdateCloseOnOutsideTooltip();
+            return;
+        }
+
+        _closeOnOutsideClick = closeOnOutside;
+        SaveSetting(CloseOnOutsideClickKey, _closeOnOutsideClick ? "true" : "false");
+        UpdateCloseOnOutsideTooltip();
+    }
+
+    private void UpdateCloseOnOutsideButton()
+    {
+        _suppressCloseOnOutside = true;
+        CloseOnOutsideAction.Value = _closeOnOutsideClick ? "on" : "off";
+        _suppressCloseOnOutside = false;
+        UpdateCloseOnOutsideTooltip();
+    }
+
+    private void UpdateCloseOnOutsideTooltip()
+    {
+        ToolTip.SetTip(
+            CloseOnOutsideAction,
+            _closeOnOutsideClick
+                ? L("CloseOnOutsideOn", "点外部关闭：开")
+                : L("CloseOnOutsideOff", "点外部关闭：关"));
+    }
+
     private void OnShelfModeChanged(object? sender, SelectionChangedEventArgs e)
     {
         if (_suppressShelfMode)
@@ -1173,7 +1262,11 @@ public partial class EbookPanel : UserControl
 
     private void OnReaderWindowDeactivated(object? sender, EventArgs e)
     {
-        if (_suppressDeactivateClose || _settingsOpen || _document is null || !ReaderPanel.IsVisible)
+        if (!_closeOnOutsideClick ||
+            _suppressDeactivateClose ||
+            _settingsOpen ||
+            _document is null ||
+            !ReaderPanel.IsVisible)
             return;
 
         CloseReaderPlugin();
@@ -1256,7 +1349,7 @@ public partial class EbookPanel : UserControl
 
     private void OnRootSurfacePressed(object? sender, PointerPressedEventArgs e)
     {
-        if (_document is null || !ReaderPanel.IsVisible)
+        if (_document is null || !ReaderPanel.IsVisible || !_closeOnOutsideClick)
             return;
 
         if (!e.GetCurrentPoint(RootBorder).Properties.IsLeftButtonPressed)

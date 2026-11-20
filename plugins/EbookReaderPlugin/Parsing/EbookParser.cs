@@ -8,7 +8,7 @@ public static class EbookParser
     public static EbookDocument Parse(string path)
     {
         var extension = Path.GetExtension(path).ToLowerInvariant();
-        return extension switch
+        var document = extension switch
         {
             ".epub" => EpubParser.Parse(path),
             ".fb2" => Fb2Parser.Parse(path),
@@ -17,6 +17,11 @@ public static class EbookParser
             ".txt" or ".text" or ".md" or ".markdown" => PlainTextParser.Parse(path),
             _ => throw new NotSupportedException($"不支持的电子书格式：{extension}"),
         };
+
+        foreach (var chapter in document.Chapters)
+            chapter.Text = TextUtil.IndentParagraphs(chapter.Text);
+
+        return document;
     }
 
     private static EbookDocument ParseHtml(string path)

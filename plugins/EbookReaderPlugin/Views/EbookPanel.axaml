@@ -142,7 +142,7 @@
                   HorizontalAlignment="Center"
                   VerticalAlignment="Center">
             <StackPanel Spacing="8" HorizontalAlignment="Center">
-              <lucide:LucideIcon Kind="BookOpen" Size="42"
+              <lucide:LucideIcon Kind="LibraryBig" Size="42"
                                  Foreground="{arc:ArcDesignTokenResource Accent}"
                                  HorizontalAlignment="Center" />
               <TextBlock x:Name="EmptyTitleText"
@@ -187,6 +187,19 @@
                                    VerticalAlignment="Stretch"
                                    HorizontalAlignment="Stretch"
                                    SizeChanged="OnPageTextSizeChanged" />
+              <TextBlock x:Name="PageChapterHeading"
+                         IsVisible="False"
+                         IsHitTestVisible="False"
+                         Margin="18,8,18,0"
+                         FontSize="20"
+                         FontWeight="SemiBold"
+                         LineHeight="30"
+                         Foreground="#2B2620"
+                         TextAlignment="Center"
+                         TextWrapping="NoWrap"
+                         TextTrimming="CharacterEllipsis"
+                         HorizontalAlignment="Stretch"
+                         VerticalAlignment="Top" />
               <Border x:Name="LeftZone"
                       Width="24"
                       HorizontalAlignment="Left"
@@ -296,17 +309,18 @@
       <Border x:Name="ReaderFooter"
               Grid.Row="1"
               IsVisible="False"
+              Opacity="0"
               VerticalAlignment="Bottom"
               Background="{arc:ArcDesignTokenResource SurfaceRaised}"
               BoxShadow="{arc:ArcDesignTokenResource ShadowRaised}"
               BorderBrush="{arc:ArcDesignTokenResource Border}"
               BorderThickness="1"
               CornerRadius="12"
-              Padding="10,8"
+              Padding="12,10"
               Margin="4,0,4,4">
         <StackPanel Spacing="8">
 
-          <StackPanel x:Name="SettingsStrip" IsVisible="False" Spacing="6">
+          <StackPanel x:Name="SettingsStrip" IsVisible="False" Spacing="8">
             <Grid ColumnDefinitions="56,*">
               <TextBlock x:Name="FontLabelText"
                          Text="字体"
@@ -443,6 +457,22 @@
                           Click="OnSettingsToggleClick">
                 <TextBlock Text="Aa" FontSize="13" FontWeight="SemiBold" />
               </arc:Button>
+              <arc:ActionSwap x:Name="CloseOnOutsideAction"
+                              Size="Small"
+                              Width="36" Height="36"
+                              Padding="0"
+                              Margin="2,0,0,0"
+                              VerticalAlignment="Center"
+                              ValueChanged="OnCloseOnOutsideValueChanged">
+                <arc:ActionSwap.States>
+                  <arc:ActionSwapState Id="on"
+                                       Icon="{lucide:LucideGeometry Kind=MousePointerClick}"
+                                       Tone="Accent" />
+                  <arc:ActionSwapState Id="off"
+                                       Icon="{lucide:LucideGeometry Kind=MousePointer2Off}"
+                                       Tone="Quiet" />
+                </arc:ActionSwap.States>
+              </arc:ActionSwap>
             </StackPanel>
           </Grid>
 

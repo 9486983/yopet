@@ -27,7 +27,7 @@ public sealed class EbookReaderPlugin : PluginBase
         host.RegisterAction(new PluginAction
         {
             Name = T("ShelfName", "书架"),
-            Emoji = "📚",
+            Emoji = "🗂️",
             Group = T("Group", "电子书"),
             Description = T("ShelfDescription", "打开电子书书架"),
             Display = LocalizedDisplay.Of(
