@@ -8,6 +8,18 @@ public sealed class Chapter
     public string Title { get; set; } = "";
 
     public string Text { get; set; } = "";
+
+    public List<BookImage> Images { get; } = new();
+}
+
+/// <summary>章节中的插图，正文用占位符标记其位置。</summary>
+public sealed class BookImage
+{
+    public const char Placeholder = '\uFFFC';
+
+    public string Key { get; set; } = "";
+
+    public byte[] Data { get; set; } = Array.Empty<byte>();
 }
 
 /// <summary>解析后的电子书内容（与具体格式无关）。</summary>

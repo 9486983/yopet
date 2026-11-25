@@ -2,6 +2,7 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:arc="https://github.com/AIDotNet/TKCode.Arc"
              xmlns:lucide="https://github.com/AIDotNet/TKCode.Arc/lucide"
+             xmlns:primitives="using:Avalonia.Controls.Primitives"
              x:Class="EbookReaderPlugin.Views.EbookPanel"
              x:CompileBindings="False"
              Width="408"
@@ -178,15 +179,30 @@
                   BorderThickness="0"
                   ClipToBounds="True">
             <Grid>
-              <SelectableTextBlock x:Name="PageText"
-                                   Margin="18,8"
-                                   FontSize="16"
-                                   LineHeight="27"
-                                   Foreground="#2B2620"
-                                   TextWrapping="Wrap"
-                                   VerticalAlignment="Stretch"
-                                   HorizontalAlignment="Stretch"
-                                   SizeChanged="OnPageTextSizeChanged" />
+              <Grid x:Name="PageContentGrid"
+                    Margin="18,8"
+                    RowDefinitions="Auto,*"
+                    SizeChanged="OnPageContentSizeChanged">
+                <Border x:Name="PageImageFrame"
+                        Grid.Row="0"
+                        IsVisible="False"
+                        IsHitTestVisible="False"
+                        Margin="0,0,0,8"
+                        ClipToBounds="True">
+                  <Image x:Name="PageImage"
+                         Stretch="Uniform"
+                         HorizontalAlignment="Center"
+                         VerticalAlignment="Center" />
+                </Border>
+                <SelectableTextBlock x:Name="PageText"
+                                     Grid.Row="1"
+                                     FontSize="16"
+                                     LineHeight="27"
+                                     Foreground="#2B2620"
+                                     TextWrapping="Wrap"
+                                     VerticalAlignment="Stretch"
+                                     HorizontalAlignment="Stretch" />
+              </Grid>
               <TextBlock x:Name="PageChapterHeading"
                          IsVisible="False"
                          IsHitTestVisible="False"
@@ -473,6 +489,23 @@
                                        Tone="Quiet" />
                 </arc:ActionSwap.States>
               </arc:ActionSwap>
+              <arc:ActionSwap x:Name="ImageMenuAction"
+                              Size="Small"
+                              Width="36" Height="36"
+                              Padding="0"
+                              Margin="2,0,0,0"
+                              VerticalAlignment="Center"
+                              Value="closed"
+                              ValueChanged="OnImageMenuValueChanged">
+                <arc:ActionSwap.States>
+                  <arc:ActionSwapState Id="closed"
+                                       Icon="{lucide:LucideGeometry Kind=Image}"
+                                       Tone="Quiet" />
+                  <arc:ActionSwapState Id="open"
+                                       Icon="{lucide:LucideGeometry Kind=Image}"
+                                       Tone="Accent" />
+                </arc:ActionSwap.States>
+              </arc:ActionSwap>
             </StackPanel>
           </Grid>
 
@@ -528,6 +561,69 @@
         </StackPanel>
       </Border>
 
+      <primitives:Popup x:Name="ImageSettingsPopup"
+                        IsOpen="False"
+                        IsLightDismissEnabled="True"
+                        Placement="Top"
+                        VerticalOffset="-8"
+                        Closed="OnImageSettingsPopupClosed">
+        <Border Background="{arc:ArcDesignTokenResource SurfaceRaised}"
+                BorderBrush="{arc:ArcDesignTokenResource Border}"
+                BorderThickness="1"
+                BoxShadow="{arc:ArcDesignTokenResource ShadowRaised}"
+                CornerRadius="10"
+                Padding="10,8"
+                MinWidth="168">
+          <StackPanel Spacing="2">
+            <Grid ColumnDefinitions="*,Auto" MinHeight="36">
+              <TextBlock x:Name="ShowImagesLabel"
+                         Text="展示图片"
+                         FontSize="{arc:ArcDesignTokenResource TypeSM}"
+                         Foreground="{arc:ArcDesignTokenResource Foreground}"
+                         VerticalAlignment="Center" />
+              <arc:ActionSwap x:Name="ShowImagesAction"
+                              Grid.Column="1"
+                              Size="Small"
+                              Width="36" Height="36"
+                              Padding="0"
+                              Value="on"
+                              ValueChanged="OnShowImagesValueChanged">
+                <arc:ActionSwap.States>
+                  <arc:ActionSwapState Id="on"
+                                       Icon="{lucide:LucideGeometry Kind=Eye}"
+                                       Tone="Accent" />
+                  <arc:ActionSwapState Id="off"
+                                       Icon="{lucide:LucideGeometry Kind=EyeOff}"
+                                       Tone="Quiet" />
+                </arc:ActionSwap.States>
+              </arc:ActionSwap>
+            </Grid>
+            <Grid ColumnDefinitions="*,Auto" MinHeight="36">
+              <TextBlock x:Name="GrayscaleImagesLabel"
+                         Text="默认黑白"
+                         FontSize="{arc:ArcDesignTokenResource TypeSM}"
+                         Foreground="{arc:ArcDesignTokenResource Foreground}"
+                         VerticalAlignment="Center" />
+              <arc:ActionSwap x:Name="GrayscaleImagesAction"
+                              Grid.Column="1"
+                              Size="Small"
+                              Width="36" Height="36"
+                              Padding="0"
+                              Value="off"
+                              ValueChanged="OnGrayscaleImagesValueChanged">
+                <arc:ActionSwap.States>
+                  <arc:ActionSwapState Id="on"
+                                       Icon="{lucide:LucideGeometry Kind=Contrast}"
+                                       Tone="Accent" />
+                  <arc:ActionSwapState Id="off"
+                                       Icon="{lucide:LucideGeometry Kind=Palette}"
+                                       Tone="Quiet" />
+                </arc:ActionSwap.States>
+              </arc:ActionSwap>
+            </Grid>
+          </StackPanel>
+        </Border>
+      </primitives:Popup>
 
       <!-- 阅读器目录/书签/批注列表 -->
       <Border x:Name="ReaderListOverlay"

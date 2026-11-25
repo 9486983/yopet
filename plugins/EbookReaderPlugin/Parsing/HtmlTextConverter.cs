@@ -39,6 +39,14 @@ public static class HtmlTextConverter
         "<h(?<level>[1-6])[^>]*>(?<title>.*?)</h\\k<level>>",
         RegexOptions.Compiled | RegexOptions.Singleline | RegexOptions.IgnoreCase);
 
+    private static readonly Regex ImageTagRegex = new(
+        "<(?:img|image)\\b[^>]*>",
+        RegexOptions.Compiled | RegexOptions.Singleline | RegexOptions.IgnoreCase);
+
+    private static readonly Regex ImageSourceRegex = new(
+        @"(?:\s+src|\s+xlink:href|\s+href)\s*=\s*(?<quote>[""'])(?<src>.*?)\k<quote>",
+        RegexOptions.Compiled | RegexOptions.Singleline | RegexOptions.IgnoreCase);
+
     public static string ToPlainText(string? html)
     {
         if (string.IsNullOrWhiteSpace(html))
@@ -54,10 +62,62 @@ public static class HtmlTextConverter
         return TextUtil.Normalize(text);
     }
 
+    public static (string Html, List<BookImage> Images) ExtractImages(
+        string html,
+        Func<string, BookImage?> resolve)
+    {
+        var images = new List<BookImage>();
+        var ignoredRanges = new List<(int Start, int End)>();
+        AddRanges(CommentRegex, html, ignoredRanges);
+        AddRanges(HeadRegex, html, ignoredRanges);
+        foreach (Match heading in HeadingRegex.Matches(html))
+        {
+            if (int.Parse(heading.Groups["level"].Value) <= 3)
+                ignoredRanges.Add((heading.Index, heading.Index + heading.Length));
+        }
+
+        var prepared = ImageTagRegex.Replace(html, match =>
+        {
+            if (IsInside(match.Index, ignoredRanges))
+                return "";
+
+            var source = ImageSourceRegex.Match(match.Value);
+            if (!source.Success)
+                return "";
+
+            var image = resolve(WebUtility.HtmlDecode(source.Groups["src"].Value));
+            if (image is null)
+                return "";
+
+            images.Add(image);
+            return BookImage.Placeholder.ToString();
+        });
+
+        return (prepared, images);
+    }
+
+    private static void AddRanges(Regex regex, string text, List<(int Start, int End)> ranges)
+    {
+        foreach (Match match in regex.Matches(text))
+            ranges.Add((match.Index, match.Index + match.Length));
+    }
+
+    private static bool IsInside(int index, List<(int Start, int End)> ranges)
+    {
+        foreach (var (start, end) in ranges)
+        {
+            if (index >= start && index < end)
+                return true;
+        }
+
+        return false;
+    }
+
     public static (string Title, List<Chapter> Chapters) BuildFromHtml(
         string html,
         string fallbackTitle,
-        string? preferredTitle = null)
+        string? preferredTitle = null,
+        IReadOnlyList<BookImage>? images = null)
     {
         var htmlTitle = ExtractTitle(html);
         var title = FirstNonEmpty(preferredTitle, htmlTitle, fallbackTitle);
@@ -80,13 +140,14 @@ public static class HtmlTextConverter
             if (text.Length > 0)
                 chapters.Add(new Chapter { Title = title, Text = text });
 
+            AttachImages(chapters, images);
             return (title, chapters);
         }
 
         var parentTitle = FirstNonEmpty(preferredTitle, htmlTitle);
         var first = headings[0];
         var preface = ToPlainText(html[..first.Start]);
-        if (preface.Length > 120)
+        if (preface.Length > 120 || ContainsPlaceholder(preface))
             chapters.Add(new Chapter { Title = "前言", Text = preface });
 
         for (var i = 0; i < headings.Count; i++)
@@ -122,8 +183,28 @@ public static class HtmlTextConverter
                 chapters.Add(new Chapter { Title = title, Text = text });
         }
 
+        AttachImages(chapters, images);
         return (title, chapters);
     }
+
+    private static void AttachImages(List<Chapter> chapters, IReadOnlyList<BookImage>? images)
+    {
+        if (images is not { Count: > 0 })
+            return;
+
+        var imageIndex = 0;
+        foreach (var chapter in chapters)
+        {
+            for (var i = 0; i < chapter.Text.Length && imageIndex < images.Count; i++)
+            {
+                if (chapter.Text[i] == BookImage.Placeholder)
+                    chapter.Images.Add(images[imageIndex++]);
+            }
+        }
+    }
+
+    private static bool ContainsPlaceholder(string text) =>
+        text.IndexOf(BookImage.Placeholder) >= 0;
 
     public static string ExtractStoryTitle(string? html)
     {
@@ -171,7 +252,8 @@ public static class HtmlTextConverter
 
     private static string CleanHeading(string? html)
     {
-        var title = TextUtil.CleanInline(ToPlainText(html));
+        var title = TextUtil.CleanInline(ToPlainText(html))
+            .Replace(BookImage.Placeholder.ToString(), "");
         return TrimTitle(title);
     }
 

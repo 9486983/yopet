@@ -23,7 +23,7 @@ public partial class EbookPanel
         inlines.Clear();
         PageText.SelectionStart = 0;
         PageText.SelectionEnd = 0;
-        var text = page.Text;
+        var text = page.Text.Replace(BookImage.Placeholder, '\u200B');
         if (text.Length == 0)
             return;
 
@@ -204,7 +204,7 @@ public partial class EbookPanel
         {
             book.Bookmarks ??= new List<BookBookmark>();
             var existing = book.Bookmarks.FirstOrDefault(bookmark =>
-                bookmark.ChapterIndex == _chapterIndex && bookmark.Offset == page.CharStart);
+                bookmark.ChapterIndex == _chapterIndex && bookmark.Offset == page.PositionOffset);
 
             if (existing is not null)
             {
@@ -215,7 +215,7 @@ public partial class EbookPanel
                 book.Bookmarks.Add(new BookBookmark
                 {
                     ChapterIndex = _chapterIndex,
-                    Offset = page.CharStart,
+                    Offset = page.PositionOffset,
                     Label = _document?.Chapters[_chapterIndex].Title ?? "",
                 });
             }
@@ -237,7 +237,7 @@ public partial class EbookPanel
         BookmarkButton.Opacity = _book.Bookmarks is { } bookmarks &&
                                  bookmarks.Any(bookmark =>
                                      bookmark.ChapterIndex == _chapterIndex &&
-                                     bookmark.Offset == page.CharStart)
+                                     bookmark.Offset == page.PositionOffset)
             ? 1
             : 0.55;
     }

@@ -31,6 +31,8 @@ public partial class EbookPanel : UserControl
     private const string ShelfModeKey = "ebook.shelf_mode";
     private const string PageOpacityKey = "ebook.page_opacity";
     private const string CloseOnOutsideClickKey = "ebook.close_on_outside_click";
+    private const string ShowImagesKey = "ebook.show_images";
+    private const string GrayscaleImagesKey = "ebook.grayscale_images";
     private const double DialogInset = 24;
 
     private const int CoverColumns = 3;
@@ -65,6 +67,9 @@ public partial class EbookPanel : UserControl
     private readonly List<BookAnnotation> _chapterAnnotations = new();
     private readonly Dictionary<string, IBrush> _annotationBrushCache = new(StringComparer.OrdinalIgnoreCase);
     private readonly Dictionary<string, string> _pendingSettings = new(StringComparer.OrdinalIgnoreCase);
+    private readonly Dictionary<BookImage, Bitmap> _imageCache = new();
+    private readonly Dictionary<BookImage, Bitmap> _grayscaleImageCache = new();
+    private readonly Dictionary<BookImage, (int Width, int Height)> _imageSizeCache = new();
     private readonly CancellationTokenSource _lifetime = new();
 
     private Window? _readerWindow;
@@ -83,6 +88,10 @@ public partial class EbookPanel : UserControl
     private double _pageOpacity = 0.9;
     private bool _closeOnOutsideClick = true;
     private bool _suppressCloseOnOutside;
+    private bool _showImages = true;
+    private bool _grayscaleImages;
+    private bool _suppressImageMenu;
+    private bool _suppressImageSettings;
     private string? _fontFamilyName;
     private int _themeIndex;
     private int _shelfMode;
@@ -111,6 +120,7 @@ public partial class EbookPanel : UserControl
     public EbookPanel()
     {
         InitializeComponent();
+        ImageSettingsPopup.PlacementTarget = ImageMenuAction;
         _host = null!;
         _service = null!;
         _localize = _ => "";
@@ -132,7 +142,10 @@ public partial class EbookPanel : UserControl
         _chromeHideTimer.Tick += (_, _) =>
         {
             _chromeHideTimer.Stop();
-            if (!_chromeVisible || ReaderListOverlay.IsVisible || SelectionToolbar.IsVisible)
+            if (!_chromeVisible ||
+                ReaderListOverlay.IsVisible ||
+                SelectionToolbar.IsVisible ||
+                ImageSettingsPopup.IsOpen)
                 return;
 
             SetReaderChrome(false);
@@ -146,6 +159,7 @@ public partial class EbookPanel : UserControl
         };
 
         InitializeComponent();
+        ImageSettingsPopup.PlacementTarget = ImageMenuAction;
         ReaderListHost.ItemTemplate = new FuncDataTemplate<ReaderListRowModel>(
             (row, _) => CreateReaderListRow(row),
             supportsRecycling: false);
@@ -265,6 +279,8 @@ public partial class EbookPanel : UserControl
         _shelfLoaded = false;
 
         PageText.Inlines?.Clear();
+        CloseImageSettingsMenu();
+        ClearImageCache();
         ClearReaderList();
         _pages.Clear();
         _chapterAnnotations.Clear();
@@ -302,6 +318,14 @@ public partial class EbookPanel : UserControl
         var closeOnOutside = _host.GetConfig(CloseOnOutsideClickKey);
         if (bool.TryParse(closeOnOutside, out var parsedCloseOnOutside))
             _closeOnOutsideClick = parsedCloseOnOutside;
+
+        var showImages = _host.GetConfig(ShowImagesKey);
+        if (bool.TryParse(showImages, out var parsedShowImages))
+            _showImages = parsedShowImages;
+
+        var grayscaleImages = _host.GetConfig(GrayscaleImagesKey);
+        if (bool.TryParse(grayscaleImages, out var parsedGrayscaleImages))
+            _grayscaleImages = parsedGrayscaleImages;
 
         var shelfMode = _host.GetConfig(ShelfModeKey);
         if (int.TryParse(shelfMode, NumberStyles.Integer, CultureInfo.InvariantCulture, out var parsedShelfMode))
@@ -374,7 +398,10 @@ public partial class EbookPanel : UserControl
         FontSizeLabelText.Text = L("FontSizeLabel", "字号");
         LineSpacingLabelText.Text = L("LineSpacingLabel", "行距");
         ThemeLabelText.Text = L("ThemeLabel", "主题");
+        ShowImagesLabel.Text = L("ShowImagesLabel", "展示图片");
+        GrayscaleImagesLabel.Text = L("GrayscaleImagesLabel", "默认黑白");
         UpdateCloseOnOutsideButton();
+        UpdateImageSettingsButtons();
 
         HighlightSelectionButton.Content = L("Highlight", "高亮");
         AnnotateSelectionButton.Content = L("Annotate", "批注");
@@ -462,6 +489,7 @@ public partial class EbookPanel : UserControl
                 new SelectOption(2, L("ThemeNight", "夜间")),
             };
             ThemeSelect.SelectedValue = _themeIndex;
+            UpdateImageSettingsButtons();
         }
         finally
         {
@@ -594,6 +622,10 @@ public partial class EbookPanel : UserControl
 
             var location = document.Locate(book.Position);
 
+            ClearImageCache();
+            PageImageFrame.IsVisible = false;
+            PageText.Opacity = 1;
+            PageText.IsHitTestVisible = true;
             _document = document;
             _book = book;
             _chapterIndex = location.ChapterIndex;
@@ -682,6 +714,7 @@ public partial class EbookPanel : UserControl
         if (_document is null || _book is null)
             return;
 
+        CloseImageSettingsMenu();
         LibraryPanel.IsVisible = false;
         ReaderPanel.IsVisible = true;
         LibraryFooter.IsVisible = false;
@@ -698,6 +731,9 @@ public partial class EbookPanel : UserControl
         ReaderFooter.Opacity = 0;
         ReaderListOverlay.IsVisible = false;
         SelectionToolbar.IsVisible = false;
+        PageImageFrame.IsVisible = false;
+        PageText.Opacity = 1;
+        PageText.IsHitTestVisible = true;
         RootContent.Margin = new Thickness(10, 0, 10, 8);
         BackButton.IsVisible = true;
         ShelfModeControl.IsVisible = false;
@@ -717,6 +753,11 @@ public partial class EbookPanel : UserControl
     {
         SaveCurrentProgress();
         _service?.Flush();
+        CloseImageSettingsMenu();
+        ClearImageCache();
+        PageImageFrame.IsVisible = false;
+        PageText.Opacity = 1;
+        PageText.IsHitTestVisible = true;
         _document = null;
         _book = null;
         _pages.Clear();
@@ -792,6 +833,7 @@ public partial class EbookPanel : UserControl
         _chromeHideTimer.Stop();
         _settingsOpen = false;
         SettingsStrip.IsVisible = false;
+        CloseImageSettingsMenu();
         _readerFooterTransform.Y = 8;
         ReaderFooter.Opacity = 0;
         _ = HideReaderChromeAsync();
@@ -812,6 +854,12 @@ public partial class EbookPanel : UserControl
         if (_document is null || !ReaderPanel.IsVisible)
             return;
 
+        if (ImageSettingsPopup.IsOpen)
+        {
+            _chromeHideTimer.Stop();
+            return;
+        }
+
         if (ReaderListOverlay.IsVisible || SelectionToolbar.IsVisible)
             return;
 
@@ -819,8 +867,8 @@ public partial class EbookPanel : UserControl
             return;
 
         var position = e.GetPosition(RootBorder);
-        var nearEdge = position.Y >= RootBorder.Bounds.Height - 120;
-        var overChrome = ReaderFooter.IsPointerOver;
+        var nearEdge = position.Y >= RootBorder.Bounds.Height - 32;
+        var overChrome = ReaderFooter.IsPointerOver || ReaderStatusBar.IsPointerOver;
 
         if (nearEdge || overChrome)
         {
@@ -856,7 +904,7 @@ public partial class EbookPanel : UserControl
             if (_document is null || !ReaderPanel.IsVisible)
                 return;
 
-            if (PageText.Bounds.Width < 40 || PageText.Bounds.Height < 40)
+            if (PageContentGrid.Bounds.Width < 40 || PageContentGrid.Bounds.Height < 40)
             {
                 if (attempt < 8)
                     SchedulePagination(restorePosition, attempt + 1);
@@ -875,7 +923,7 @@ public partial class EbookPanel : UserControl
         if (chapterIndex < 0 || chapterIndex >= _document.Chapters.Count)
             return;
 
-        if (PageText.Bounds.Width < 40 || PageText.Bounds.Height < 40)
+        if (PageContentGrid.Bounds.Width < 40 || PageContentGrid.Bounds.Height < 40)
             return;
 
         _paginating = true;
@@ -890,18 +938,20 @@ public partial class EbookPanel : UserControl
                 : new FontFamily(_fontFamilyName);
 
             _pages.Clear();
-            _pages.AddRange(PaginationEngine.Paginate(
+            _pages.AddRange(PaginationEngine.PaginateChapter(
                 chapter.Text,
-                PageText.Bounds.Width,
-                PageText.Bounds.Height,
+                PageContentGrid.Bounds.Width,
+                PageContentGrid.Bounds.Height,
                 fontFamily,
                 _fontSize,
                 _lineSpacing,
-                GetChapterHeadingHeight(chapterTitle)));
+                GetChapterHeadingHeight(chapterTitle),
+                _showImages ? chapter.Images : Array.Empty<BookImage>(),
+                image => GetImageNaturalHeight(image, PageContentGrid.Bounds.Width)));
 
             var chapterStart = _document.GetChapterStart(chapterIndex);
             var offset = (int)Math.Clamp(restorePosition - chapterStart, 0, chapter.Text.Length);
-            var pageIndex = _pages.FindLastIndex(page => page.CharStart <= offset);
+            var pageIndex = _pages.FindLastIndex(page => page.PositionOffset <= offset);
             _pageIndex = pageIndex < 0 ? 0 : Math.Min(pageIndex, _pages.Count - 1);
 
             RenderPage();
@@ -924,19 +974,48 @@ public partial class EbookPanel : UserControl
         var page = _pages[_pageIndex];
         var chapter = _document.Chapters[_chapterIndex];
         var chapterTitle = GetChapterTitle(_chapterIndex, chapter);
-        var showHeading = _pageIndex == 0;
+        var showHeading = _pageIndex == 0 && page.Image is null;
 
         PageChapterHeading.Text = chapterTitle;
         PageChapterHeading.IsVisible = showHeading;
         _pageTransform.Y = showHeading ? GetChapterHeadingHeight(chapterTitle) : 0;
         _pageTransform.X = 8;
-        SetPageInlines(page);
+        var hasPageText = page.Text.Trim().Length > 0;
+        if (page.Image is { } image)
+        {
+            PageImageFrame.IsVisible = true;
+            PageImage.Source = GetImageBitmap(image);
+            PageImage.MaxWidth = PageContentGrid.Bounds.Width;
+            PageImage.MaxHeight = page.ImageHeight > 0
+                ? page.ImageHeight
+                : PageContentGrid.Bounds.Height;
+        }
+        else
+        {
+            PageImageFrame.IsVisible = false;
+            PageImage.Source = null;
+        }
+
+        if (hasPageText)
+        {
+            PageText.Opacity = 1;
+            PageText.IsHitTestVisible = true;
+            SetPageInlines(page);
+        }
+        else
+        {
+            PageText.Opacity = 0;
+            PageText.IsHitTestVisible = false;
+            PageText.SelectionStart = 0;
+            PageText.SelectionEnd = 0;
+            PageText.Inlines?.Clear();
+        }
         ReaderChapterTitle.Text = chapterTitle;
         Dispatcher.UIThread.Post(() => _pageTransform.X = 0, DispatcherPriority.Background);
         PageInfoText.Text = $"{_pageIndex + 1} / {_pages.Count}";
         _pendingRestore = null;
 
-        var globalOffset = _document.GetChapterStart(_chapterIndex) + page.CharStart;
+        var globalOffset = _document.GetChapterStart(_chapterIndex) + page.PositionOffset;
         var total = _document.TotalLength;
         var percent = total <= 0
             ? 0
@@ -962,6 +1041,64 @@ public partial class EbookPanel : UserControl
         return headingSize * 1.5 + 8;
     }
 
+    private double GetImageNaturalHeight(BookImage image, double width)
+    {
+        var size = GetImagePixelSize(image);
+        if (size is null || size.Value.Width <= 0)
+            return Math.Max(1, _fontSize * _lineSpacing);
+
+        var scale = Math.Min(1.0, Math.Max(1, width) / size.Value.Width);
+        return Math.Max(1, size.Value.Height * scale);
+    }
+
+    private (int Width, int Height)? GetImagePixelSize(BookImage image)
+    {
+        if (_imageSizeCache.TryGetValue(image, out var cached))
+            return cached;
+
+        var size = EbookImageProcessor.GetPixelSize(image.Data);
+        if (size is not null)
+            _imageSizeCache[image] = size.Value;
+        return size;
+    }
+
+    private Bitmap? GetImageBitmap(BookImage image)
+    {
+        var cache = _grayscaleImages ? _grayscaleImageCache : _imageCache;
+        if (cache.TryGetValue(image, out var cached))
+            return cached;
+
+        try
+        {
+            var data = _grayscaleImages ? EbookImageProcessor.ToGrayscale(image.Data) : image.Data;
+            if (data is not { Length: > 0 })
+                data = image.Data;
+            if (data is not { Length: > 0 })
+                return null;
+
+            using var stream = new MemoryStream(data);
+            var bitmap = new Bitmap(stream);
+            cache[image] = bitmap;
+            return bitmap;
+        }
+        catch
+        {
+            return null;
+        }
+    }
+
+    private void ClearImageCache()
+    {
+        PageImage.Source = null;
+        foreach (var bitmap in _imageCache.Values)
+            bitmap.Dispose();
+        foreach (var bitmap in _grayscaleImageCache.Values)
+            bitmap.Dispose();
+        _imageCache.Clear();
+        _grayscaleImageCache.Clear();
+        _imageSizeCache.Clear();
+    }
+
     private long CurrentGlobalOffset()
     {
         if (_document is null)
@@ -970,7 +1107,7 @@ public partial class EbookPanel : UserControl
         if (_pages.Count == 0 || _pageIndex < 0 || _pageIndex >= _pages.Count)
             return _pendingRestore ?? _document.GetChapterStart(_chapterIndex);
 
-        return _document.GetChapterStart(_chapterIndex) + _pages[_pageIndex].CharStart;
+        return _document.GetChapterStart(_chapterIndex) + _pages[_pageIndex].PositionOffset;
     }
 
     private void SaveCurrentProgress()
@@ -1141,6 +1278,71 @@ public partial class EbookPanel : UserControl
             _closeOnOutsideClick
                 ? L("CloseOnOutsideOn", "点外部关闭：开")
                 : L("CloseOnOutsideOff", "点外部关闭：关"));
+    }
+
+    private void OnImageMenuValueChanged(object? sender, ActionSwapValueChangedEventArgs e)
+    {
+        if (_suppressImageMenu)
+            return;
+
+        var open = string.Equals(e.Value, "open", StringComparison.OrdinalIgnoreCase);
+        if (open)
+            _chromeHideTimer.Stop();
+        ImageSettingsPopup.IsOpen = open;
+    }
+
+    private void OnImageSettingsPopupClosed(object? sender, EventArgs e)
+    {
+        _suppressImageMenu = true;
+        ImageMenuAction.Value = "closed";
+        _suppressImageMenu = false;
+    }
+
+    private void OnShowImagesValueChanged(object? sender, ActionSwapValueChangedEventArgs e)
+    {
+        var showImages = string.Equals(e.Value, "on", StringComparison.OrdinalIgnoreCase);
+        if (_suppressImageSettings || showImages == _showImages)
+            return;
+
+        _showImages = showImages;
+        SaveSetting(ShowImagesKey, _showImages ? "true" : "false");
+        ApplyTypographyAndRepaginate();
+    }
+
+    private void OnGrayscaleImagesValueChanged(object? sender, ActionSwapValueChangedEventArgs e)
+    {
+        var grayscale = string.Equals(e.Value, "on", StringComparison.OrdinalIgnoreCase);
+        if (_suppressImageSettings || grayscale == _grayscaleImages)
+            return;
+
+        _grayscaleImages = grayscale;
+        SaveSetting(GrayscaleImagesKey, _grayscaleImages ? "true" : "false");
+        if (_pages.Count > 0 && _pages[_pageIndex].Image is not null)
+            RenderPage();
+    }
+
+    private void UpdateImageSettingsButtons()
+    {
+        _suppressImageSettings = true;
+        try
+        {
+            ShowImagesAction.Value = _showImages ? "on" : "off";
+            GrayscaleImagesAction.Value = _grayscaleImages ? "on" : "off";
+        }
+        finally
+        {
+            _suppressImageSettings = false;
+        }
+
+        ToolTip.SetTip(ImageMenuAction, L("ImageSettings", "图片设置"));
+    }
+
+    private void CloseImageSettingsMenu()
+    {
+        if (!ImageSettingsPopup.IsOpen)
+            return;
+
+        ImageSettingsPopup.IsOpen = false;
     }
 
     private void OnShelfModeChanged(object? sender, SelectionChangedEventArgs e)
@@ -1401,7 +1603,7 @@ public partial class EbookPanel : UserControl
         ApplyTheme();
     }
 
-    private void OnPageTextSizeChanged(object? sender, SizeChangedEventArgs e)
+    private void OnPageContentSizeChanged(object? sender, SizeChangedEventArgs e)
     {
         if (_paginating || _document is null || !ReaderPanel.IsVisible)
             return;

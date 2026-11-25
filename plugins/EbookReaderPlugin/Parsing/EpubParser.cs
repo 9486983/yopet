@@ -22,6 +22,7 @@ public static class EpubParser
         var navTitles = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
         CollectNavigationTitles(book.Navigation, navTitles);
 
+        var images = LoadImages(book);
         var navigationPath = book.Content?.NavigationHtmlFile?.FilePath;
         var chapters = new List<Chapter>();
         var currentParentTitle = "";
@@ -51,10 +52,14 @@ public static class EpubParser
                 ? $"第 {chapters.Count + 1} 章"
                 : preferredTitle;
 
-            var (_, fileChapters) = HtmlTextConverter.BuildFromHtml(
+            var (preparedHtml, fileImages) = HtmlTextConverter.ExtractImages(
                 file.Content,
+                source => ResolveImage(file.FilePath, source, images));
+            var (_, fileChapters) = HtmlTextConverter.BuildFromHtml(
+                preparedHtml,
                 fallbackTitle,
-                string.IsNullOrWhiteSpace(preferredTitle) ? null : preferredTitle);
+                string.IsNullOrWhiteSpace(preferredTitle) ? null : preferredTitle,
+                fileImages);
 
             chapters.AddRange(fileChapters);
         }
@@ -71,6 +76,95 @@ public static class EpubParser
         document.Chapters.AddRange(chapters);
         return document;
     }
+
+    private static Dictionary<string, BookImage> LoadImages(EpubBook book)
+    {
+        var images = new Dictionary<string, BookImage>(StringComparer.OrdinalIgnoreCase);
+        var localImages = book.Content?.Images?.Local;
+        if (localImages is null)
+            return images;
+
+        foreach (var image in localImages)
+        {
+            if (image.Content is not { Length: > 0 } || string.IsNullOrWhiteSpace(image.FilePath))
+                continue;
+
+            images[NormalizeArchivePath(image.FilePath)] = new BookImage
+            {
+                Key = image.FilePath,
+                Data = image.Content,
+            };
+        }
+
+        return images;
+    }
+
+    private static BookImage? ResolveImage(
+        string? htmlPath,
+        string source,
+        IReadOnlyDictionary<string, BookImage> images)
+    {
+        if (string.IsNullOrWhiteSpace(source))
+            return null;
+
+        var value = source.Trim();
+        if (value.StartsWith("data:", StringComparison.OrdinalIgnoreCase))
+            return null;
+
+        var hash = value.IndexOf('#');
+        if (hash >= 0)
+            value = value[..hash];
+        var query = value.IndexOf('?');
+        if (query >= 0)
+            value = value[..query];
+
+        try
+        {
+            value = Uri.UnescapeDataString(value);
+        }
+        catch
+        {
+        }
+
+        var path = ResolveArchivePath(htmlPath, value);
+        return path.Length > 0 && images.TryGetValue(path, out var image) ? image : null;
+    }
+
+    private static string ResolveArchivePath(string? baseFile, string source)
+    {
+        source = source.Replace('\\', '/');
+        var rooted = source.StartsWith('/');
+        source = source.TrimStart('/');
+
+        var baseDirectory = "";
+        if (!rooted && !string.IsNullOrWhiteSpace(baseFile))
+        {
+            var normalizedBase = NormalizeArchivePath(baseFile);
+            var slash = normalizedBase.LastIndexOf('/');
+            if (slash >= 0)
+                baseDirectory = normalizedBase[..(slash + 1)];
+        }
+
+        var parts = new List<string>();
+        foreach (var part in (baseDirectory + source).Split('/'))
+        {
+            if (part.Length == 0 || part == ".")
+                continue;
+            if (part == "..")
+            {
+                if (parts.Count > 0)
+                    parts.RemoveAt(parts.Count - 1);
+                continue;
+            }
+
+            parts.Add(part);
+        }
+
+        return string.Join('/', parts);
+    }
+
+    private static string NormalizeArchivePath(string path) =>
+        path.Replace('\\', '/').TrimStart('/');
 
     private static EpubReaderOptions CreateTolerantOptions() => new()
     {
